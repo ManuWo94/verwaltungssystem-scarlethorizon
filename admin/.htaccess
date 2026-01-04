@@ -1,0 +1,8 @@
+# Verhindere direkten Zugriff auf das Verzeichnis
+Options -Indexes
+
+# Setze Standardseite
+DirectoryIndex index.php
+
+# Sichere Admin-Seiten ausschließlich über PHP-Authentifizierungslogik
+# Alle direkten Zugriffsversuche werden durch PHP-Authentifizierungsprüfungen geschützt
