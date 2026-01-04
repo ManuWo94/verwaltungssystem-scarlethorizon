@@ -1,0 +1,37 @@
+/* Accordion Styling */
+.equipment-accordion .equipment-toggle {
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    outline: none;
+    transition: 0.4s;
+    text-decoration: none;
+}
+
+.equipment-accordion .equipment-toggle:hover {
+    text-decoration: none;
+}
+
+.equipment-accordion .fas.fa-chevron-down {
+    transition: transform 0.3s ease;
+}
+
+/* Rotation class for toggle */
+.rotate-180 {
+    transform: rotate(180deg) !important;
+}
+
+/* Content styling */
+.equipment-accordion .category-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.equipment-accordion .category-content.show {
+    max-height: 1000px; /* Stellen Sie sicher, dass dieser Wert hoch genug ist, um den gesamten Inhalt anzuzeigen */
+}
+
+.equipment-accordion .category-content.hide {
+    max-height: 0;
+}

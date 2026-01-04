@@ -1,0 +1,74 @@
+Beachte bitte:
+
+Login System einführen (Benutzername und Passwort)
+Benutzer werden angelegt mit (Benutzername und Passwort, sowie Hauptrolle und vollständiger Name, optional TG-Nummer)
+
+
+Folgende Rollen sollen auswählbar sein:
+
+Leitungsebene:
+
+Chief Justice ( Bezeichnung für den Systemadministrator)
+Senior Associate Justice
+
+Attorney General
+
+
+Assistenz:
+Administrative Assistant
+
+
+Richterebene:
+District Court Judge
+Judge
+Magistrate
+Junior Magistrate
+
+
+Staatsanwaltschaft:
+District Attorney
+Senior Prosecutor
+Prosecutor
+Junior Prosecutor
+Student
+
+
+U.S. Marshal Service:
+Director
+Commander
+Senior Deputy
+Deputy
+Junior Deputy
+Trainee
+
+
+Externe Personen:
+U.S. Präsident
+Staatssekretär
+Army
+Sheriff
+
+
+Implementiere als aller erstes die Zugriffsberechtigungen (Hat ein Benutzer keinen Zugriff, so bekommt er die Meldung “Du hast keinen Zugriff!” angezeigt - überlege wie du das effizient implementiert bekommst, wenn Benutzer etwas sehen dürfen, kann es als Popup aufkommen wenn sie etwas anklicken was sie nicht dürfen, wenn sie etwas nicht sehen dürfen erscheint statt der eigentlichen Seite eine Seite mit der Zugriff verwehrt Info, allerdings sollte die Sidebar immer zu sehen sein)  und erstelle eine benutzerfreundliche Übersicht wo alle Benutzer die Zugriffsberechtigungen für jede Rolle einsehen können:
+
+
+Der Chief Justice ist der einzige, der Benutzer sowie Akten löschen kann. Am Systemadministrator kann nur der Chief Justice selbst etwas ändern, niemand anderes. Er hat die vollen Zugriffsrechte auf alles.
+
+Die Leitungsebene hat ebenfalls volle Zugriffsrechte, mit der Einschränkung, dass sie keine Benutzer oder Akten löschen kann, das kann nur der Chief Justice. Sie können aber neue Benutzer anlegen, bearbeiten und deren Zugang sperren. Und haben Zugriff auf alle Bereiche.
+
+Die Assistenz hat Zugriff auf alle Bereiche, ausgenommen des Admin Bereichs. Das Bearbeiten von Klageschriften und Revisionen ist der Stelle aber verboten. Sie kann auch keine Änderungen an Benutzern oder Rollen vornehmen.
+
+Die Richterschaft hat volle Zugriffe auf alles bis auf den Admin Bereich. Sie hat jedoch die Einschränkung, dass sie keine Klageschriften einreichen oder Revisionen beantragen darf. Sie darf Fälle lediglich anlegen, bearbeiten, Klageschriften als Verhandlung terminieren und Urteile eintragen, sowie Revisionsurteile eintragen oder Klageschriften und Revisionen ablehnen.
+Der Attorney General darf ebenfalls Revisionen prüfen und entscheiden, ob diese angenommen oder abgelehnt werden. Ausnahme bildet der Junior Magistrat, dieser hat zwar Einsicht in alle Bereich bis auf den Admin-Bereich, darf aber keine Urteile oder Revisionsurteile eintragen und auch nicht prüfen oder terminieren. Außerdem dürfen sie kein Personal anlegen oder Veränderungen vornehmen, mit Ausnahme des District Court Judge, dieser darf auch Schulungen anlegen und bearbeiten und bei Mitarbeitern beantragen.
+
+
+Die Staatsanwaltschaft hat vollen Zugriff, außer auf den Admin-Bereich und auf Klageschriften und Revisionen. Alle Rollen in der Kategorie Staatsanwälte dürfen Fälle bearbeiten, anlegen und Klageschriften einreichen sowie Revisionen beantragen, aber diese nicht prüfen und keine Urteile eintragen. Außerdem dürfen sie kein Personal anlegen oder Veränderungen vornehmen, dies darf ausschließlich der District Attorney in der Kategorie Staatsanwaltschaft, dieser darf auch Schulungen anlegen und bearbeiten und bei Mitarbeitern eintragen. Eine Ausnahme bilden die Studenten, sie dürfen keine Bearbeitungen vornehmen, diese dürfen lediglich das Dienstprotokoll und die Notizen nutzen. 
+
+Die U.S. Marshals haben nur Zugriff auf den Bereich des Personals mit Mitarbeitern und Schulungen, sowie Kalender. Nur der Director, der Commander und der Senior Deputy dürfen neue Ausrüstungen anlegen, diese bearbeiten und vergeben, neue Mitarbeiter anlegen und bearbeiten und Bearbeitungen bei Schulungen vornehmen und diese an Mitarbeiter zuweisen. Sie haben außerdem Einsicht auf Fallakten.
+
+Die Externen Personen U.S. Präsident und Staatssekretär haben Zugriff auf alles und dürfen alles einsichten, jedoch nichts bearbeiten oder löschen.
+Sheriffs und Army haben Einsicht in Fallakten, Kalender, Adressbuch, Beschlagnahmungen und Mitarbeiterliste, dürfen jedoch keine Bearbeitungen vornehmen und auch nichts löschen.
+
+Beachte bei der Zugriffsberechtigung auf folgende allgemeine Regeln zur Zugriffsberechtigung die grundsätzlich alle nutzen dürfen:
+
+Alle Benutzer haben jedoch Zugriff auf das Dienstprotokoll und können dieses nutzen, ein Verlauf ist nicht notwendig, stattdessen ist es wichtig, sich im Dienst anmelden und abmelden zu können und in Echtzeit zu sehen, wer noch alles im Dienst ist. Außerdem haben Benutzer Zugriff auf ihre individuellen Notizen die nur sie selbst sehen (Benutzergebunden) diese dürfen sie selbst erstellen, bearbeiten und löschen. Auch der Kalender ist für alle zu sehen, bis auf Studenten und Trainees dürfen dort alle auch Termine eintragen. Auf das Dashboard haben natürlich auch alle Benutzer Zugriff. Auch auf das Adressbuch haben alle Zugriff. Alle haben Zugriff auf Beschlagnahmungen und dürfen dort Änderungen vornehmen, ausgenommen sind Studenten und Trainees. Auf Justizreferenzen darf jeder zugreifen, aber nur der Chief Justice darf dort Bearbeitungen vornehmen. Urlaub darf jeder eintragen (braucht keine Genehmigung) mit Ausnahme der Externen Personen die können dort nur Einsicht nehmen

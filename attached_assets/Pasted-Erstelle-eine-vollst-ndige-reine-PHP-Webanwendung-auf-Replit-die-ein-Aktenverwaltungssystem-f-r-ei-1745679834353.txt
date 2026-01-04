@@ -1,0 +1,118 @@
+Erstelle eine vollständige, reine PHP-Webanwendung auf Replit, die ein Aktenverwaltungssystem für ein Department of Justice im Stil des Jahres 1899 simuliert.
+
+Die Anwendung soll folgende Anforderungen erfüllen:
+
+🔐 Authentifizierung und Benutzerverwaltung
+Es gibt einen festen Administrator-Account mit Benutzername: OConnor und Passwort: admin.
+
+Nur der Administrator kann:
+
+Neue Benutzer anlegen
+
+Benutzer sperren oder entsperren
+
+Rollen zuweisen oder bearbeiten (Rollen dienen nur der Anzeige, beeinflussen aber keine Rechte)
+
+Normale Benutzer können sich nur anmelden, nicht registrieren.
+
+Passwort-Hashing mit password_hash() und Login-Verwaltung via PHP Sessions.
+
+🧭 Navigationsstruktur
+Eine Sidebar zeigt alle Module je nach Anmeldung an.
+
+Beim Login soll die Rolle des Benutzers optisch sichtbar sein (z. B. neben dem Namen).
+
+📚 Module und Funktionen
+Dienstbuch
+
+Benutzer können sich „in Dienst“ und „außer Dienst“ melden (mit Uhrzeit).
+
+Im Profil oder separaten Bereich sichtbar.
+
+Fallübersicht
+
+Fälle erfassen mit folgenden Feldern:
+
+Beschuldigter
+
+Anklagepunkt
+
+Tatzeitpunkt
+
+Verjährungsfrist (automatisch +21 Tage nach Tatzeitpunkt)
+
+Kaution
+
+Bezirk (Ost oder West)
+
+Staatsanwalt
+
+Richter
+
+Status (z. B. Offen, In Bearbeitung, Abgeschlossen, Revision usw.)
+
+Funktionen:
+
+Fälle anlegen
+
+Fälle bearbeiten
+
+Fälle löschen
+
+Beschuldigtenverwaltung
+
+Beschuldigte mit Namen und TG-Nummer erfassen.
+
+Kalender
+
+Termine eintragen, die für alle Benutzer sichtbar sind.
+
+Ereignisse wie Anhörungen, Urlaube oder Fristen verwalten.
+
+Eigene Notizen
+
+Jeder Benutzer kann private, individuelle Notizen speichern.
+
+Aktenordner
+
+Erstellen von Ordnern (Haftbefehle, Beschlüsse, individuelle Ordner)
+
+Hochladen oder Anlegen von Akten und Formularen (Textdokumente).
+
+Klageschriftenverwaltung
+
+Einfache Textfelder zur Eingabe von Klageschriften pro Fall.
+
+Sichtbar in einem eigenen Bereich für Richter.
+
+Richter können Klagen annehmen oder ablehnen und ein Urteil hinzufügen.
+
+Vorlagenverwaltung
+
+Anlegen und Speichern von Textvorlagen, die schnell kopiert werden können.
+
+Mitarbeiterverwaltung
+
+Anlegen von Mitarbeitern mit Rollenanzeige.
+
+Hochladen und Verwalten von Schulungsunterlagen (Dateiupload möglich).
+
+Dokumentieren, welche Schulungen ein Mitarbeiter noch absolvieren muss.
+
+Ausrüstungsverwaltung
+
+Erfassung von Ausrüstungen (Art der Ausrüstung manuell anlegbar).
+
+Vermerk, an wen, wann und von wem die Ausrüstung ausgegeben wurde.
+
+Urlaubsverwaltung
+
+Benutzer können angeben, wann sie im Urlaub sind (Anzeige im Kalender).
+
+Administratorbereich
+
+Benutzerübersicht mit Aktiv/Inaktiv-Status.
+
+Rollenmanagement (Anlegen, Bearbeiten).
+
+Verwaltung von Benutzerkonten (Sperren/Entsperren).

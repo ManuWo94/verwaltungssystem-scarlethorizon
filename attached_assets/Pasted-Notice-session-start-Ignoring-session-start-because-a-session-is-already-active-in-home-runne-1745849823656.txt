@@ -1,0 +1,77 @@
+Notice: session_start(): Ignoring session_start() because a session is already active in /home/runner/workspace/admin_check.php on line 2
+Sitzungsinformationen
+Eingeloggt: Ja
+Benutzer-ID: admin
+Benutzername: OConnor
+Rolle: Administrator
+ist_admin: true
+isAdminSession() Ergebnis
+isAdminSession(): true
+Verfügbare Benutzer (ohne Passwörter)
+Array
+(
+    [0] => Array
+        (
+            [id] => admin
+            [username] => OConnor
+            [role] => Administrator
+            [is_admin] => 1
+            [status] => active
+            [date_created] => 2025-04-26 15:34:09
+            [first_name] => Myles
+            [last_name] => OConnor
+            [email] => 
+            [badge_number] => 35
+            [title] => Hauptadministrator
+            [notes] => Department of Justice - Systemadministrator
+            [roles] => Array
+                (
+                    [0] => Administrator
+                )
+
+            [date_updated] => 2025-04-27 00:28:27
+        )
+
+    [1] => Array
+        (
+            [id] => 680d49e17f9b93.60925980
+            [username] => Rhodes
+            [full_name] => James Rhodes
+            [role] => Staatsanwalt
+            [roles] => Array
+                (
+                    [0] => Staatsanwalt
+                )
+
+            [is_admin] => 
+            [date_created] => 2025-04-26 21:02:25
+            [badge_number] => 23
+            [email] => jrhodes@justice.gov
+            [title] => Staatsanwalt
+            [status] => active
+            [first_name] => 
+            [last_name] => 
+            [notes] => 
+            [date_updated] => 2025-04-27 00:28:41
+        )
+
+    [2] => Array
+        (
+            [id] => 680d72752eb549.26666508
+            [username] => Weber
+            [date_created] => 2025-04-26 23:55:33
+            [role] => Richter
+            [roles] => Array
+                (
+                    [0] => Richter
+                )
+
+            [is_admin] => 
+            [status] => active
+            [first_name] => Jack
+            [last_name] => Weber
+            [email] => 
+            [badge_number] => 
+            [title] => 
+            [notes] => 
+        )
