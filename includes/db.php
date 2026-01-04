@@ -535,6 +535,51 @@ function initializeDataFiles() {
                 'id' => 'clerk',
                 'name' => 'Clerk',
                 'description' => 'Administrative staff who manages records'
+            ],
+            [
+                'id' => 'gerichtsreferendar',
+                'name' => 'Gerichtsreferendar',
+                'description' => 'Referendar am Gericht'
+            ],
+            [
+                'id' => 'gerichtsvolontar',
+                'name' => 'Gerichtsvolontär',
+                'description' => 'Volontär/Praktikant am Gericht'
+            ],
+            [
+                'id' => 'gerichtsassistent',
+                'name' => 'Gerichtsassistent',
+                'description' => 'Assistent für richterliche Tätigkeiten'
+            ],
+            [
+                'id' => 'friedensrichter',
+                'name' => 'Friedensrichter',
+                'description' => 'Richter für Schlichtungsverfahren'
+            ],
+            [
+                'id' => 'berufungsrichter',
+                'name' => 'Berufungsrichter',
+                'description' => 'Richter im Berufungsgericht'
+            ],
+            [
+                'id' => 'beisitzender_richter',
+                'name' => 'Beisitzender Richter',
+                'description' => 'Beisitzender Richter'
+            ],
+            [
+                'id' => 'amtsrichter',
+                'name' => 'Amtsrichter',
+                'description' => 'Amtsrichter'
+            ],
+            [
+                'id' => 'senatsrichter',
+                'name' => 'Senatsrichter',
+                'description' => 'Senatsrichter'
+            ],
+            [
+                'id' => 'vorsitzender_senatsrichter',
+                'name' => 'Vorsitzender Senatsrichter',
+                'description' => 'Vorsitzender Richter eines Senats'
             ]
         ],
         'themes.json' => [
@@ -626,6 +671,39 @@ function initializeDataFiles() {
         if (!file_exists($filepath)) {
             file_put_contents($filepath, json_encode($defaultData, JSON_PRETTY_PRINT));
         }
+    }
+
+    // Ensure specific judicial roles exist in roles.json even if file already existed
+    $requiredRoles = [
+        ['id' => 'gerichtsreferendar', 'name' => 'Gerichtsreferendar', 'description' => 'Referendar am Gericht'],
+        ['id' => 'gerichtsvolontar', 'name' => 'Gerichtsvolontär', 'description' => 'Volontär/Praktikant am Gericht'],
+        ['id' => 'gerichtsassistent', 'name' => 'Gerichtsassistent', 'description' => 'Assistent für richterliche Tätigkeiten'],
+        ['id' => 'friedensrichter', 'name' => 'Friedensrichter', 'description' => 'Richter für Schlichtungsverfahren'],
+        ['id' => 'berufungsrichter', 'name' => 'Berufungsrichter', 'description' => 'Richter im Berufungsgericht'],
+        ['id' => 'beisitzender_richter', 'name' => 'Beisitzender Richter', 'description' => 'Beisitzender Richter'],
+        ['id' => 'amtsrichter', 'name' => 'Amtsrichter', 'description' => 'Amtsrichter'],
+        ['id' => 'senatsrichter', 'name' => 'Senatsrichter', 'description' => 'Senatsrichter'],
+        ['id' => 'vorsitzender_senatsrichter', 'name' => 'Vorsitzender Senatsrichter', 'description' => 'Vorsitzender Richter eines Senats']
+    ];
+
+    $currentRoles = loadJsonData('roles.json');
+    $added = false;
+    foreach ($requiredRoles as $req) {
+        $exists = false;
+        foreach ($currentRoles as $r) {
+            if (isset($r['id']) && $r['id'] === $req['id']) {
+                $exists = true;
+                break;
+            }
+        }
+        if (!$exists) {
+            $currentRoles[] = $req;
+            $added = true;
+        }
+    }
+
+    if ($added) {
+        saveJsonData('roles.json', $currentRoles);
     }
 }
 

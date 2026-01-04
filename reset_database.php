@@ -107,6 +107,78 @@ $roles = [
         'permissions' => null
     ],
     [
+        'id' => 'gerichtsreferendar',
+        'name' => 'Gerichtsreferendar',
+        'description' => 'Referendar am Gericht',
+        'level' => 7,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'gerichtsvolontar',
+        'name' => 'Gerichtsvolontär',
+        'description' => 'Volontär/Praktikant am Gericht',
+        'level' => 8,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'gerichtsassistent',
+        'name' => 'Gerichtsassistent',
+        'description' => 'Assistent für richterliche Tätigkeiten',
+        'level' => 6,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'friedensrichter',
+        'name' => 'Friedensrichter',
+        'description' => 'Richter für Schlichtungsverfahren',
+        'level' => 7,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'berufungsrichter',
+        'name' => 'Berufungsrichter',
+        'description' => 'Richter im Berufungsgericht',
+        'level' => 5,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'beisitzender_richter',
+        'name' => 'Beisitzender Richter',
+        'description' => 'Beisitzender Richter',
+        'level' => 5,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'amtsrichter',
+        'name' => 'Amtsrichter',
+        'description' => 'Amtsrichter',
+        'level' => 5,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'senatsrichter',
+        'name' => 'Senatsrichter',
+        'description' => 'Senatsrichter',
+        'level' => 4,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
+        'id' => 'vorsitzender_senatsrichter',
+        'name' => 'Vorsitzender Senatsrichter',
+        'description' => 'Vorsitzender Richter eines Senats',
+        'level' => 3,
+        'department' => 'Judicial',
+        'permissions' => null
+    ],
+    [
         'id' => 'district_attorney',
         'name' => 'District Attorney',
         'description' => 'Bezirksstaatsanwalt',

@@ -544,7 +544,7 @@ function checkUserHasRoleType($role, $roleType) {
     $roleType = strtolower($roleType);
     
     // Rollen nach Typen gruppieren
-    $judgeRoles = ['richter', 'judge', 'magistrate', 'junior_magistrate', 'magistratsrichter', 'chief_justice', 'district_court_judge', 'chief justice', 'oberster richter', 'senior_associate_justice', 'senior associate justice'];
+    $judgeRoles = ['richter', 'judge', 'magistrate', 'junior_magistrate', 'magistratsrichter', 'gerichtsreferendar', 'gerichtsvolontar', 'gerichtsassistent', 'friedensrichter', 'berufungsrichter', 'beisitzender_richter', 'amtsrichter', 'senatsrichter', 'vorsitzender_senatsrichter', 'chief_justice', 'district_court_judge', 'chief justice', 'oberster richter', 'senior_associate_justice', 'senior associate justice'];
     $prosecutorRoles = ['staatsanwalt', 'prosecutor', 'junior_prosecutor', 'junior prosecutor', 'senior_prosecutor', 'senior prosecutor', 'district_attorney', 'district attorney', 'bezirksstaatsanwalt', 'attorney_general', 'attorney general', 'generalstaatsanwalt'];
     $leadershipRoles = ['chief_justice', 'chief justice', 'oberster richter', 'senior_associate_justice', 'senior associate justice', 'stellvertretender oberster richter', 'attorney_general', 'attorney general', 'generalstaatsanwalt', 'district_attorney', 'district attorney'];
     $marshalRoles = ['marshal', 'us marshal', 'deputy_marshal', 'deputy marshal', 'marshal director', 'director', 'commander', 'senior_deputy', 'senior deputy'];
