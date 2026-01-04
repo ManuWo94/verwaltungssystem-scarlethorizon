@@ -1,0 +1,1179 @@
+<?php
+session_start();
+require_once '../includes/functions.php';
+require_once '../includes/db.php';
+require_once '../includes/auth.php';
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../login.php');
+    exit;
+}
+
+$user_id = $_SESSION['user_id'];
+$username = $_SESSION['username'];
+$role = $_SESSION['role'];
+$message = '';
+$error = '';
+
+// Handle equipment actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        $action = $_POST['action'];
+        
+        if ($action === 'add_equipment') {
+            $equipmentData = [
+                'id' => generateUniqueId(),
+                'type_id' => sanitize($_POST['type_id'] ?? ''),
+                'serial_number' => sanitize($_POST['serial_number'] ?? ''),
+                'description' => sanitize($_POST['description'] ?? ''),
+                'status' => sanitize($_POST['status'] ?? 'Available'),
+                'notes' => sanitize($_POST['notes'] ?? ''),
+                'date_added' => date('Y-m-d H:i:s'),
+                'added_by' => $user_id,
+                'assignment_history' => []
+            ];
+            
+            // Validate required fields
+            if (empty($equipmentData['type_id'])) {
+                $error = 'Please select an equipment type.';
+            } else {
+                if (insertRecord('equipment.json', $equipmentData)) {
+                    $message = 'Equipment added successfully.';
+                } else {
+                    $error = 'Failed to add equipment.';
+                }
+            }
+        } elseif ($action === 'update_equipment' && isset($_POST['equipment_id'])) {
+            $equipmentId = $_POST['equipment_id'];
+            $equipment = findById('equipment.json', $equipmentId);
+            
+            if (!$equipment) {
+                $error = 'Equipment not found.';
+            } else {
+                $equipmentData = [
+                    'type_id' => sanitize($_POST['type_id'] ?? ''),
+                    'serial_number' => sanitize($_POST['serial_number'] ?? ''),
+                    'description' => sanitize($_POST['description'] ?? ''),
+                    'status' => sanitize($_POST['status'] ?? 'Available'),
+                    'notes' => sanitize($_POST['notes'] ?? ''),
+                    'date_added' => $equipment['date_added'],
+                    'added_by' => $equipment['added_by'],
+                    'assignment_history' => $equipment['assignment_history'] ?? []
+                ];
+                
+                // Validate required fields
+                if (empty($equipmentData['type_id'])) {
+                    $error = 'Please select an equipment type.';
+                } else {
+                    if (updateRecord('equipment.json', $equipmentId, $equipmentData)) {
+                        $message = 'Equipment updated successfully.';
+                    } else {
+                        $error = 'Failed to update equipment.';
+                    }
+                }
+            }
+        } elseif ($action === 'delete_equipment' && isset($_POST['equipment_id'])) {
+            $equipmentId = $_POST['equipment_id'];
+            
+            if (deleteRecord('equipment.json', $equipmentId)) {
+                $message = 'Equipment deleted successfully.';
+            } else {
+                $error = 'Failed to delete equipment.';
+            }
+        } elseif ($action === 'assign_equipment' && isset($_POST['equipment_id'])) {
+            $equipmentId = $_POST['equipment_id'];
+            $equipment = findById('equipment.json', $equipmentId);
+            
+            if (!$equipment) {
+                $error = 'Equipment not found.';
+            } else {
+                $assignmentData = [
+                    'id' => generateUniqueId(),
+                    'staff_id' => sanitize($_POST['staff_id'] ?? ''),
+                    'assigned_by' => $user_id,
+                    'assigned_date' => date('Y-m-d H:i:s'),
+                    'notes' => sanitize($_POST['assignment_notes'] ?? '')
+                ];
+                
+                // Validate required fields
+                if (empty($assignmentData['staff_id'])) {
+                    $error = 'Please select a staff member.';
+                } else {
+                    // Add assignment to history
+                    if (!isset($equipment['assignment_history'])) {
+                        $equipment['assignment_history'] = [];
+                    }
+                    
+                    $equipment['assignment_history'][] = $assignmentData;
+                    $equipment['status'] = 'Assigned';
+                    $equipment['current_assignment'] = $assignmentData;
+                    
+                    if (updateRecord('equipment.json', $equipmentId, $equipment)) {
+                        $message = 'Equipment assigned successfully.';
+                    } else {
+                        $error = 'Failed to assign equipment.';
+                    }
+                }
+            }
+        } elseif ($action === 'return_equipment' && isset($_POST['equipment_id'])) {
+            $equipmentId = $_POST['equipment_id'];
+            $equipment = findById('equipment.json', $equipmentId);
+            
+            if (!$equipment) {
+                $error = 'Equipment not found.';
+            } else {
+                if (isset($equipment['current_assignment'])) {
+                    // Add return information to current assignment
+                    $returnInfo = [
+                        'returned_by' => $user_id,
+                        'return_date' => date('Y-m-d H:i:s'),
+                        'return_notes' => sanitize($_POST['return_notes'] ?? '')
+                    ];
+                    
+                    // Update last assignment in history
+                    $lastIndex = count($equipment['assignment_history']) - 1;
+                    if ($lastIndex >= 0) {
+                        $equipment['assignment_history'][$lastIndex] = array_merge(
+                            $equipment['assignment_history'][$lastIndex],
+                            $returnInfo
+                        );
+                    }
+                    
+                    // Clear current assignment and update status
+                    unset($equipment['current_assignment']);
+                    $equipment['status'] = 'Available';
+                    
+                    if (updateRecord('equipment.json', $equipmentId, $equipment)) {
+                        $message = 'Equipment returned successfully.';
+                    } else {
+                        $error = 'Failed to return equipment.';
+                    }
+                } else {
+                    $error = 'This equipment is not currently assigned.';
+                }
+            }
+        } elseif ($action === 'add_equipment_type') {
+            $typeData = [
+                'id' => generateUniqueId(),
+                'name' => sanitize($_POST['type_name'] ?? ''),
+                'description' => sanitize($_POST['type_description'] ?? ''),
+                'date_created' => date('Y-m-d H:i:s')
+            ];
+            
+            // Validate required fields
+            if (empty($typeData['name'])) {
+                $error = 'Please enter a type name.';
+            } else {
+                // Check if type already exists
+                $equipmentTypes = loadJsonData('equipment_types.json');
+                $typeExists = false;
+                
+                foreach ($equipmentTypes as $type) {
+                    if (strtolower($type['name']) === strtolower($typeData['name'])) {
+                        $typeExists = true;
+                        break;
+                    }
+                }
+                
+                if ($typeExists) {
+                    $error = 'An equipment type with this name already exists.';
+                } else {
+                    if (insertRecord('equipment_types.json', $typeData)) {
+                        $message = 'Equipment type added successfully.';
+                    } else {
+                        $error = 'Failed to add equipment type.';
+                    }
+                }
+            }
+        } elseif ($action === 'edit_equipment_type' && isset($_POST['type_id'])) {
+            $typeId = sanitize($_POST['type_id']);
+            
+            // Validate required fields
+            if (empty($_POST['type_name'])) {
+                $error = 'Please enter a type name.';
+            } else {
+                // Check if type already exists with the same name (but different ID)
+                $equipmentTypes = loadJsonData('equipment_types.json');
+                $typeExists = false;
+                
+                foreach ($equipmentTypes as $type) {
+                    if (strtolower($type['name']) === strtolower($_POST['type_name']) && $type['id'] !== $typeId) {
+                        $typeExists = true;
+                        break;
+                    }
+                }
+                
+                if ($typeExists) {
+                    $error = 'An equipment type with this name already exists.';
+                } else {
+                    $equipmentType = findById('equipment_types.json', $typeId);
+                    if (!$equipmentType) {
+                        $error = 'Equipment type not found.';
+                    } else {
+                        // Preserve all existing fields and only update what was provided
+                        $equipmentType['name'] = sanitize($_POST['type_name']);
+                        $equipmentType['description'] = sanitize($_POST['type_description'] ?? '');
+                        $equipmentType['date_updated'] = date('Y-m-d H:i:s');
+                        
+                        if (updateRecord('equipment_types.json', $typeId, $equipmentType)) {
+                            $message = 'Equipment type updated successfully.';
+                        } else {
+                            $error = 'Failed to update equipment type.';
+                        }
+                    }
+                }
+            }
+        } elseif ($action === 'delete_equipment_type' && isset($_POST['type_id'])) {
+            $typeId = sanitize($_POST['type_id']);
+            
+            // Check if type is in use
+            $equipment = loadJsonData('equipment.json');
+            $typeIsInUse = false;
+            
+            foreach ($equipment as $item) {
+                if ($item['type_id'] === $typeId) {
+                    $typeIsInUse = true;
+                    break;
+                }
+            }
+            
+            if ($typeIsInUse) {
+                $error = 'Cannot delete this equipment type because it is in use by one or more equipment items.';
+            } else {
+                if (deleteRecord('equipment_types.json', $typeId)) {
+                    $message = 'Equipment type deleted successfully.';
+                } else {
+                    $error = 'Failed to delete equipment type.';
+                }
+            }
+        }
+    }
+}
+
+// Load equipment types
+$equipmentTypes = loadJsonData('equipment_types.json');
+
+// Sort types by name
+usort($equipmentTypes, function($a, $b) {
+    return strcmp($a['name'], $b['name']);
+});
+
+// Load equipment
+$equipment = loadJsonData('equipment.json');
+
+// Sort equipment by type and serial number
+usort($equipment, function($a, $b) use ($equipmentTypes) {
+    // Get type names
+    $typeA = '';
+    $typeB = '';
+    
+    foreach ($equipmentTypes as $type) {
+        if ($type['id'] === $a['type_id']) {
+            $typeA = $type['name'];
+        }
+        if ($type['id'] === $b['type_id']) {
+            $typeB = $type['name'];
+        }
+    }
+    
+    // Compare by type first
+    $typeCompare = strcmp($typeA, $typeB);
+    if ($typeCompare !== 0) {
+        return $typeCompare;
+    }
+    
+    // If same type, compare by serial number
+    return strcmp($a['serial_number'], $b['serial_number']);
+});
+
+// Load staff for assignment dropdown
+$staff = loadJsonData('staff.json');
+
+// Sort staff by name
+usort($staff, function($a, $b) {
+    return strcmp($a['name'], $b['name']);
+});
+
+// Get selected equipment if ID is provided
+$selectedEquipment = null;
+if (isset($_GET['id'])) {
+    $equipmentId = $_GET['id'];
+    $selectedEquipment = findById('equipment.json', $equipmentId);
+}
+
+// Filter by type if provided
+$selectedType = $_GET['type'] ?? '';
+if (!empty($selectedType)) {
+    $equipment = array_filter($equipment, function($item) use ($selectedType) {
+        return $item['type_id'] === $selectedType;
+    });
+}
+
+// Filter by status if provided
+$selectedStatus = $_GET['status'] ?? '';
+if (!empty($selectedStatus)) {
+    $equipment = array_filter($equipment, function($item) use ($selectedStatus) {
+        return strtolower($item['status']) === strtolower($selectedStatus);
+    });
+}
+?>
+
+<?php include '../includes/header.php'; ?>
+
+<div class="container-fluid">
+    <div class="row">
+        <?php include '../includes/sidebar.php'; ?>
+
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Ausrüstungsverwaltung</h1>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary mr-2" data-toggle="modal" data-target="#addEquipmentTypeModal">
+                        <span data-feather="tag"></span> Ausrüstungstyp hinzufügen
+                    </button>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addEquipmentModal">
+                        <span data-feather="plus"></span> Ausrüstung hinzufügen
+                    </button>
+                </div>
+            </div>
+
+            <?php if (!empty($message)): ?>
+                <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
+            <?php endif; ?>
+            
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+            <?php endif; ?>
+            
+            <!-- Equipment Types Management -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Ausrüstungstypen</h4>
+                    <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addEquipmentTypeModal">
+                        <span data-feather="plus"></span> Neuer Typ
+                    </button>
+                </div>
+                <div class="card-body">
+                    <?php if (count($equipmentTypes) > 0): ?>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Beschreibung</th>
+                                        <th>Verwendung</th>
+                                        <th>Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($equipmentTypes as $type): 
+                                        // Count equipment items using this type
+                                        $typeUsageCount = 0;
+                                        foreach ($equipment as $item) {
+                                            if ($item['type_id'] === $type['id']) {
+                                                $typeUsageCount++;
+                                            }
+                                        }
+                                    ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($type['name']); ?></td>
+                                            <td><?php echo htmlspecialchars($type['description'] ?? ''); ?></td>
+                                            <td><?php echo $typeUsageCount; ?> Ausrüstung</td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" 
+                                                        data-toggle="modal" 
+                                                        data-target="#editTypeModal<?php echo $type['id']; ?>">
+                                                    <span data-feather="edit"></span> Bearbeiten
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        data-toggle="modal" 
+                                                        data-target="#deleteTypeModal<?php echo $type['id']; ?>">
+                                                    <span data-feather="trash-2"></span> Löschen
+                                                </button>
+                                                
+                                                <!-- Edit Type Modal -->
+                                                <div class="modal fade" id="editTypeModal<?php echo $type['id']; ?>" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Ausrüstungstyp bearbeiten</h5>
+                                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                                    <span aria-hidden="true">&times;</span>
+                                                                </button>
+                                                            </div>
+                                                            <form method="post" action="equipment.php">
+                                                                <input type="hidden" name="action" value="edit_equipment_type">
+                                                                <input type="hidden" name="type_id" value="<?php echo $type['id']; ?>">
+                                                                <div class="modal-body">
+                                                                    <div class="form-group">
+                                                                        <label for="type_name_<?php echo $type['id']; ?>">Typname *</label>
+                                                                        <input type="text" class="form-control" id="type_name_<?php echo $type['id']; ?>" name="type_name" required value="<?php echo htmlspecialchars($type['name']); ?>">
+                                                                    </div>
+                                                                    <div class="form-group">
+                                                                        <label for="type_description_<?php echo $type['id']; ?>">Beschreibung</label>
+                                                                        <textarea class="form-control" id="type_description_<?php echo $type['id']; ?>" name="type_description" rows="3"><?php echo htmlspecialchars($type['description'] ?? ''); ?></textarea>
+                                                                    </div>
+                                                                    <?php if ($typeUsageCount > 0): ?>
+                                                                        <div class="alert alert-info">
+                                                                            <small>Dieser Ausrüstungstyp wird aktuell von <?php echo $typeUsageCount; ?> Ausrüstungsgegenständen verwendet.</small>
+                                                                        </div>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                                                                    <button type="submit" class="btn btn-primary">Speichern</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Delete Type Modal -->
+                                                <div class="modal fade" id="deleteTypeModal<?php echo $type['id']; ?>" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Ausrüstungstyp löschen</h5>
+                                                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                                    <span aria-hidden="true">&times;</span>
+                                                                </button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Sind Sie sicher, dass Sie den Ausrüstungstyp <strong><?php echo htmlspecialchars($type['name']); ?></strong> löschen möchten?</p>
+                                                                <p class="text-danger"><small>Diese Aktion kann nicht rückgängig gemacht werden.</small></p>
+                                                            </div>
+                                                            <form method="post" action="equipment.php">
+                                                                <input type="hidden" name="action" value="delete_equipment_type">
+                                                                <input type="hidden" name="type_id" value="<?php echo $type['id']; ?>">
+                                                                <div class="modal-footer">
+                                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                                                                    <button type="submit" class="btn btn-danger">Löschen</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-muted">Keine Ausrüstungstypen gefunden. Bitte fügen Sie zunächst einen Typ hinzu.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        
+            <!-- Filter Bar -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h4>Ausrüstungsfilter</h4>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="equipment.php" class="row">
+                        <div class="col-md-4">
+                            <div class="form-group mb-0">
+                                <label for="type">Equipment Type</label>
+                                <select class="form-control" id="type" name="type">
+                                    <option value="">All Types</option>
+                                    <?php foreach ($equipmentTypes as $type): ?>
+                                        <option value="<?php echo $type['id']; ?>" <?php echo $selectedType === $type['id'] ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($type['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group mb-0">
+                                <label for="status">Status</label>
+                                <select class="form-control" id="status" name="status">
+                                    <option value="">Alle Status</option>
+                                    <option value="Available" <?php echo $selectedStatus === 'Available' ? 'selected' : ''; ?>>Verfügbar</option>
+                                    <option value="Assigned" <?php echo $selectedStatus === 'Assigned' ? 'selected' : ''; ?>>Zugewiesen</option>
+                                    <option value="Maintenance" <?php echo $selectedStatus === 'Maintenance' ? 'selected' : ''; ?>>In Wartung</option>
+                                    <option value="Damaged" <?php echo $selectedStatus === 'Damaged' ? 'selected' : ''; ?>>Beschädigt</option>
+                                    <option value="Retired" <?php echo $selectedStatus === 'Retired' ? 'selected' : ''; ?>>Ausgemustert</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">Filter</button>
+                            <a href="equipment.php" class="btn btn-outline-secondary ml-2">Reset</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h4>Ausrüstungsverzeichnis</h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="equipment-accordion" id="equipmentAccordion">
+                                <?php 
+                                // Group equipment by type
+                                $equipmentByType = [];
+                                foreach ($equipment as $item) {
+                                    if (!isset($equipmentByType[$item['type_id']])) {
+                                        $equipmentByType[$item['type_id']] = [];
+                                    }
+                                    $equipmentByType[$item['type_id']][] = $item;
+                                }
+                                
+                                if (count($equipmentByType) > 0): 
+                                    // Generiere eindeutige numerische IDs für jede Kategorie
+                                    foreach ($equipmentTypes as $typeIndex => $type):
+                                        // Skip types with no equipment or if they don't match selected type
+                                        if (!isset($equipmentByType[$type['id']]) || 
+                                            (isset($_GET['type']) && $_GET['type'] !== $type['id'])) {
+                                            continue;
+                                        }
+                                        
+                                        $typeItemCount = count($equipmentByType[$type['id']]);
+                                        // Nutze den Index statt der komplexen ID für DOM-Elemente
+                                        $safeTypeId = "eqtype_" . $typeIndex;
+                                ?>
+                                    <div class="card mb-2 equipment-category">
+                                        <div class="card-header" id="heading_<?php echo $safeTypeId; ?>">
+                                            <h2 class="mb-0">
+                                                <button class="btn btn-link btn-block text-left d-flex justify-content-between align-items-center equipment-toggle" 
+                                                        type="button" 
+                                                        onclick="toggleEquipmentCategory('<?php echo $safeTypeId; ?>')"
+                                                        aria-expanded="<?php echo $typeIndex === 0 ? 'true' : 'false'; ?>" 
+                                                        aria-controls="collapse_<?php echo $safeTypeId; ?>">
+                                                    <span>
+                                                        <?php echo htmlspecialchars($type['name']); ?>
+                                                        <span class="badge badge-primary badge-pill ml-2"><?php echo $typeItemCount; ?></span>
+                                                    </span>
+                                                    <i id="icon_<?php echo $safeTypeId; ?>" class="fas fa-chevron-down <?php echo $typeIndex === 0 ? 'rotate-180' : ''; ?>"></i>
+                                                </button>
+                                            </h2>
+                                        </div>
+
+                                        <div id="collapse_<?php echo $safeTypeId; ?>" 
+                                             class="category-content <?php echo $typeIndex === 0 ? 'show' : 'hide'; ?>"
+                                             aria-labelledby="heading_<?php echo $safeTypeId; ?>">
+                                            <div class="card-body p-0">
+                                                <div class="table-responsive">
+                                                    <table class="table table-striped table-hover mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Seriennummer</th>
+                                                                <th>Status</th>
+                                                                <th>Zuweisung</th>
+                                                                <th>Aktionen</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <?php foreach ($equipmentByType[$type['id']] as $item): ?>
+                                                                <tr>
+                                                                    <td><?php echo htmlspecialchars($item['serial_number'] ?? 'N/A'); ?></td>
+                                                                    <td>
+                                                                        <?php 
+                                                                            $statusClass = 'secondary';
+                                                                            $status = strtolower($item['status']);
+                                                                            
+                                                                            if ($status === 'available') {
+                                                                                $statusClass = 'success';
+                                                                            } elseif ($status === 'assigned') {
+                                                                                $statusClass = 'primary';
+                                                                            } elseif ($status === 'maintenance') {
+                                                                                $statusClass = 'warning';
+                                                                            } elseif ($status === 'damaged') {
+                                                                                $statusClass = 'danger';
+                                                                            } elseif ($status === 'retired') {
+                                                                                $statusClass = 'dark';
+                                                                            }
+                                                                        ?>
+                                                                        <span class="badge badge-<?php echo $statusClass; ?>"><?php echo htmlspecialchars(mapStatusToGerman($item['status'])); ?></span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <?php 
+                                                                            if (isset($item['current_assignment'])) {
+                                                                                $staffId = $item['current_assignment']['staff_id'];
+                                                                                $staffName = 'Unknown';
+                                                                                
+                                                                                foreach ($staff as $s) {
+                                                                                    if ($s['id'] === $staffId) {
+                                                                                        $staffName = $s['name'];
+                                                                                        break;
+                                                                                    }
+                                                                                }
+                                                                                
+                                                                                echo htmlspecialchars($staffName);
+                                                                                echo '<br><small class="text-muted">' . date('d.m.Y', strtotime($item['current_assignment']['assigned_date'])) . '</small>';
+                                                                            } else {
+                                                                                echo '<span class="text-muted">Nicht zugewiesen</span>';
+                                                                            }
+                                                                        ?>
+                                                                    </td>
+                                                                    <td>
+                                                                        <a href="equipment.php?id=<?php echo $item['id']; ?>" class="btn btn-sm btn-secondary">
+                                                                            <span data-feather="eye"></span> Ansehen
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            <?php endforeach; ?>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php 
+                                    endforeach;
+                                else: 
+                                ?>
+                                    <p class="text-muted">Keine Ausrüstung mit den gewählten Filtern gefunden.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <?php if ($selectedEquipment): ?>
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4>Ausrüstungsdetails</h4>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#editEquipmentModal">
+                                        <span data-feather="edit"></span> Bearbeiten
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h5>
+                                    <?php 
+                                        $typeName = 'Unbekannter Typ';
+                                        foreach ($equipmentTypes as $type) {
+                                            if ($type['id'] === $selectedEquipment['type_id']) {
+                                                $typeName = $type['name'];
+                                                break;
+                                            }
+                                        }
+                                        echo htmlspecialchars($typeName);
+                                    ?>
+                                    <?php if (!empty($selectedEquipment['serial_number'])): ?>
+                                        <small class="text-muted">#<?php echo htmlspecialchars($selectedEquipment['serial_number']); ?></small>
+                                    <?php endif; ?>
+                                </h5>
+                                
+                                <p>
+                                    <strong>Status:</strong> 
+                                    <?php 
+                                        $statusClass = 'secondary';
+                                        $status = strtolower($selectedEquipment['status']);
+                                        
+                                        if ($status === 'available') {
+                                            $statusClass = 'success';
+                                        } elseif ($status === 'assigned') {
+                                            $statusClass = 'primary';
+                                        } elseif ($status === 'maintenance') {
+                                            $statusClass = 'warning';
+                                        } elseif ($status === 'damaged') {
+                                            $statusClass = 'danger';
+                                        } elseif ($status === 'retired') {
+                                            $statusClass = 'dark';
+                                        }
+                                    ?>
+                                    <span class="badge badge-<?php echo $statusClass; ?>"><?php echo htmlspecialchars(mapStatusToGerman($selectedEquipment['status'])); ?></span>
+                                </p>
+                                
+                                <?php if (!empty($selectedEquipment['description'])): ?>
+                                    <p><strong>Beschreibung:</strong> <?php echo htmlspecialchars($selectedEquipment['description']); ?></p>
+                                <?php endif; ?>
+                                
+                                <p><strong>Hinzugefügt am:</strong> <?php echo date('d.m.Y', strtotime($selectedEquipment['date_added'])); ?></p>
+                                
+                                <?php if (!empty($selectedEquipment['notes'])): ?>
+                                    <p><strong>Notizen:</strong> <?php echo nl2br(htmlspecialchars($selectedEquipment['notes'])); ?></p>
+                                <?php endif; ?>
+                                
+                                <?php if (isset($selectedEquipment['current_assignment'])): ?>
+                                    <div class="mt-4 mb-3">
+                                        <h5>Aktuelle Zuweisung</h5>
+                                        <?php 
+                                            $assignment = $selectedEquipment['current_assignment'];
+                                            $staffId = $assignment['staff_id'];
+                                            $staffName = 'Unbekannt';
+                                            
+                                            foreach ($staff as $s) {
+                                                if ($s['id'] === $staffId) {
+                                                    $staffName = $s['name'];
+                                                    break;
+                                                }
+                                            }
+                                        ?>
+                                        <p><strong>Zugewiesen an:</strong> <?php echo htmlspecialchars($staffName); ?></p>
+                                        <p><strong>Zugewiesen am:</strong> <?php echo date('d.m.Y', strtotime($assignment['assigned_date'])); ?></p>
+                                        
+                                        <?php 
+                                        // Zeige den Namen des Benutzers, der die Zuweisung vorgenommen hat
+                                        $assignedByUserId = $assignment['assigned_by'] ?? null;
+                                        if ($assignedByUserId) {
+                                            $assignedByUser = findById('users.json', $assignedByUserId);
+                                            $assignedByName = $assignedByUser ? $assignedByUser['username'] : 'Unbekannter Benutzer';
+                                            echo '<p><strong>Zugewiesen von:</strong> ' . htmlspecialchars($assignedByName) . '</p>';
+                                        }
+                                        ?>
+                                        
+                                        <?php if (!empty($assignment['notes'])): ?>
+                                            <p><strong>Notizen:</strong> <?php echo nl2br(htmlspecialchars($assignment['notes'])); ?></p>
+                                        <?php endif; ?>
+                                        
+                                        <button type="button" class="btn btn-warning" data-toggle="modal" data-target="#returnEquipmentModal">
+                                            <span data-feather="corner-down-left"></span> Ausrüstung zurückgeben
+                                        </button>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="mt-4 mb-3">
+                                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#assignEquipmentModal">
+                                            <span data-feather="user-plus"></span> Ausrüstung zuweisen
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <?php if (isset($selectedEquipment['assignment_history']) && count($selectedEquipment['assignment_history']) > 0): ?>
+                                    <div class="mt-4">
+                                        <h5>Zuweisungsverlauf</h5>
+                                        <div class="list-group">
+                                            <?php 
+                                                // Sort assignment history in reverse chronological order
+                                                $history = $selectedEquipment['assignment_history'];
+                                                usort($history, function($a, $b) {
+                                                    return strtotime($b['assigned_date']) - strtotime($a['assigned_date']);
+                                                });
+                                                
+                                                foreach ($history as $assignment): 
+                                                    $staffId = $assignment['staff_id'];
+                                                    $staffName = 'Unknown';
+                                                    
+                                                    foreach ($staff as $s) {
+                                                        if ($s['id'] === $staffId) {
+                                                            $staffName = $s['name'];
+                                                            break;
+                                                        }
+                                                    }
+                                            ?>
+                                                <div class="list-group-item">
+                                                    <div class="d-flex w-100 justify-content-between">
+                                                        <h6 class="mb-1"><?php echo htmlspecialchars($staffName); ?></h6>
+                                                        <small><?php echo date('d.m.Y', strtotime($assignment['assigned_date'])); ?></small>
+                                                    </div>
+                                                    <?php if (isset($assignment['return_date'])): ?>
+                                                        <p class="mb-1">
+                                                            <span class="badge badge-info">Zugewiesen</span> <?php echo date('d.m.Y', strtotime($assignment['assigned_date'])); ?>
+                                                            &nbsp;|&nbsp;
+                                                            <span class="badge badge-success">Zurückgegeben</span> <?php echo date('d.m.Y', strtotime($assignment['return_date'])); ?>
+                                                        </p>
+                                                    <?php else: ?>
+                                                        <p class="mb-1"><span class="badge badge-primary">Aktuell zugewiesen</span></p>
+                                                    <?php endif; ?>
+                                                    
+                                                    <?php 
+                                                    // Zeige den Namen des Benutzers, der die Zuweisung vorgenommen hat
+                                                    $assignedByUserId = $assignment['assigned_by'] ?? null;
+                                                    if ($assignedByUserId) {
+                                                        $assignedByUser = findById('users.json', $assignedByUserId);
+                                                        $assignedByName = $assignedByUser ? $assignedByUser['username'] : 'Unbekannter Benutzer';
+                                                        echo '<small><strong>Zugewiesen von:</strong> ' . htmlspecialchars($assignedByName) . '</small><br>';
+                                                    }
+                                                    ?>
+                                                    
+                                                    <?php if (!empty($assignment['notes'])): ?>
+                                                        <small><strong>Zuweisungsnotizen:</strong> <?php echo htmlspecialchars($assignment['notes']); ?></small>
+                                                    <?php endif; ?>
+                                                    
+                                                    <?php if (isset($assignment['return_date']) && !empty($assignment['return_notes'])): ?>
+                                                        <br>
+                                                        <small><strong>Rückgabenotizen:</strong> <?php echo htmlspecialchars($assignment['return_notes']); ?></small>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="mt-4 text-right">
+                                    <form method="post" action="equipment.php" class="d-inline">
+                                        <input type="hidden" name="action" value="delete_equipment">
+                                        <input type="hidden" name="equipment_id" value="<?php echo $selectedEquipment['id']; ?>">
+                                        <button type="submit" class="btn btn-sm btn-danger btn-delete" onclick="return confirm('Sind Sie sicher, dass Sie diese Ausrüstung löschen möchten? Dies kann nicht rückgängig gemacht werden.')">
+                                            <span data-feather="trash-2"></span> Ausrüstung löschen
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="text-center py-4">
+                                    <h5 class="mb-3">Ausrüstungsinformationen</h5>
+                                    <p>Wählen Sie einen Ausrüstungsgegenstand aus der Inventarliste, um dessen Details anzuzeigen, oder fügen Sie mit der Schaltfläche oben neue Ausrüstung hinzu.</p>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h6>Ausrüstungstypen</h6>
+                                    <div class="accordion" id="equipmentTypesAccordion">
+                                        <?php foreach ($equipmentTypes as $type): 
+                                            // Zähle Ausrüstungsgegenstände dieses Typs
+                                            $typeItems = [];
+                                            foreach ($equipment as $item) {
+                                                if ($item['type_id'] === $type['id']) {
+                                                    $typeItems[] = $item;
+                                                }
+                                            }
+                                            $itemCount = count($typeItems);
+                                            $typeId = $type['id'];
+                                        ?>
+                                            <div class="card">
+                                                <div class="card-header" id="heading<?php echo $typeId; ?>">
+                                                    <h2 class="mb-0">
+                                                        <button class="btn btn-link btn-block text-left d-flex justify-content-between align-items-center collapsed" 
+                                                                type="button" 
+                                                                data-toggle="collapse" 
+                                                                data-target="#collapse<?php echo $typeId; ?>" 
+                                                                aria-expanded="false" 
+                                                                aria-controls="collapse<?php echo $typeId; ?>">
+                                                            <?php echo htmlspecialchars($type['name']); ?>
+                                                            <span class="badge badge-primary badge-pill"><?php echo $itemCount; ?></span>
+                                                        </button>
+                                                    </h2>
+                                                </div>
+                                                <div id="collapse<?php echo $typeId; ?>" 
+                                                     class="collapse" 
+                                                     aria-labelledby="heading<?php echo $typeId; ?>" 
+                                                     data-parent="#equipmentTypesAccordion">
+                                                    <div class="card-body p-0">
+                                                        <?php if ($itemCount > 0): ?>
+                                                            <div class="list-group list-group-flush">
+                                                                <?php foreach ($typeItems as $item): ?>
+                                                                    <a href="equipment.php?id=<?php echo $item['id']; ?>" 
+                                                                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                                                                        <div>
+                                                                            <?php echo !empty($item['serial_number']) ? 
+                                                                                htmlspecialchars($item['serial_number']) : 
+                                                                                htmlspecialchars(substr($item['id'], 0, 8)); ?>
+                                                                            <?php if (!empty($item['description'])): ?>
+                                                                                <small class="d-block text-muted"><?php echo htmlspecialchars($item['description']); ?></small>
+                                                                            <?php endif; ?>
+                                                                        </div>
+                                                                        <?php 
+                                                                            $statusClass = 'secondary';
+                                                                            $statusText = $item['status'];
+                                                                            
+                                                                            switch($item['status']) {
+                                                                                case 'Available': 
+                                                                                    $statusClass = 'success';
+                                                                                    $statusText = 'Verfügbar';
+                                                                                    break;
+                                                                                case 'Assigned': 
+                                                                                    $statusClass = 'primary';
+                                                                                    $statusText = 'Zugewiesen';
+                                                                                    break;
+                                                                                case 'Maintenance': 
+                                                                                    $statusClass = 'warning';
+                                                                                    $statusText = 'In Wartung';
+                                                                                    break;
+                                                                                case 'Damaged': 
+                                                                                    $statusClass = 'danger';
+                                                                                    $statusText = 'Beschädigt';
+                                                                                    break;
+                                                                                case 'Retired': 
+                                                                                    $statusClass = 'dark';
+                                                                                    $statusText = 'Ausgemustert';
+                                                                                    break;
+                                                                            }
+                                                                        ?>
+                                                                        <span class="badge badge-<?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                                                    </a>
+                                                                <?php endforeach; ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <div class="p-3 text-muted">Keine Ausrüstung dieses Typs vorhanden.</div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Scripts für Modal-Funktionalität -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialisiere alle Bootstrap-Modals
+        $('.modal').on('shown.bs.modal', function() {
+            $(this).find('input:first').focus();
+        });
+        
+        // Bearbeitungs-Buttons für Ausrüstungstypen
+        document.querySelectorAll('[data-target^="#editTypeModal"]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var modalId = this.getAttribute('data-target');
+                $(modalId).modal('show');
+            });
+        });
+        
+        // Lösch-Buttons für Ausrüstungstypen
+        document.querySelectorAll('[data-target^="#deleteTypeModal"]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                var modalId = this.getAttribute('data-target');
+                $(modalId).modal('show');
+            });
+        });
+    });
+</script>
+
+<!-- Add Equipment Modal -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEquipmentModalLabel">Neue Ausrüstung hinzufügen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="equipment.php">
+                <input type="hidden" name="action" value="add_equipment">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="type_id">Ausrüstungstyp *</label>
+                        <select class="form-control" id="type_id" name="type_id" required>
+                            <option value="">Typ auswählen</option>
+                            <?php foreach ($equipmentTypes as $type): ?>
+                                <option value="<?php echo $type['id']; ?>">
+                                    <?php echo htmlspecialchars($type['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="serial_number">Serien-/Dienstmarken-Nummer</label>
+                        <input type="text" class="form-control" id="serial_number" name="serial_number">
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Beschreibung</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status</label>
+                        <select class="form-control" id="status" name="status">
+                            <option value="Available">Verfügbar</option>
+                            <option value="Maintenance">In Wartung</option>
+                            <option value="Damaged">Beschädigt</option>
+                            <option value="Retired">Ausgemustert</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="notes">Anmerkungen</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Equipment Type Modal -->
+<div class="modal fade" id="addEquipmentTypeModal" tabindex="-1" aria-labelledby="addEquipmentTypeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEquipmentTypeModalLabel">Ausrüstungstyp hinzufügen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="equipment.php">
+                <input type="hidden" name="action" value="add_equipment_type">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="type_name">Typname *</label>
+                        <input type="text" class="form-control" id="type_name" name="type_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="type_description">Beschreibung</label>
+                        <textarea class="form-control" id="type_description" name="type_description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<?php if ($selectedEquipment): ?>
+<!-- Edit Equipment Modal -->
+<div class="modal fade" id="editEquipmentModal" tabindex="-1" aria-labelledby="editEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editEquipmentModalLabel">Ausrüstung bearbeiten</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="equipment.php">
+                <input type="hidden" name="action" value="update_equipment">
+                <input type="hidden" name="equipment_id" value="<?php echo $selectedEquipment['id']; ?>">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_type_id">Ausrüstungstyp *</label>
+                        <select class="form-control" id="edit_type_id" name="type_id" required>
+                            <option value="">Typ auswählen</option>
+                            <?php foreach ($equipmentTypes as $type): ?>
+                                <option value="<?php echo $type['id']; ?>" <?php echo ($selectedEquipment['type_id'] === $type['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($type['name']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_serial_number">Serien-/Dienstmarken-Nummer</label>
+                        <input type="text" class="form-control" id="edit_serial_number" name="serial_number" value="<?php echo htmlspecialchars($selectedEquipment['serial_number'] ?? ''); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_description">Beschreibung</label>
+                        <textarea class="form-control" id="edit_description" name="description" rows="2"><?php echo htmlspecialchars($selectedEquipment['description'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_status">Status</label>
+                        <select class="form-control" id="edit_status" name="status">
+                            <option value="Available" <?php echo ($selectedEquipment['status'] === 'Available') ? 'selected' : ''; ?>>Verfügbar</option>
+                            <option value="Assigned" <?php echo ($selectedEquipment['status'] === 'Assigned') ? 'selected' : ''; ?>>Zugewiesen</option>
+                            <option value="Maintenance" <?php echo ($selectedEquipment['status'] === 'Maintenance') ? 'selected' : ''; ?>>In Wartung</option>
+                            <option value="Damaged" <?php echo ($selectedEquipment['status'] === 'Damaged') ? 'selected' : ''; ?>>Beschädigt</option>
+                            <option value="Retired" <?php echo ($selectedEquipment['status'] === 'Retired') ? 'selected' : ''; ?>>Ausgemustert</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_notes">Anmerkungen</label>
+                        <textarea class="form-control" id="edit_notes" name="notes" rows="3"><?php echo htmlspecialchars($selectedEquipment['notes'] ?? ''); ?></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Änderungen speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Equipment Modal -->
+<?php if (!isset($selectedEquipment['current_assignment'])): ?>
+<div class="modal fade" id="assignEquipmentModal" tabindex="-1" aria-labelledby="assignEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignEquipmentModalLabel">Ausrüstung zuweisen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="equipment.php">
+                <input type="hidden" name="action" value="assign_equipment">
+                <input type="hidden" name="equipment_id" value="<?php echo $selectedEquipment['id']; ?>">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="staff_id">Mitarbeiter zuweisen *</label>
+                        <select class="form-control" id="staff_id" name="staff_id" required>
+                            <option value="">Mitarbeiter auswählen</option>
+                            <?php foreach ($staff as $member): ?>
+                                <option value="<?php echo $member['id']; ?>">
+                                    <?php echo htmlspecialchars($member['name']); ?>
+                                    <?php if (!empty($member['badge_number'])): ?>
+                                        (Dienstmarke: <?php echo htmlspecialchars($member['badge_number']); ?>)
+                                    <?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignment_notes">Anmerkungen zur Zuweisung</label>
+                        <textarea class="form-control" id="assignment_notes" name="assignment_notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Ausrüstung zuweisen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Return Equipment Modal -->
+<?php if (isset($selectedEquipment['current_assignment'])): ?>
+<div class="modal fade" id="returnEquipmentModal" tabindex="-1" aria-labelledby="returnEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="returnEquipmentModalLabel">Ausrüstung zurückgeben</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="equipment.php">
+                <input type="hidden" name="action" value="return_equipment">
+                <input type="hidden" name="equipment_id" value="<?php echo $selectedEquipment['id']; ?>">
+                <div class="modal-body">
+                    <p>
+                        Diese Ausrüstung ist derzeit zugewiesen an:
+                        <strong>
+                            <?php 
+                                $staffId = $selectedEquipment['current_assignment']['staff_id'];
+                                $staffName = 'Unbekannt';
+                                
+                                foreach ($staff as $s) {
+                                    if ($s['id'] === $staffId) {
+                                        $staffName = $s['name'];
+                                        break;
+                                    }
+                                }
+                                echo htmlspecialchars($staffName);
+                            ?>
+                        </strong>
+                    </p>
+                    <div class="form-group">
+                        <label for="return_notes">Anmerkungen zur Rückgabe</label>
+                        <textarea class="form-control" id="return_notes" name="return_notes" rows="3" placeholder="Vermerken Sie etwaige Beschädigungen, den Zustand oder andere relevante Informationen über die zurückgegebene Ausrüstung."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-warning">Ausrüstung zurückgeben</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+<?php endif; ?>
+
+<?php include '../includes/footer.php'; ?>

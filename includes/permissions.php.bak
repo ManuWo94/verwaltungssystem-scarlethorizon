@@ -1,0 +1,545 @@
+<?php
+/**
+ * Permission system for the Department of Justice application
+ * This file defines permissions for different user roles
+ */
+
+/**
+ * Defines all available modules and their human-readable names
+ */
+function getAvailableModules() {
+    return [
+        'admin' => 'Administrationsbereich',
+        'users' => 'Benutzerverwaltung',
+        'roles' => 'Rollenverwaltung',
+        'cases' => 'Fallakten',
+        'indictments' => 'Klageschriften',
+        'appeals' => 'Revisionen',
+        'defendants' => 'Angeklagte',
+        'hearings' => 'Verhandlungen',
+        'templates' => 'Vorlagen',
+        'staff' => 'Mitarbeiter',
+        'trainings' => 'Schulungen',
+        'equipment' => 'Ausrüstung',
+        'notes' => 'Notizen',
+        'calendar' => 'Kalender',
+        'files' => 'Dateien',
+        'duty_log' => 'Dienstprotokoll',
+        'vacation' => 'Urlaubsanträge',
+        'address_book' => 'Adressbuch',
+        'seized_assets' => 'Beschlagnahmungen'
+    ];
+}
+
+/**
+ * Defines all available actions for permission checking
+ */
+function getAvailableActions() {
+    return [
+        'view' => 'Ansehen',
+        'create' => 'Erstellen',
+        'edit' => 'Bearbeiten',
+        'delete' => 'Löschen',
+        'approve' => 'Genehmigen',
+        'reject' => 'Ablehnen',
+        'assign' => 'Zuweisen',
+        'schedule' => 'Terminieren',
+        'verdict' => 'Urteil eintragen',
+        'appeal' => 'Revision beantragen',
+        'appeal_verdict' => 'Revisionsurteil eintragen',
+        'lock' => 'Sperren',
+        'unlock' => 'Entsperren'
+    ];
+}
+
+/**
+ * Returns all permission definitions for all roles
+ * This is the central permission configuration
+ */
+function getRolePermissions() {
+    // Common access for all roles
+    $commonAccess = [
+        'duty_log' => ['view', 'create', 'edit', 'delete'],
+        'notes' => ['view', 'create', 'edit', 'delete'],
+        'calendar' => ['view', 'create', 'edit', 'delete'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit', 'delete']
+    ];
+    
+    // Calculate permissions for each role
+    $permissions = [];
+    
+    // Chief Justice (System Administrator)
+    $permissions['chief_justice'] = array_merge($commonAccess, [
+        'admin' => ['view', 'create', 'edit', 'delete'],
+        'users' => ['view', 'create', 'edit', 'delete', 'lock', 'unlock'],
+        'roles' => ['view', 'create', 'edit', 'delete'],
+        'cases' => ['view', 'create', 'edit', 'delete'],
+        'indictments' => ['view', 'create', 'edit', 'delete', 'approve', 'reject', 'schedule', 'verdict'],
+        'appeals' => ['view', 'create', 'edit', 'delete', 'approve', 'reject', 'appeal_verdict'],
+        'defendants' => ['view', 'create', 'edit', 'delete'],
+        'hearings' => ['view', 'create', 'edit', 'delete'],
+        'templates' => ['view', 'create', 'edit', 'delete'],
+        'staff' => ['view', 'create', 'edit', 'delete'],
+        'trainings' => ['view', 'create', 'edit', 'delete', 'assign'],
+        'equipment' => ['view', 'create', 'edit', 'delete', 'assign'],
+        'calendar' => ['view', 'create', 'edit', 'delete'],
+        'files' => ['view', 'create', 'edit', 'delete'],
+        'vacation' => ['view', 'create', 'edit', 'delete', 'approve', 'reject'],
+        'address_book' => ['view', 'create', 'edit', 'delete'],
+        'seized_assets' => ['view', 'create', 'edit', 'delete']
+    ]);
+    
+    // Senior Associate Justice
+    $permissions['senior_associate_justice'] = array_merge($commonAccess, [
+        'admin' => ['view', 'create', 'edit'],
+        'users' => ['view', 'create', 'edit', 'lock', 'unlock'],
+        'roles' => ['view', 'create', 'edit'],
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'create', 'edit', 'approve', 'reject', 'schedule', 'verdict'],
+        'appeals' => ['view', 'create', 'edit', 'approve', 'reject', 'appeal_verdict'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view', 'create', 'edit'],
+        'trainings' => ['view', 'create', 'edit', 'assign'],
+        'equipment' => ['view', 'create', 'edit', 'assign'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create', 'edit', 'approve', 'reject'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view', 'create', 'edit']
+    ]);
+    
+    // Attorney General
+    $permissions['attorney_general'] = array_merge($commonAccess, [
+        'admin' => ['view', 'create', 'edit'],
+        'users' => ['view', 'create', 'edit', 'lock', 'unlock'],
+        'roles' => ['view', 'create', 'edit'],
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'create', 'edit', 'approve', 'reject', 'schedule', 'verdict'],
+        'appeals' => ['view', 'create', 'edit', 'approve', 'reject', 'appeal_verdict'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view', 'create', 'edit'],
+        'trainings' => ['view', 'create', 'edit', 'assign'],
+        'equipment' => ['view', 'create', 'edit', 'assign'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create', 'edit', 'approve', 'reject'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view', 'create', 'edit']
+    ]);
+    
+    // Administrative Assistant
+    $permissions['administrative_assistant'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view', 'create', 'edit']
+    ]);
+    
+    // District Court Judge
+    $permissions['district_court_judge'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'approve', 'reject', 'schedule', 'verdict'],
+        'appeals' => ['view', 'approve', 'reject', 'appeal_verdict'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view'],
+        'trainings' => ['view', 'create', 'edit', 'assign'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view']
+    ]);
+    
+    // Judge
+    $permissions['judge'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'approve', 'reject', 'schedule', 'verdict'],
+        'appeals' => ['view', 'approve', 'reject', 'appeal_verdict'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view']
+    ]);
+    
+    // Magistrate
+    $permissions['magistrate'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'approve', 'reject', 'schedule', 'verdict'],
+        'appeals' => ['view', 'approve', 'reject', 'appeal_verdict'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view']
+    ]);
+    
+    // Junior Magistrate
+    $permissions['junior_magistrate'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view'],
+        'appeals' => ['view'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view']
+    ]);
+    
+    // District Attorney
+    $permissions['district_attorney'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'create', 'edit'],
+        'appeals' => ['view', 'create', 'edit', 'appeal'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view', 'create', 'edit'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view', 'create', 'edit'],
+        'trainings' => ['view', 'create', 'edit', 'assign'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create', 'edit', 'approve', 'reject'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view', 'create', 'edit']
+    ]);
+    
+    // Senior Prosecutor
+    $permissions['senior_prosecutor'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'create', 'edit'],
+        'appeals' => ['view', 'create', 'edit', 'appeal'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view', 'create', 'edit']
+    ]);
+    
+    // Prosecutor
+    $permissions['prosecutor'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'create', 'edit'],
+        'appeals' => ['view', 'create', 'edit', 'appeal'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view'],
+        'templates' => ['view', 'create', 'edit'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view', 'create', 'edit']
+    ]);
+    
+    // Junior Prosecutor
+    $permissions['junior_prosecutor'] = array_merge($commonAccess, [
+        'cases' => ['view', 'create', 'edit'],
+        'indictments' => ['view', 'create', 'edit'],
+        'appeals' => ['view', 'create', 'edit', 'appeal'],
+        'defendants' => ['view', 'create', 'edit'],
+        'hearings' => ['view'],
+        'templates' => ['view'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'files' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit'],
+        'seized_assets' => ['view', 'create', 'edit']
+    ]);
+    
+    // Student
+    $permissions['student'] = array_merge($commonAccess, [
+        'cases' => ['view'],
+        'indictments' => ['view'],
+        'defendants' => ['view'],
+        'templates' => ['view'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'files' => ['view'],
+        'address_book' => ['view']
+    ]);
+    
+    // Director (U.S. Marshal Service)
+    $permissions['director'] = array_merge($commonAccess, [
+        'staff' => ['view', 'create', 'edit'],
+        'trainings' => ['view', 'create', 'edit', 'assign'],
+        'equipment' => ['view', 'create', 'edit', 'assign'],
+        'calendar' => ['view', 'create', 'edit'],
+        'cases' => ['view'],
+        'seized_assets' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create', 'approve', 'reject'],
+        'address_book' => ['view', 'create', 'edit']
+    ]);
+    
+    // Commander (U.S. Marshal Service)
+    $permissions['commander'] = array_merge($commonAccess, [
+        'staff' => ['view', 'create', 'edit'],
+        'trainings' => ['view', 'create', 'edit', 'assign'],
+        'equipment' => ['view', 'create', 'edit', 'assign'],
+        'calendar' => ['view', 'create', 'edit'],
+        'cases' => ['view'],
+        'seized_assets' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create', 'approve', 'reject'],
+        'address_book' => ['view', 'create', 'edit']
+    ]);
+    
+    // Senior Deputy (U.S. Marshal Service)
+    $permissions['senior_deputy'] = array_merge($commonAccess, [
+        'staff' => ['view', 'create', 'edit'],
+        'trainings' => ['view', 'create', 'edit', 'assign'],
+        'equipment' => ['view', 'create', 'edit', 'assign'],
+        'calendar' => ['view', 'create', 'edit'],
+        'cases' => ['view'],
+        'seized_assets' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit']
+    ]);
+    
+    // Deputy (U.S. Marshal Service)
+    $permissions['deputy'] = array_merge($commonAccess, [
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'cases' => ['view'],
+        'seized_assets' => ['view', 'create', 'edit'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit']
+    ]);
+    
+    // Junior Deputy (U.S. Marshal Service)
+    $permissions['junior_deputy'] = array_merge($commonAccess, [
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view', 'create', 'edit'],
+        'cases' => ['view'],
+        'seized_assets' => ['view'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view', 'create', 'edit']
+    ]);
+    
+    // Trainee (U.S. Marshal Service)
+    $permissions['trainee'] = array_merge($commonAccess, [
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view'],
+        'vacation' => ['view', 'create'],
+        'address_book' => ['view']
+    ]);
+    
+    // U.S. President (External)
+    $permissions['president'] = [
+        'cases' => ['view'],
+        'indictments' => ['view'],
+        'appeals' => ['view'],
+        'defendants' => ['view'],
+        'hearings' => ['view'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view'],
+        'files' => ['view'],
+        'address_book' => ['view'],
+        'seized_assets' => ['view']
+    ];
+    
+    // Staatssekretär (External)
+    $permissions['secretary'] = [
+        'cases' => ['view'],
+        'indictments' => ['view'],
+        'appeals' => ['view'],
+        'defendants' => ['view'],
+        'hearings' => ['view'],
+        'staff' => ['view'],
+        'trainings' => ['view'],
+        'equipment' => ['view'],
+        'calendar' => ['view'],
+        'files' => ['view'],
+        'address_book' => ['view'],
+        'seized_assets' => ['view']
+    ];
+    
+    // Army (External)
+    $permissions['army'] = [
+        'cases' => ['view'],
+        'calendar' => ['view'],
+        'address_book' => ['view'],
+        'seized_assets' => ['view'],
+        'staff' => ['view']
+    ];
+    
+    // Sheriff (External)
+    $permissions['sheriff'] = [
+        'cases' => ['view'],
+        'calendar' => ['view'],
+        'address_book' => ['view'],
+        'seized_assets' => ['view'],
+        'staff' => ['view']
+    ];
+    
+    return $permissions;
+}
+
+/**
+ * Check if a user has permission to perform an action on a module
+ * 
+ * @param string $userId The user ID
+ * @param string $module The module to check
+ * @param string $action The action to check
+ * @return bool True if user has permission, false otherwise
+ */
+function checkUserPermission($userId, $module, $action) {
+    // Benutzer abrufen
+    $user = findById('users.json', $userId);
+    if (!$user) {
+        return false;
+    }
+    
+    // If user is Chief Justice (system administrator), grant all permissions
+    if (isset($user['roles']) && in_array('Chief Justice', $user['roles'])) {
+        return true;
+    }
+    
+    // Get role permissions
+    $rolePermissions = getRolePermissions();
+    
+    // Check permissions for each role the user has
+    if (isset($user['roles']) && is_array($user['roles'])) {
+        foreach ($user['roles'] as $roleName) {
+            // Zuerst prüfen, ob eine role_id direkt im Benutzer gespeichert ist
+            $roleId = isset($user['role_id']) ? $user['role_id'] : strtolower(str_replace(' ', '_', $roleName));
+            
+            // Check if role exists in permissions
+            if (isset($rolePermissions[$roleId])) {
+                // Check if module exists for this role
+                if (isset($rolePermissions[$roleId][$module])) {
+                    // Check if action is allowed for this module
+                    if (in_array($action, $rolePermissions[$roleId][$module])) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    
+    // If single role is set (legacy support)
+    if (isset($user['role'])) {
+        // Zuerst prüfen, ob eine role_id direkt im Benutzer gespeichert ist
+        $roleId = isset($user['role_id']) ? $user['role_id'] : strtolower(str_replace(' ', '_', $user['role']));
+        
+        if (isset($rolePermissions[$roleId])) {
+            if (isset($rolePermissions[$roleId][$module])) {
+                if (in_array($action, $rolePermissions[$roleId][$module])) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Get all modules a user has access to (at least view permission)
+ * 
+ * @param string $userId The user ID
+ * @return array List of module IDs the user can access
+ */
+function getAccessibleModules($userId) {
+    $modules = getAvailableModules();
+    $accessibleModules = [];
+    
+    foreach (array_keys($modules) as $moduleId) {
+        if (checkUserPermission($userId, $moduleId, 'view')) {
+            $accessibleModules[] = $moduleId;
+        }
+    }
+    
+    return $accessibleModules;
+}
+
+/**
+ * Check if user has permission and redirect to access denied if not
+ * 
+ * @param string $module The module to check
+ * @param string $action The action to check
+ * @return void Redirects to access_denied.php if user doesn't have permission
+ */
+function checkPermissionAndRedirect($module, $action) {
+    if (!isset($_SESSION['user_id'])) {
+        // Not logged in, redirect to login
+        header('Location: ' . getBaseUrl() . 'login.php');
+        exit;
+    }
+    
+    if (!checkUserPermission($_SESSION['user_id'], $module, $action)) {
+        // No permission, redirect to access denied
+        header('Location: ' . getBaseUrl() . 'access_denied.php');
+        exit;
+    }
+}
+
+/**
+ * Utility function to get the base URL for redirects
+ * 
+ * @return string The base URL with trailing slash
+ */
+function getBaseUrl() {
+    // Check if we're in a subdirectory
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+    $baseUrl = '';
+    
+    // If we're in a module directory, go up one level
+    if (strpos($scriptDir, '/modules') !== false || strpos($scriptDir, '/admin') !== false) {
+        $baseUrl = '../';
+    }
+    
+    return $baseUrl;
+}

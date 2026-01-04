@@ -1,0 +1,2838 @@
+<?php
+/**
+ * Aktenverwaltungssystem - Department of Justice
+ * Gewerbeschein-Verwaltungsmodul
+ * 
+ * Dieses Modul ermöglicht die Verwaltung von Unternehmensdaten, Pachtverträgen und Gewerbescheinen
+ * inklusive Verlängerung, Statusüberwachung und Protokollierung aller Aktionen.
+ * 
+ * Funktionen:
+ * - Verwaltung von Unternehmensdaten (Name, Inhaber, Stellvertreter, Kontaktdaten)
+ * - Pachtvertragsverwaltung mit automatischer Berechnung der Ablaufdaten
+ * - Überwachung der Gewerbeschein-Gültigkeit mit farbcodiertem Status
+ * - Dokumentation und Protokollierung aller Maßnahmen und Benachrichtigungen
+ * - Verwaltung von Unternehmenslizenzen
+ */
+
+// Lade essentielle Dateien
+require_once '../includes/session_config.php'; // Stellt sicher, dass Upload-Limits korrekt konfiguriert sind
+require_once '../includes/functions.php';
+require_once '../includes/db.php';
+require_once '../includes/auth.php';
+require_once '../includes/permissions.php';
+
+// Überprüfen, ob der Benutzer angemeldet ist
+if (!isset($_SESSION['user_id'])) {
+    header('Location: ../login.php');
+    exit;
+}
+
+$user_id = $_SESSION['user_id'];
+$username = $_SESSION['username'];
+$role = $_SESSION['role']; // Hauptrolle
+$roles = isset($_SESSION['roles']) ? $_SESSION['roles'] : [$role]; // Alle Rollen
+$message = '';
+$error = '';
+
+// Dateinamen für die Gewerbeschein-Daten
+$businessLicensesFile = 'data/business_licenses.json';
+$businessLicensesLogFile = 'data/business_licenses_log.json';
+
+// Verzeichnis für Pachtvertragsanlagen
+$uploadsDir = '../uploads/business_contracts/';
+
+/**
+ * Hilfsfunktion zum sicheren Finden eines Unternehmens anhand seiner ID
+ * 
+ * @param array $businesses Array mit allen Unternehmen
+ * @param string $targetId ID des gesuchten Unternehmens
+ * @return array|null Das gefundene Unternehmen oder null
+ */
+function findBusinessById($businesses, $targetId) {
+    if (empty($targetId)) {
+        error_log('Leere Business-ID übergeben');
+        return null;
+    }
+    
+    $targetId = trim((string)$targetId);
+    error_log("Suche nach Business mit ID: '$targetId'");
+    
+    foreach ($businesses as $business) {
+        if (!isset($business['id'])) {
+            error_log('Business ohne ID gefunden, überspringe');
+            continue;
+        }
+        
+        $businessId = trim((string)$business['id']);
+        
+        // Detaillierte Protokollierung für Debugging
+        error_log("Vergleiche Business IDs - aktuell: '$businessId' mit Ziel: '$targetId'");
+        
+        if ($businessId === $targetId) {
+            error_log("Business gefunden: " . ($business['name'] ?? 'unbekannt'));
+            return $business;
+        }
+    }
+    
+    error_log("Kein Business mit ID '$targetId' gefunden");
+    return null;
+}
+
+// Verzeichnisse erstellen, falls sie nicht existieren
+if (!file_exists(dirname($businessLicensesFile))) {
+    mkdir(dirname($businessLicensesFile), 0755, true);
+}
+
+if (!file_exists($uploadsDir)) {
+    mkdir($uploadsDir, 0755, true);
+}
+
+// Lade Unternehmensdaten
+$businesses = getJsonData($businessLicensesFile);
+if ($businesses === false) {
+    $businesses = [];
+}
+
+// Lade Protokolldaten
+$businessLogs = getJsonData($businessLicensesLogFile);
+if ($businessLogs === false) {
+    $businessLogs = [];
+}
+
+/**
+ * Protokolliert eine Aktion im Zusammenhang mit Gewerbescheinen
+ * 
+ * @param string $businessId ID des Unternehmens
+ * @param string $businessName Name des Unternehmens
+ * @param string $action Art der Aktion (z.B. "erstellt", "verlängert", "benachrichtigt")
+ * @param string $details Zusätzliche Details zur Aktion
+ * @return bool Erfolg der Protokollierung
+ */
+function logBusinessAction($businessId, $businessName, $action, $details = '') {
+    global $user_id, $username, $businessLogs, $businessLicensesLogFile;
+    
+    $logEntry = [
+        'id' => generateUniqueId(),
+        'timestamp' => date('Y-m-d H:i:s'),
+        'user_id' => $user_id,
+        'username' => $username,
+        'business_id' => $businessId,
+        'business_name' => $businessName,
+        'action' => $action,
+        'details' => $details
+    ];
+    
+    $businessLogs[] = $logEntry;
+    return saveJsonData($businessLicensesLogFile, $businessLogs);
+}
+
+/**
+ * Berechnet den Status eines Gewerbescheins basierend auf seinem Ablaufdatum
+ * 
+ * @param string $expiryDate Ablaufdatum im Format 'Y-m-d'
+ * @return array Array mit Status (green, yellow, red, black) und verbleibenden Tagen
+ */
+function calculateLicenseStatus($expiryDate) {
+    // Aktuelles Datum mit Uhrzeit 00:00:00
+    $today = new DateTime();
+    $today->setTime(0, 0, 0);
+    
+    try {
+        // Sicherstellen, dass das Ablaufdatum ein gültiges Datum ist
+        $expiry = new DateTime($expiryDate);
+        $expiry->setTime(0, 0, 0);
+        
+        // Differenz zwischen heute und Ablaufdatum berechnen
+        $interval = $today->diff($expiry);
+        
+        // Negative Tage, wenn das Ablaufdatum in der Vergangenheit liegt
+        $daysRemaining = $interval->invert ? -$interval->days : $interval->days;
+        
+        // Debug-Protokoll
+        error_log("Ablaufdatum: $expiryDate, Heute: " . $today->format('Y-m-d') . ", Tage verbleibend: $daysRemaining");
+        
+        // Normale Gültigkeit (grün): mehr als 7 Tage verbleibend
+        if ($daysRemaining > 7) {
+            return [
+                'status' => 'green',
+                'days_remaining' => $daysRemaining,
+                'text' => 'Gültig',
+                'color_class' => 'bg-success',
+                'needs_action' => false
+            ];
+        }
+        
+        // Vorwarnphase (gelb): 0-7 Tage verbleibend
+        elseif ($daysRemaining >= 0) {
+            return [
+                'status' => 'yellow',
+                'days_remaining' => $daysRemaining,
+                'text' => 'Vorwarnung',
+                'color_class' => 'bg-warning',
+                'needs_action' => true
+            ];
+        }
+        
+        // Nachfrist (rot): 1-28 Tage abgelaufen
+        elseif ($daysRemaining >= -28) {
+            return [
+                'status' => 'red',
+                'days_remaining' => 28 + $daysRemaining, // umwandeln in positive Zahl für die verbleibenden Tage
+                'text' => 'Nachfrist',
+                'color_class' => 'bg-danger',
+                'needs_action' => true
+            ];
+        }
+        
+        // Letzter Aufschub (schwarz): 29-42 Tage abgelaufen
+        elseif ($daysRemaining >= -42) {
+            return [
+                'status' => 'black',
+                'days_remaining' => 42 + $daysRemaining, // umwandeln in positive Zahl für die verbleibenden Tage
+                'text' => 'Letzter Aufschub',
+                'color_class' => 'bg-dark',
+                'needs_action' => true
+            ];
+        }
+        
+        // Vollständig abgelaufen (grau): mehr als 42 Tage abgelaufen
+        else {
+            return [
+                'status' => 'expired',
+                'days_remaining' => 0,
+                'text' => 'Abgelaufen',
+                'color_class' => 'bg-secondary',
+                'needs_action' => true
+            ];
+        }
+    } catch (Exception $e) {
+        // Bei ungültigem Datum als abgelaufen markieren
+        error_log("Fehler bei der Datumsberechnung: " . $e->getMessage() . " für Datum: $expiryDate");
+        return [
+            'status' => 'expired',
+            'days_remaining' => 0,
+            'text' => 'Abgelaufen (Fehler)',
+            'color_class' => 'bg-secondary',
+            'needs_action' => true
+        ];
+    }
+}
+
+/**
+ * Berechnet das Ablaufdatum eines Pachtvertrags basierend auf einem Startdatum
+ * 
+ * @param string $startDate Startdatum im Format 'Y-m-d'
+ * @return string Ablaufdatum im Format 'Y-m-d'
+ */
+function calculateExpiryDate($startDate) {
+    $date = new DateTime($startDate);
+    $date->modify('+28 days');
+    return $date->format('Y-m-d');
+}
+
+/**
+ * Berechnet das Ablaufdatum des Gewerbescheins (28 Tage ab Startdatum)
+ * 
+ * @param string $startDate Startdatum im Format 'Y-m-d'
+ * @param int $remainingDays Verbleibende Tage aus früherem Gewerbeschein, die addiert werden
+ * @return string Ablaufdatum im Format 'Y-m-d'
+ */
+function calculateLicenseExpiryDate($startDate, $remainingDays = 0) {
+    try {
+        // Validiere Eingabeparameter
+        if (empty($startDate)) {
+            error_log("calculateLicenseExpiryDate: Leeres Startdatum übergeben");
+            $startDate = date('Y-m-d'); // Heutiges Datum als Fallback
+        }
+        
+        // Validiere das Datumsformat
+        if (!DateTime::createFromFormat('Y-m-d', $startDate)) {
+            error_log("calculateLicenseExpiryDate: Ungültiges Datumsformat für '$startDate', verwende heutiges Datum");
+            $startDate = date('Y-m-d');
+        }
+        
+        $date = new DateTime($startDate);
+        $date->setTime(0, 0, 0); // Setze Zeit auf 00:00:00
+        
+        // Debug-Info für Eingabeparameter
+        error_log("calculateLicenseExpiryDate - Startdatum: $startDate, Verbleibende Tage: $remainingDays");
+        
+        // Immer 28 Tage Basislaufzeit
+        $date->modify('+28 days');
+        
+        // Füge verbleibende Tage hinzu, wenn vorhanden und positiv
+        if ($remainingDays > 0) {
+            $date->modify('+' . intval($remainingDays) . ' days');
+        }
+        
+        $expiryDate = $date->format('Y-m-d');
+        
+        // Debug-Info für das berechnete Datum
+        error_log("calculateLicenseExpiryDate - Berechnetes Ablaufdatum: $expiryDate");
+        
+        return $expiryDate;
+    } catch (Exception $e) {
+        // Bei Fehlern protokollieren und ein Standard-Ablaufdatum zurückgeben
+        error_log("Fehler bei der Berechnung des Ablaufdatums: " . $e->getMessage());
+        
+        // Fallback: 28 Tage ab heute
+        $date = new DateTime();
+        $date->modify('+28 days');
+        return $date->format('Y-m-d');
+    }
+}
+
+/**
+ * Berechnet die verbleibenden Tage eines Gewerbescheins
+ * 
+ * @param string $expiryDate Ablaufdatum im Format 'Y-m-d'
+ * @return int Anzahl der verbleibenden Tage (0 wenn abgelaufen)
+ */
+function calculateRemainingDays($expiryDate) {
+    try {
+        if (empty($expiryDate)) {
+            error_log("calculateRemainingDays: Leeres Ablaufdatum übergeben");
+            return 0;
+        }
+        
+        // Validiere das Datumsformat
+        if (!DateTime::createFromFormat('Y-m-d', $expiryDate)) {
+            error_log("calculateRemainingDays: Ungültiges Datumsformat für '$expiryDate'");
+            return 0;
+        }
+        
+        $today = new DateTime('now');
+        $today->setTime(0, 0, 0); // Setze Zeit auf 00:00:00
+        
+        $expiry = new DateTime($expiryDate);
+        $expiry->setTime(23, 59, 59); // Setze Zeit auf 23:59:59
+        
+        // Ausgabe für Debugging
+        error_log("calculateRemainingDays - Ablaufdatum: $expiryDate, Heute: " . $today->format('Y-m-d'));
+        
+        // Wenn Ablaufdatum in der Vergangenheit liegt, gib 0 zurück
+        if ($expiry < $today) {
+            error_log("calculateRemainingDays: Ablaufdatum liegt in der Vergangenheit");
+            return 0;
+        }
+        
+        $interval = $today->diff($expiry);
+        $daysRemaining = $interval->days;
+        
+        error_log("calculateRemainingDays: Verbleibende Tage: $daysRemaining");
+        return $daysRemaining;
+    } catch (Exception $e) {
+        error_log("Fehler in calculateRemainingDays: " . $e->getMessage());
+        return 0;
+    }
+}
+
+// Hier haben wir die getUserFullName-Funktion entfernt, da sie bereits 
+// in includes/functions.php definiert ist und nun von dort verwendet wird.
+
+/**
+ * Bereinigt einen Dateinamen
+ * 
+ * @param string $filename Der Dateiname
+ * @return string Der bereinigte Dateiname
+ */
+function sanitizeFilename($filename) {
+    // Unerwünschte Zeichen entfernen und durch Unterstrich ersetzen
+    $filename = preg_replace('/[^\w\.-]/i', '_', $filename);
+    return $filename;
+}
+
+/**
+ * Gibt den MIME-Typ einer Datei zurück und prüft, ob er erlaubt ist
+ * 
+ * @param string $filepath Der Pfad zur Datei
+ * @return array Array mit MIME-Typ und Erlaubnis-Flag
+ */
+function checkFileMimeType($filepath) {
+    $mime = mime_content_type($filepath);
+    
+    // Erlaubte MIME-Typen für Pachtverträge
+    $allowedMimes = [
+        'application/pdf',
+        'image/png',
+        'image/jpeg',
+        'image/jpg'
+    ];
+    
+    return [
+        'mime' => $mime,
+        'allowed' => in_array($mime, $allowedMimes)
+    ];
+}
+
+/**
+ * Formatiert eine Dateigröße in eine menschenlesbare Form
+ * 
+ * @param int $bytes Die Größe in Bytes
+ * @return string Die formatierte Größe
+ */
+function formatFileSize($bytes) {
+    if ($bytes >= 1073741824) {
+        return number_format($bytes / 1073741824, 2, ',', '.') . ' GB';
+    } elseif ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2, ',', '.') . ' MB';
+    } elseif ($bytes >= 1024) {
+        return number_format($bytes / 1024, 2, ',', '.') . ' KB';
+    } else {
+        return $bytes . ' Bytes';
+    }
+}
+
+/**
+ * Gibt ein passendes Icon für einen MIME-Typ zurück
+ * 
+ * @param string $mime Der MIME-Typ
+ * @return string Font Awesome Icon-Klasse
+ */
+function getMimeIcon($mime) {
+    switch ($mime) {
+        case 'application/pdf':
+            return 'fas fa-file-pdf';
+        case 'image/png':
+        case 'image/jpeg':
+        case 'image/jpg':
+            return 'fas fa-file-image';
+        default:
+            return 'fas fa-file';
+    }
+}
+
+// Aktuellen Status für jedes Unternehmen berechnen
+foreach ($businesses as &$business) {
+    $business['status'] = calculateLicenseStatus($business['license_expiry']);
+}
+unset($business); // Referenz lösen
+
+// Sortiere Unternehmen nach Status (kritische zuerst, dann alphabetisch)
+usort($businesses, function($a, $b) {
+    // Statuspriorität: expired > black > red > yellow > green
+    $statusPriority = [
+        'expired' => 0,
+        'black' => 1,
+        'red' => 2,
+        'yellow' => 3,
+        'green' => 4
+    ];
+    
+    $statusA = $a['status']['status'];
+    $statusB = $b['status']['status'];
+    
+    // Vergleiche zuerst nach Status
+    if ($statusPriority[$statusA] !== $statusPriority[$statusB]) {
+        return $statusPriority[$statusA] - $statusPriority[$statusB];
+    }
+    
+    // Bei gleichem Status vergleiche nach Namen
+    return strcmp($a['name'], $b['name']);
+});
+
+// API-Endpunkt für JSON-Daten
+if (isset($_GET['action']) && $_GET['action'] === 'get_business_data' && isset($_GET['business_id'])) {
+    $businessId = sanitize($_GET['business_id']);
+    $business = findBusinessById($businesses, $businessId);
+    
+    header('Content-Type: application/json');
+    
+    if ($business) {
+        echo json_encode([
+            'success' => true,
+            'business' => $business
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Business not found'
+        ]);
+    }
+    exit;
+}
+
+// Aktionen verarbeiten
+if (($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) || 
+    ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']))) {
+    
+    $action = isset($_POST['action']) ? $_POST['action'] : $_GET['action'];
+    
+    // Neues Unternehmen erstellen
+    if ($action === 'create_business') {
+        // Pflichtfelder prüfen
+        if (empty($_POST['business_name']) || empty($_POST['owner_name']) || empty($_POST['owner_telegram']) || empty($_POST['foundation_date'])) {
+            $error = 'Bitte füllen Sie alle Pflichtfelder aus.';
+        } else {
+            $businessName = trim(sanitize($_POST['business_name']));
+            
+            // Prüfe, ob ein Unternehmen mit diesem Namen bereits existiert
+            $businessExists = false;
+            foreach ($businesses as $business) {
+                if (strcasecmp($business['name'], $businessName) === 0) {
+                    $businessExists = true;
+                    break;
+                }
+            }
+            
+            if ($businessExists) {
+                $error = 'Ein Unternehmen mit diesem Namen existiert bereits.';
+            } else {
+                $foundationDate = sanitize($_POST['foundation_date']);
+                
+                // Datum für den Gewerbeschein (falls angegeben, sonst Gründungsdatum verwenden)
+                $licenseDate = !empty($_POST['foundation_date_license']) ? 
+                              sanitize($_POST['foundation_date_license']) : $foundationDate;
+                
+                // Für neue Gewerbescheine: immer 28 Tage Laufzeit
+                $licenseExpiryDate = calculateLicenseExpiryDate($licenseDate, 0); // 0 verbleibende Tage bei Neuerstellung
+                
+                $businessData = [
+                    'id' => generateUniqueId(),
+                    'name' => $businessName,
+                    'owner_name' => sanitize($_POST['owner_name']),
+                    'owner_telegram' => sanitize($_POST['owner_telegram']),
+                    'deputy_name' => sanitize($_POST['deputy_name'] ?? ''),
+                    'deputy_telegram' => sanitize($_POST['deputy_telegram'] ?? ''),
+                    'foundation_date' => $foundationDate,
+                    'license_date' => $licenseDate, // Datum der Gewerbeschein-Ausstellung
+                    'license_renewal_date' => $licenseDate, // Datum der letzten Verlängerung 
+                    'license_duration' => 1,   // Für Kompatibilität mit älteren Einträgen (ungefähr 1 Monat = 28 Tage)
+                    'license_expiry' => $licenseExpiryDate,    // Berechnetes Ablaufdatum
+                    'remaining_days_added' => 0,  // Keine verbleibenden Tage bei Neuerstellung
+                    'notifications' => [
+                        'pre_warning_sent' => false,
+                        'expiry_notice_sent' => false
+                    ],
+                    'licenses' => [],
+                    'attachments' => [], // Für hochgeladene Pachtverträge
+                    'created_by' => $user_id,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_by' => $user_id,
+                    'updated_at' => date('Y-m-d H:i:s')
+                ];
+                
+                // Pachtverträge hochladen, falls vorhanden
+                if (isset($_FILES['contract_files']) && !empty($_FILES['contract_files']['name'][0])) {
+                    $fileCount = count($_FILES['contract_files']['name']);
+                    
+                    for ($i = 0; $i < $fileCount; $i++) {
+                        if ($_FILES['contract_files']['error'][$i] === UPLOAD_ERR_OK) {
+                            $tmpName = $_FILES['contract_files']['tmp_name'][$i];
+                            $fileName = $_FILES['contract_files']['name'][$i];
+                            $fileSize = $_FILES['contract_files']['size'][$i];
+                            
+                            // MIME-Typ prüfen
+                            $mimeInfo = checkFileMimeType($tmpName);
+                            
+                            if ($mimeInfo['allowed']) {
+                                // Dateinamen bereinigen und eindeutig machen
+                                $safeFileName = sanitizeFilename($fileName);
+                                $uniqueFileName = uniqid() . '_' . $safeFileName;
+                                $targetPath = $uploadsDir . $uniqueFileName;
+                                
+                                if (move_uploaded_file($tmpName, $targetPath)) {
+                                    // Erfolgreich hochgeladen, zur Anlage hinzufügen
+                                    $businessData['attachments'][] = [
+                                        'id' => generateUniqueId(),
+                                        'file_name' => $uniqueFileName,
+                                        'original_name' => $fileName,
+                                        'mime_type' => $mimeInfo['mime'],
+                                        'size' => $fileSize,
+                                        'uploaded_at' => date('Y-m-d H:i:s'),
+                                        'uploaded_by' => $user_id
+                                    ];
+                                } else {
+                                    $error = 'Eine oder mehrere Anlagen konnten nicht hochgeladen werden.';
+                                }
+                            } else {
+                                $error = 'Eine oder mehrere Anlagen haben einen nicht unterstützten Dateityp (nur PDF, PNG, JPEG erlaubt).';
+                            }
+                        } else if ($_FILES['contract_files']['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+                            $error = 'Beim Hochladen einer oder mehrerer Anlagen ist ein Fehler aufgetreten.';
+                        }
+                    }
+                }
+                
+                // Berechne Status für das neue Unternehmen
+                $businessData['status'] = calculateLicenseStatus($businessData['license_expiry']);
+                
+                // Eintrag am Anfang der Liste hinzufügen
+                array_unshift($businesses, $businessData);
+                
+                if (saveJsonData($businessLicensesFile, $businesses)) {
+                    // Protokolliere die Erstellung des Unternehmens
+                    logBusinessAction($businessData['id'], $businessData['name'], 'erstellt', 'Neues Unternehmen angelegt mit Gewerbeschein gültig bis ' . date('d.m.Y', strtotime($licenseExpiryDate)));
+                    $message = 'Unternehmen wurde erfolgreich hinzugefügt.';
+                } else {
+                    $error = 'Fehler beim Speichern der Unternehmensdaten.';
+                }
+            }
+        }
+    }
+    
+    // Unternehmen bearbeiten
+    elseif ($action === 'update_business' && isset($_POST['business_id'])) {
+        $businessId = sanitize($_POST['business_id']);
+        $businessFound = false;
+        
+        foreach ($businesses as $key => $business) {
+            // Verbesserte ID-Vergleichslogik mit Trim
+            if (trim($business['id']) === trim($businessId)) {
+                // Pflichtfelder prüfen
+                if (empty($_POST['business_name']) || empty($_POST['owner_name']) || empty($_POST['owner_telegram'])) {
+                    $error = 'Bitte füllen Sie alle Pflichtfelder aus.';
+                } else {
+                    // Prüfe, ob der Unternehmensname bereits existiert (außer beim aktuellen Unternehmen)
+                    $businessName = trim(sanitize($_POST['business_name']));
+                    $nameExists = false;
+                    
+                    foreach ($businesses as $existingBusiness) {
+                        if ($existingBusiness['id'] !== $businessId && 
+                            strcasecmp($existingBusiness['name'], $businessName) === 0) {
+                            $nameExists = true;
+                            break;
+                        }
+                    }
+                    
+                    if ($nameExists) {
+                        $error = 'Ein anderes Unternehmen mit diesem Namen existiert bereits.';
+                    } else {
+                        // Alte Daten sichern für die Protokollierung
+                        $oldName = $business['name'];
+                        $oldOwner = $business['owner_name'];
+                        $oldFoundationDate = $business['foundation_date'];
+                        
+                        // Aktualisiere Unternehmensdaten
+                        $businesses[$key]['name'] = $businessName;
+                        $businesses[$key]['owner_name'] = sanitize($_POST['owner_name']);
+                        $businesses[$key]['owner_telegram'] = sanitize($_POST['owner_telegram']);
+                        $businesses[$key]['deputy_name'] = sanitize($_POST['deputy_name'] ?? '');
+                        $businesses[$key]['deputy_telegram'] = sanitize($_POST['deputy_telegram'] ?? '');
+                        
+                        // Nur wenn das Gründungsdatum geändert wurde, aktualisiere auch das Gründungsdatum
+                        // Das Ablaufdatum wird nicht verändert, da dies nur durch Verlängerung geschieht
+                        if (!empty($_POST['foundation_date']) && $_POST['foundation_date'] !== $oldFoundationDate) {
+                            $businesses[$key]['foundation_date'] = sanitize($_POST['foundation_date']);
+                        }
+                        
+                        // Wenn das Gewerbeschein-Ausstellungsdatum geändert wurde
+                        if (!empty($_POST['license_date'])) {
+                            $oldLicenseDate = isset($businesses[$key]['license_date']) ? $businesses[$key]['license_date'] : 
+                                             (isset($businesses[$key]['license_renewal_date']) ? $businesses[$key]['license_renewal_date'] : 
+                                             $oldFoundationDate);
+                            
+                            $newLicenseDate = sanitize($_POST['license_date']);
+                            
+                            // Nur aktualisieren, wenn sich das Datum geändert hat
+                            if ($newLicenseDate !== $oldLicenseDate) {
+                                $businesses[$key]['license_date'] = $newLicenseDate;
+                                
+                                // Protokolliere die Änderung
+                                logBusinessAction(
+                                    $businesses[$key]['id'],
+                                    $businesses[$key]['name'],
+                                    'lizenz_datum_aktualisiert',
+                                    "Gewerbeschein-Ausstellungsdatum geändert von $oldLicenseDate zu $newLicenseDate"
+                                );
+                            }
+                        }
+                        
+                        $businesses[$key]['updated_by'] = $user_id;
+                        $businesses[$key]['updated_at'] = date('Y-m-d H:i:s');
+                        
+                        // Wenn attachments noch nicht existiert, initialisiere es
+                        if (!isset($businesses[$key]['attachments'])) {
+                            $businesses[$key]['attachments'] = [];
+                        }
+                        
+                        // Pachtverträge hochladen, falls vorhanden
+                        $uploadedFiles = 0;
+                        if (isset($_FILES['contract_files']) && !empty($_FILES['contract_files']['name'][0])) {
+                            $fileCount = count($_FILES['contract_files']['name']);
+                            
+                            for ($i = 0; $i < $fileCount; $i++) {
+                                if ($_FILES['contract_files']['error'][$i] === UPLOAD_ERR_OK) {
+                                    $tmpName = $_FILES['contract_files']['tmp_name'][$i];
+                                    $fileName = $_FILES['contract_files']['name'][$i];
+                                    $fileSize = $_FILES['contract_files']['size'][$i];
+                                    
+                                    // MIME-Typ prüfen
+                                    $mimeInfo = checkFileMimeType($tmpName);
+                                    
+                                    if ($mimeInfo['allowed']) {
+                                        // Dateinamen bereinigen und eindeutig machen
+                                        $safeFileName = sanitizeFilename($fileName);
+                                        $uniqueFileName = uniqid() . '_' . $safeFileName;
+                                        $targetPath = $uploadsDir . $uniqueFileName;
+                                        
+                                        if (move_uploaded_file($tmpName, $targetPath)) {
+                                            // Erfolgreich hochgeladen, zur Anlage hinzufügen
+                                            $businesses[$key]['attachments'][] = [
+                                                'id' => generateUniqueId(),
+                                                'file_name' => $uniqueFileName,
+                                                'original_name' => $fileName,
+                                                'mime_type' => $mimeInfo['mime'],
+                                                'size' => $fileSize,
+                                                'uploaded_at' => date('Y-m-d H:i:s'),
+                                                'uploaded_by' => $user_id
+                                            ];
+                                            $uploadedFiles++;
+                                        } else {
+                                            $error = 'Eine oder mehrere Anlagen konnten nicht hochgeladen werden.';
+                                        }
+                                    } else {
+                                        $error = 'Eine oder mehrere Anlagen haben einen nicht unterstützten Dateityp (nur PDF, PNG, JPEG erlaubt).';
+                                    }
+                                } else if ($_FILES['contract_files']['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+                                    $error = 'Beim Hochladen einer oder mehrerer Anlagen ist ein Fehler aufgetreten.';
+                                }
+                            }
+                        }
+                        
+                        if (saveJsonData($businessLicensesFile, $businesses)) {
+                            // Protokolliere die Aktualisierung des Unternehmens
+                            $changeDetails = '';
+                            if ($oldName !== $businesses[$key]['name']) {
+                                $changeDetails .= "Name geändert von '{$oldName}' zu '{$businesses[$key]['name']}'. ";
+                            }
+                            if ($oldOwner !== $businesses[$key]['owner_name']) {
+                                $changeDetails .= "Inhaber geändert von '{$oldOwner}' zu '{$businesses[$key]['owner_name']}'. ";
+                            }
+                            if (!empty($_POST['foundation_date']) && $oldFoundationDate !== $businesses[$key]['foundation_date']) {
+                                $oldDate = date('d.m.Y', strtotime($oldFoundationDate));
+                                $newDate = date('d.m.Y', strtotime($businesses[$key]['foundation_date']));
+                                $changeDetails .= "Gründungsdatum geändert von '{$oldDate}' zu '{$newDate}'. ";
+                            }
+                            
+                            if ($uploadedFiles > 0) {
+                                $changeDetails .= "{$uploadedFiles} neue Pachtverträge hochgeladen. ";
+                            }
+                            
+                            logBusinessAction($businessId, $businesses[$key]['name'], 'aktualisiert', $changeDetails);
+                            $message = 'Unternehmensdaten wurden erfolgreich aktualisiert.';
+                        } else {
+                            $error = 'Fehler beim Speichern der Unternehmensdaten.';
+                        }
+                    }
+                }
+                
+                $businessFound = true;
+                break;
+            }
+        }
+        
+        if (!$businessFound) {
+            $error = 'Unternehmen nicht gefunden.';
+        }
+    }
+    
+    // Gewerbeschein verlängern mit verbesserter Fehlerbehandlung und Validierung
+    elseif ($action === 'renew_license' && isset($_POST['business_id'])) {
+        $businessId = trim(sanitize($_POST['business_id']));
+        $businessFound = false;
+        
+        // Erweiterte Validierung - Prüfe ob Business-ID leer ist
+        if (empty($businessId)) {
+            $error = 'Fehler: Keine Unternehmens-ID übermittelt. Bitte versuchen Sie es erneut.';
+            error_log('FEHLER: Leere Business-ID bei Verlängerungsanfrage');
+        } else {
+            // Debug-Information für Fehlerbehebung
+            error_log('Verlängerungsanfrage für Business-ID: ' . $businessId);
+            error_log('Anzahl der Unternehmen in der Datenbank: ' . count($businesses));
+            
+            // Erweiterte Debug-Informationen für schwer zu findende Fehler
+            error_log('POST-Daten: ' . print_r($_POST, true));
+            
+            foreach ($businesses as $key => $business) {
+                // Debug: Business-IDs protokollieren mit Typinformationen
+                $loggedId = $business['id'];
+                $loggedType = gettype($loggedId);
+                $businessIdType = gettype($businessId);
+                
+                error_log("Vergleiche IDs - DB: '$loggedId' ($loggedType) mit Request: '$businessId' ($businessIdType)");
+                
+                // Mehrfach abgesicherte ID-Vergleichslogik mit Stringkonvertierung
+                if (trim((string)$business['id']) === trim((string)$businessId)) {
+                    // Prüfen, ob ein Datum für die Verlängerung angegeben wurde
+                    if (empty($_POST['renewal_date'])) {
+                        $error = 'Bitte geben Sie das Datum der Verlängerung an.';
+                    } else {
+                        $renewalDate = sanitize($_POST['renewal_date']);
+                        
+                        // Berechne verbleibende Tage aus dem alten Gewerbeschein
+                        $remainingDays = 0;
+                        $oldExpiryDate = $business['license_expiry'];
+                        $oldRenewalDate = $business['license_renewal_date'] ?? 'unbekannt';
+                        
+                        // Wenn das alte Ablaufdatum in der Zukunft liegt, berechne die verbleibenden Tage
+                        if (isset($oldExpiryDate)) {
+                            $remainingDays = calculateRemainingDays($oldExpiryDate);
+                        }
+                        
+                        // Berechne neues Ablaufdatum: 28 Tage + verbleibende Tage aus altem Schein
+                        $newExpiryDate = calculateLicenseExpiryDate($renewalDate, $remainingDays);
+                        
+                        // Aktualisiere Unternehmensdaten
+                        $businesses[$key]['license_renewal_date'] = $renewalDate;
+                        // Für Kompatibilität mit älteren Einträgen
+                        $businesses[$key]['license_duration'] = 1; // 1 Monat als ungefährer Wert für 28 Tage
+                        $businesses[$key]['license_expiry'] = $newExpiryDate;
+                        // Speichere verbleibende Tage zur Information
+                        $businesses[$key]['remaining_days_added'] = $remainingDays;
+                        $businesses[$key]['notifications']['pre_warning_sent'] = false;
+                        $businesses[$key]['notifications']['expiry_notice_sent'] = false;
+                        $businesses[$key]['updated_by'] = $user_id;
+                        $businesses[$key]['updated_at'] = date('Y-m-d H:i:s');
+                        
+                        // Aktualisiere Status
+                        $businesses[$key]['status'] = calculateLicenseStatus($newExpiryDate);
+                        
+                        if (saveJsonData($businessLicensesFile, $businesses)) {
+                            // Protokolliere die Verlängerung des Gewerbescheins
+                            $renewalDateFormatted = date('d.m.Y', strtotime($renewalDate));
+                            $oldDateFormatted = date('d.m.Y', strtotime($oldExpiryDate));
+                            $newDateFormatted = date('d.m.Y', strtotime($newExpiryDate));
+                            
+                            $details = "Gewerbeschein verlängert am {$renewalDateFormatted}. Ablaufdatum geändert von {$oldDateFormatted} zu {$newDateFormatted}";
+                            logBusinessAction($businessId, $business['name'], 'verlängert', $details);
+                            $message = "Gewerbeschein für '{$business['name']}' wurde erfolgreich verlängert. Neues Ablaufdatum: {$newDateFormatted}";
+                        } else {
+                            $error = 'Fehler beim Speichern der Unternehmensdaten.';
+                            error_log('Fehler beim Speichern der Verlängerungsdaten für Business-ID: ' . $businessId);
+                        }
+                    }
+                    
+                    $businessFound = true;
+                    break;
+                }
+            }
+            
+            if (!$businessFound) {
+                $error = 'Unternehmen für die Verlängerung nicht gefunden. ID: ' . htmlspecialchars($businessId);
+                
+                // Detaillierte Fehlerinformationen im Log
+                error_log('FEHLER: Unternehmen nicht gefunden. ID: ' . $businessId);
+                error_log('Verfügbare Business-IDs: ' . implode(', ', array_map(function($b) { 
+                    return $b['id'] . ' (' . $b['name'] . ')'; 
+                }, $businesses)));
+            }
+        }
+    }
+    
+    // Benachrichtigung als gesendet markieren
+    elseif ($action === 'mark_notification' && isset($_POST['business_id']) && isset($_POST['notification_type'])) {
+        $businessId = sanitize($_POST['business_id']);
+        $notificationType = sanitize($_POST['notification_type']); // pre_warning oder expiry_notice
+        $businessFound = false;
+        
+        foreach ($businesses as $key => $business) {
+            if ($business['id'] === $businessId) {
+                // Aktualisiere Benachrichtigungsstatus
+                if ($notificationType === 'pre_warning') {
+                    $businesses[$key]['notifications']['pre_warning_sent'] = true;
+                    $notificationTypeText = 'Vorwarnung';
+                } elseif ($notificationType === 'expiry_notice') {
+                    $businesses[$key]['notifications']['expiry_notice_sent'] = true;
+                    $notificationTypeText = 'Ablaufmitteilung';
+                }
+                
+                $businesses[$key]['updated_by'] = $user_id;
+                $businesses[$key]['updated_at'] = date('Y-m-d H:i:s');
+                
+                if (saveJsonData($businessLicensesFile, $businesses)) {
+                    // Protokolliere die Benachrichtigung
+                    $details = "{$notificationTypeText} wurde gesendet und im System vermerkt";
+                    logBusinessAction($businessId, $business['name'], 'benachrichtigt', $details);
+                    $message = 'Benachrichtigung wurde erfolgreich als gesendet markiert.';
+                } else {
+                    $error = 'Fehler beim Speichern der Unternehmensdaten.';
+                }
+                
+                $businessFound = true;
+                break;
+            }
+        }
+        
+        if (!$businessFound) {
+            $error = 'Unternehmen nicht gefunden.';
+        }
+    }
+    
+    // Unternehmen löschen (nur für Chief Justice oder Stellvertreter)
+    elseif ($action === 'delete_business' && isset($_POST['business_id'])) {
+        $businessId = sanitize($_POST['business_id']);
+        
+        // Debug-Ausgabe für Fehleranalyse
+        error_log("Löschversuch für Business-ID: '$businessId'");
+        error_log("Anzahl Unternehmen vor Löschung: " . count($businesses));
+        
+        // Prüfen, ob der Benutzer berechtigt ist (Chief Justice oder Stellvertreter)
+        $canDelete = false;
+        
+        if (in_array('chief_justice', array_map('strtolower', $roles)) || 
+            in_array('senior_associate_justice', array_map('strtolower', $roles))) {
+            $canDelete = true;
+        }
+        
+        if (!$canDelete) {
+            $error = 'Sie haben keine Berechtigung, um Unternehmen zu löschen. Diese Aktion ist dem Chief Justice oder seinem Stellvertreter vorbehalten.';
+        } else {
+            $businessFound = false;
+            $businessName = '';
+            $newBusinesses = []; // Neue Liste ohne das zu löschende Unternehmen
+            
+            foreach ($businesses as $business) {
+                $currentId = $business['id'];
+                error_log("Vergleiche Business-ID: '$currentId' mit Lösch-ID: '$businessId'");
+                
+                // Vergleich mit Typkonvertierung zu String und Trimming
+                if (trim((string)$currentId) === trim((string)$businessId)) {
+                    $businessName = $business['name'];
+                    $businessFound = true;
+                    error_log("Business gefunden und wird gelöscht: {$business['name']}");
+                } else {
+                    $newBusinesses[] = $business;
+                }
+            }
+            
+            if ($businessFound) {
+                if (saveJsonData($businessLicensesFile, $newBusinesses)) {
+                    // Aktualisiere die Variable mit der neuen Liste
+                    $businesses = $newBusinesses;
+                    
+                    // Protokolliere die Löschung des Unternehmens
+                    logBusinessAction($businessId, $businessName, 'gelöscht', 'Unternehmen aus dem System entfernt');
+                    $message = 'Unternehmen wurde erfolgreich gelöscht.';
+                } else {
+                    $error = 'Fehler beim Speichern der Unternehmensdaten.';
+                }
+            } else {
+                $error = 'Unternehmen nicht gefunden.';
+            }
+        }
+    }
+    
+    // Pachtvertrag löschen (AJAX/JSON-Antwort)
+    elseif ($action === 'delete_attachment' && isset($_POST['business_id']) && isset($_POST['attachment_id'])) {
+        $businessId = sanitize($_POST['business_id']);
+        $attachmentId = sanitize($_POST['attachment_id']);
+        $businessFound = false;
+        $attachmentFound = false;
+        $attachmentName = '';
+        $result = [
+            'success' => false,
+            'message' => 'Unbekannter Fehler beim Löschen des Pachtvertrags.',
+            'business_id' => $businessId
+        ];
+        
+        header('Content-Type: application/json');
+        
+        foreach ($businesses as $key => $business) {
+            if (trim((string)$business['id']) === trim((string)$businessId)) {
+                $businessFound = true;
+                
+                // Debug-Ausgabe für bessere Fehlerbehebung
+                error_log("Suche nach Anhang in Business: " . json_encode($business['id']));
+                error_log("Gesuchte Anhang-ID: " . json_encode($attachmentId));
+                
+                // Prüfe zuerst attachments
+                $attachmentIndex = -1;
+                $location = null;
+                
+                // Prüfen, ob das Unternehmen überhaupt Anhänge im attachments-Array hat
+                if (isset($business['attachments']) && is_array($business['attachments'])) {
+                    // Suche den Anhang anhand der ID
+                    foreach ($business['attachments'] as $index => $attachment) {
+                        error_log("Überprüfe attachment: " . json_encode($attachment));
+                        if (isset($attachment['id']) && trim((string)$attachment['id']) === trim((string)$attachmentId)) {
+                            $attachmentFound = true;
+                            $attachmentIndex = $index;
+                            $attachmentName = $attachment['original_name'] ?? 'Unbenannte Datei';
+                            $fileName = $attachment['file_name'] ?? '';
+                            $location = 'attachments';
+                            break;
+                        }
+                    }
+                }
+                
+                // Falls nicht in attachments gefunden, suche in files
+                if (!$attachmentFound && isset($business['files']) && is_array($business['files'])) {
+                    foreach ($business['files'] as $index => $file) {
+                        error_log("Überprüfe file: " . json_encode($file));
+                        if (isset($file['id']) && trim((string)$file['id']) === trim((string)$attachmentId)) {
+                            $attachmentFound = true;
+                            $attachmentIndex = $index;
+                            $attachmentName = $file['original_name'] ?? ($file['name'] ?? 'Unbenannte Datei');
+                            $fileName = $file['file_name'] ?? '';
+                            $location = 'files';
+                            break;
+                        }
+                    }
+                }
+                    
+                    if ($attachmentFound && $attachmentIndex >= 0) {
+                        // Datei physisch löschen, wenn sie existiert
+                        $filePath = $uploadsDir . $fileName;
+                        if (!empty($fileName) && file_exists($filePath)) {
+                            if (unlink($filePath)) {
+                                // Anhang aus dem entsprechenden Array entfernen
+                                if ($location === 'attachments') {
+                                    error_log("Lösche aus attachments: " . $attachmentIndex);
+                                    array_splice($businesses[$key]['attachments'], $attachmentIndex, 1);
+                                } else if ($location === 'files') {
+                                    error_log("Lösche aus files: " . $attachmentIndex);
+                                    array_splice($businesses[$key]['files'], $attachmentIndex, 1);
+                                }
+                                
+                                // Speichere die aktualisierte JSON-Datei
+                                if (saveJsonData($businessLicensesFile, $businesses)) {
+                                    // Protokolliere die Löschung
+                                    logBusinessAction(
+                                        $businessId, 
+                                        $business['name'], 
+                                        'Anhang gelöscht', 
+                                        "Pachtvertrag '{$attachmentName}' wurde gelöscht."
+                                    );
+                                    
+                                    $result['success'] = true;
+                                    $result['message'] = "Pachtvertrag '{$attachmentName}' wurde erfolgreich gelöscht.";
+                                } else {
+                                    $result['message'] = 'Fehler beim Speichern der Datenbank nach dem Löschen des Anhangs.';
+                                }
+                            } else {
+                                $result['message'] = 'Fehler beim Löschen der Datei vom Server.';
+                            }
+                        } else {
+                            // Wenn die Datei nicht existiert, lösche trotzdem den Eintrag aus der Datenbank
+                            if ($location === 'attachments') {
+                                error_log("Lösche aus attachments (Datei nicht vorhanden): " . $attachmentIndex);
+                                array_splice($businesses[$key]['attachments'], $attachmentIndex, 1);
+                            } else if ($location === 'files') {
+                                error_log("Lösche aus files (Datei nicht vorhanden): " . $attachmentIndex);
+                                array_splice($businesses[$key]['files'], $attachmentIndex, 1);
+                            }
+                            
+                            if (saveJsonData($businessLicensesFile, $businesses)) {
+                                logBusinessAction(
+                                    $businessId, 
+                                    $business['name'], 
+                                    'Anhang gelöscht', 
+                                    "Pachtvertrag '{$attachmentName}' wurde aus der Datenbank entfernt (Datei nicht gefunden)."
+                                );
+                                
+                                $result['success'] = true;
+                                $result['message'] = "Pachtvertrag '{$attachmentName}' wurde aus der Datenbank entfernt.";
+                            } else {
+                                $result['message'] = 'Fehler beim Speichern der Datenbank nach dem Löschen des Anhangs.';
+                            }
+                        }
+                    } else {
+                        $result['message'] = 'Der angegebene Anhang wurde nicht gefunden.';
+                    }
+                } else {
+                    $result['message'] = 'Dieses Unternehmen hat keine Anhänge.';
+                }
+                
+                break;
+            }
+        }
+        
+        if (!isset($businessFound) || !$businessFound) {
+            $result['message'] = 'Das angegebene Unternehmen wurde nicht gefunden.';
+            $businessFound = false;
+        }
+        
+        echo json_encode($result);
+        exit;
+    }
+    
+    // Lizenz hinzufügen
+    elseif ($action === 'add_license' && isset($_POST['business_id'])) {
+        $businessId = sanitize($_POST['business_id']);
+        
+        // Pflichtfelder prüfen
+        if (empty($_POST['license_name']) || empty($_POST['license_description'])) {
+            $error = 'Bitte füllen Sie alle Pflichtfelder aus.';
+        } else {
+            $businessFound = false;
+            
+            foreach ($businesses as $key => $business) {
+                if ($business['id'] === $businessId) {
+                    $licenseData = [
+                        'id' => generateUniqueId(),
+                        'name' => sanitize($_POST['license_name']),
+                        'description' => sanitize($_POST['license_description']),
+                        'issue_date' => date('Y-m-d'),
+                        'created_by' => $user_id,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ];
+                    
+                    // Wenn ein Ablaufdatum angegeben ist, füge es hinzu
+                    if (!empty($_POST['license_expiry'])) {
+                        $licenseData['expiry_date'] = sanitize($_POST['license_expiry']);
+                    } else {
+                        // Ablaufdatum automatisch auf 3 Monate nach Ausstellungsdatum setzen
+                        // Immer die neue Funktion calculateLicenseExpiryDate() verwenden, nicht calculateExpiryDate()
+                        $licenseData['expiry_date'] = calculateLicenseExpiryDate($licenseData['issue_date']);
+                    }
+                    // Status der Lizenz berechnen
+                    $licenseData['status'] = calculateLicenseStatus($licenseData['expiry_date']);
+                    
+                    // Lizenz hinzufügen
+                    $businesses[$key]['licenses'][] = $licenseData;
+                    $businesses[$key]['updated_by'] = $user_id;
+                    $businesses[$key]['updated_at'] = date('Y-m-d H:i:s');
+                    
+                    if (saveJsonData($businessLicensesFile, $businesses)) {
+                        // Protokolliere die Hinzufügung der Lizenz
+                        $details = "Neue Lizenz hinzugefügt: {$licenseData['name']}";
+                        if (!empty($licenseData['expiry_date'])) {
+                            $details .= " (gültig bis " . date('d.m.Y', strtotime($licenseData['expiry_date'])) . ")";
+                        } else {
+                            $details .= " (unbegrenzt gültig)";
+                        }
+                        
+                        logBusinessAction($businessId, $business['name'], 'lizenz_hinzugefügt', $details);
+                        $message = 'Lizenz wurde erfolgreich hinzugefügt.';
+                    } else {
+                        $error = 'Fehler beim Speichern der Unternehmensdaten.';
+                    }
+                    
+                    $businessFound = true;
+                    break;
+                }
+            }
+            
+            if (!$businessFound) {
+                $error = 'Unternehmen nicht gefunden.';
+            }
+        }
+    }
+    
+    // Lizenz löschen
+    elseif (isset($action) && $action === 'delete_license' && isset($_POST['business_id']) && isset($_POST['license_id'])) {
+        $businessId = sanitize($_POST['business_id']);
+        $licenseId = sanitize($_POST['license_id']);
+        $businessFound = false;
+        $licenseFound = false;
+        
+        // Debug-Ausgabe für Fehleranalyse
+        error_log("Löschversuch für Lizenz. Business-ID: '$businessId', Lizenz-ID: '$licenseId'");
+        error_log("Anzahl der verfügbaren Unternehmen: " . count($businesses));
+        
+        foreach ($businesses as $bKey => $business) {
+            $currentBusinessId = $business['id'];
+            error_log("Prüfe Business '$currentBusinessId': " . $business['name']);
+            
+            // Vergleich mit Typkonvertierung zu String und Trimming
+            if (trim((string)$currentBusinessId) === trim((string)$businessId)) {
+                $businessFound = true;
+                error_log("Business gefunden: " . $business['name']);
+                
+                // Prüfen, ob das Licenses Array existiert
+                if (!isset($business['licenses']) || !is_array($business['licenses'])) {
+                    error_log("Keine Lizenzen für dieses Unternehmen gefunden.");
+                    $businesses[$bKey]['licenses'] = [];
+                    $error = 'Keine Lizenzen für dieses Unternehmen vorhanden.';
+                    break;
+                }
+                
+                $licenseName = '';
+                error_log("Anzahl der Lizenzen: " . count($business['licenses']));
+                
+                foreach ($business['licenses'] as $lKey => $license) {
+                    $currentLicenseId = $license['id'];
+                    error_log("Prüfe Lizenz '$currentLicenseId': " . $license['name']);
+                    
+                    // Vergleich mit Typkonvertierung zu String und Trimming
+                    if (trim((string)$currentLicenseId) === trim((string)$licenseId)) {
+                        $licenseName = $license['name'];
+                        error_log("Lizenz gefunden und wird gelöscht: " . $licenseName);
+                        // Lizenz aus dem Array entfernen
+                        array_splice($businesses[$bKey]['licenses'], $lKey, 1);
+                        $licenseFound = true;
+                        break;
+                    }
+                }
+                
+                if ($licenseFound) {
+                    $businesses[$bKey]['updated_by'] = $user_id;
+                    $businesses[$bKey]['updated_at'] = date('Y-m-d H:i:s');
+                    
+                    if (saveJsonData($businessLicensesFile, $businesses)) {
+                        // Protokolliere die Löschung der Lizenz
+                        $details = "Lizenz gelöscht: {$licenseName}";
+                        logBusinessAction($businessId, $business['name'], 'lizenz_gelöscht', $details);
+                        $message = 'Lizenz wurde erfolgreich gelöscht.';
+                    } else {
+                        $error = 'Fehler beim Speichern der Unternehmensdaten.';
+                    }
+                } else {
+                    $error = 'Lizenz nicht gefunden.';
+                }
+                
+                break;
+            }
+        }
+        
+        if (!$businessFound) {
+            $error = 'Unternehmen nicht gefunden.';
+        }
+    }
+    
+    // Gewerbeschein generieren (vollständig neue Implementierung)
+    elseif (isset($action) && $action === 'generate_certificate' && isset($_GET['business_id'])) {
+        $businessId = sanitize($_GET['business_id']);
+        $businessFound = false; // Setze das Flag auf false am Anfang
+        
+        // Debugging für Fehlersuche
+        error_log('Generate certificate für Business-ID: ' . $businessId);
+        error_log('JSON-Datei: ' . $businessLicensesFile);
+        error_log('Absolute Pfad: ' . realpath($businessLicensesFile));
+        error_log('Anzahl der Unternehmen: ' . count($businesses));
+        
+        // Daten erneut aus der Datei laden um Konsistenz zu gewährleisten
+        $businesses = getJsonData($businessLicensesFile);
+        if ($businesses === false) {
+            error_log("Fehler beim Lesen der Datei: $businessLicensesFile");
+            $businesses = []; 
+        }
+        
+        error_log("Nach erneuter Ladung: " . count($businesses) . " Unternehmen gefunden");
+        
+        // Finde das Unternehmen mit der verbesserten Helferfunktion
+        $business = findBusinessById($businesses, $businessId);
+        
+        if ($business) {
+            error_log("Business gefunden, generiere Zertifikat für: " . $business['name']);
+            $businessFound = true;
+            
+            // Sicherstellen, dass die minimalen erforderlichen Felder vorhanden sind
+            if (!isset($business['license_expiry'])) {
+                error_log("Business " . $business['name'] . " hat kein license_expiry Datum");
+                $business['license_expiry'] = date('Y-m-d');
+            }
+            
+            if (!isset($business['foundation_date'])) {
+                error_log("Business " . $business['name'] . " hat kein foundation_date");
+                $business['foundation_date'] = date('Y-m-d');
+            }
+            
+            // Aktualisiere den Status wenn nötig
+            if (!isset($business['status']) || !is_array($business['status'])) {
+                error_log('Status fehlt oder ist nicht korrekt formatiert, berechne neu');
+                $status = calculateLicenseStatus($business['license_expiry']);
+            } else {
+                $status = $business['status'];
+            }
+            
+            error_log("Status: " . $status['status'] . ", Verbleibende Tage: " . $status['days_remaining']);
+            
+            // Prüfen, ob der Gewerbeschein gültig ist
+            $statusCode = $status['status'];
+            $isValid = in_array($statusCode, ['green', 'yellow']);
+            
+            // HTML für den Gewerbeschein generieren mit Jahr 1899
+            // Mit Fehlerbehandlung für ungültige Datumswerte
+            try {
+                $expiryDate = date('d.m.1899', strtotime($business['license_expiry']));
+            } catch (Exception $e) {
+                error_log("Fehler bei der Formatierung des Ablaufdatums: " . $e->getMessage());
+                $expiryDate = "Unbekannt";
+            }
+            
+            try {
+                $foundationDate = date('d.m.1899', strtotime($business['foundation_date']));
+            } catch (Exception $e) {
+                error_log("Fehler bei der Formatierung des Gründungsdatums: " . $e->getMessage());
+                $foundationDate = "Unbekannt";
+            }
+            
+            try {
+                $renewalDate = isset($business['license_renewal_date']) ? 
+                    date('d.m.1899', strtotime($business['license_renewal_date'])) : 
+                    $foundationDate;
+            } catch (Exception $e) {
+                error_log("Fehler bei der Formatierung des Verlängerungsdatums: " . $e->getMessage());
+                $renewalDate = $foundationDate;
+            }
+                
+            // Header setzen um HTML statt der restlichen Seite auszugeben
+            header('Content-Type: text/html; charset=utf-8');
+            
+            // Vollständiger Name und Rolle des Benutzers aus der Benutzerverwaltung
+            $issuerName = getUserFullName($user_id); // Verwende die Funktion getUserFullName, um den Namen aus der Datenbank zu holen
+            $issuerRole = htmlspecialchars($role);
+            
+            // Ermittle den aktuellen Status als Text
+            $statusText = 'Ungültig';
+            $statusClass = 'text-danger';
+                
+            if ($statusCode === 'green') {
+                $statusText = 'Gültig';
+                $statusClass = 'text-success';
+            } elseif ($statusCode === 'yellow') {
+                $statusText = 'Gültig (Vorwarnphase)';
+                $statusClass = 'text-warning';
+            } elseif ($statusCode === 'red') {
+                $statusText = 'Nachfrist';
+                $statusClass = 'text-danger';
+            } elseif ($statusCode === 'black') {
+                $statusText = 'Letzter Aufschub';
+                $statusClass = 'text-dark';
+            } else {
+                $statusText = 'Abgelaufen';
+                $statusClass = 'text-secondary';
+            }
+                
+            // Protokolliere die Generierung des Gewerbescheins
+            $details = "Gewerbeschein generiert mit Status: $statusText";
+            logBusinessAction($businessId, $business['name'], 'gewerbeschein_generiert', $details);
+                
+                // Generiere das Zertifikat
+                echo '<!DOCTYPE html>
+                <html lang="de">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Gewerbeschein - ' . htmlspecialchars($business['name']) . '</title>
+                    <link rel="stylesheet" href="../assets/css/style.css">
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            margin: 0;
+                            padding: 20px;
+                        }
+                        .certificate {
+                            max-width: 800px;
+                            margin: 0 auto;
+                            padding: 30px;
+                            border: 2px solid #000;
+                            background-color: #f9f9f9;
+                            position: relative;
+                        }
+                        .certificate::before {
+                            content: "";
+                            background-image: url("../assets/images/doj-logo-original.png");
+                            background-size: contain;
+                            background-repeat: no-repeat;
+                            background-position: center;
+                            opacity: 0.1;
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            z-index: -1;
+                        }
+                        .certificate-header {
+                            text-align: center;
+                            margin-bottom: 20px;
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 20px;
+                        }
+                        .certificate-header h1 {
+                            font-size: 28px;
+                            margin-bottom: 5px;
+                        }
+                        .certificate-header img {
+                            max-width: 200px;
+                            margin-bottom: 10px;
+                        }
+                        .certificate-body {
+                            margin-bottom: 20px;
+                        }
+                        .data-row {
+                            margin-bottom: 10px;
+                            display: flex;
+                            flex-wrap: wrap;
+                        }
+                        .data-label {
+                            font-weight: bold;
+                            width: 200px;
+                        }
+                        .data-value {
+                            flex: 1;
+                        }
+                        .certificate-footer {
+                            margin-top: 40px;
+                            border-top: 1px solid #ccc;
+                            padding-top: 20px;
+                            display: flex;
+                            justify-content: space-between;
+                        }
+                        .certificate-stamp {
+                            border: 2px dashed #444;
+                            border-radius: 50%;
+                            width: 150px;
+                            height: 150px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                            transform: rotate(-15deg);
+                            font-weight: bold;
+                            color: #444;
+                            font-size: 18px;
+                            padding: 10px;
+                        }
+                        .certificate-signature {
+                            text-align: center;
+                            width: 200px;
+                        }
+                        .signature-line {
+                            border-top: 1px solid #000;
+                            margin-top: 50px;
+                            margin-bottom: 5px;
+                        }
+                        @media print {
+                            body {
+                                padding: 0;
+                            }
+                            .certificate {
+                                border: none;
+                                padding: 0;
+                            }
+                            .no-print {
+                                display: none;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="no-print text-center mb-3">
+                        <button onclick="window.print()" class="btn btn-primary">Drucken / Als PDF speichern</button>
+                        <a href="business_licenses.php" class="btn btn-secondary ml-2">Zurück zur Übersicht</a>
+                    </div>
+                    
+                    <div class="certificate">
+                        <div class="certificate-header">
+                            <img src="../assets/images/doj-logo-original.png" alt="Department of Justice">
+                            <h1>GEWERBESCHEIN</h1>
+                            <p>Amtlich ausgestellte Gewerbeerlaubnis</p>
+                        </div>
+                        
+                        <div class="certificate-body">
+                            <p>Hiermit wird dem folgenden Unternehmen die Genehmigung zur Ausübung eines Gewerbes gemäß der geltenden Gesetze erteilt:</p>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Unternehmensname:</div>
+                                <div class="data-value">' . htmlspecialchars($business['name']) . '</div>
+                            </div>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Inhaber:</div>
+                                <div class="data-value">' . htmlspecialchars($business['owner_name']) . '</div>
+                            </div>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Telegram-Kontakt:</div>
+                                <div class="data-value">' . htmlspecialchars($business['owner_telegram']) . '</div>
+                            </div>';
+                            
+                            if (!empty($business['deputy_name'])) {
+                                echo '<div class="data-row">
+                                    <div class="data-label">Stellvertreter:</div>
+                                    <div class="data-value">' . htmlspecialchars($business['deputy_name']) . '</div>
+                                </div>
+                                
+                                <div class="data-row">
+                                    <div class="data-label">Stellvertreter Telegram:</div>
+                                    <div class="data-value">' . htmlspecialchars($business['deputy_telegram']) . '</div>
+                                </div>';
+                            }
+                            
+                            echo '<div class="data-row">
+                                <div class="data-label">Gründungsdatum:</div>
+                                <div class="data-value">' . $foundationDate . '</div>
+                            </div>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Verlängert am:</div>
+                                <div class="data-value">' . $renewalDate . '</div>
+                            </div>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Basis-Gültigkeitsdauer:</div>
+                                <div class="data-value">28 Tage</div>
+                            </div>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Übertragene Resttage:</div>
+                                <div class="data-value">' . (isset($business['remaining_days_added']) ? htmlspecialchars($business['remaining_days_added']) : '0') . ' Tage</div>
+                            </div>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Gültig bis:</div>
+                                <div class="data-value">' . $expiryDate . '</div>
+                            </div>
+                            
+                            <div class="data-row">
+                                <div class="data-label">Status:</div>
+                                <div class="data-value ' . $statusClass . '">' . $statusText . '</div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <h4>Erteilte Lizenzen:</h4>';
+                                
+                                if (isset($business['licenses']) && !empty($business['licenses']) && is_array($business['licenses'])) {
+                                    echo '<ul>';
+                                    foreach ($business['licenses'] as $license) {
+                                        // Prüfen, ob die erforderlichen Felder vorhanden sind
+                                        if (!isset($license['name'])) {
+                                            continue; // Überspringe unvollständige Einträge
+                                        }
+                                        
+                                        echo '<li>
+                                            <strong>' . htmlspecialchars($license['name']) . '</strong>';
+                                        
+                                        // Datum mit Fehlerbehandlung formatieren
+                                        if (isset($license['issue_date']) && !empty($license['issue_date'])) {
+                                            try {
+                                                $issueDate = date('d.m.1899', strtotime($license['issue_date']));
+                                                echo ' - Ausgestellt am: ' . $issueDate;
+                                            } catch (Exception $e) {
+                                                error_log("Fehler beim Formatieren des Ausstellungsdatums: " . $e->getMessage());
+                                                echo ' - Ausstellungsdatum unbekannt';
+                                            }
+                                        }
+                                        
+                                        if (!empty($license['expiry_date'])) {
+                                            try {
+                                                $licenseExpiryDate = date('d.m.1899', strtotime($license['expiry_date']));
+                                                echo ', Gültig bis: ' . $licenseExpiryDate;
+                                            } catch (Exception $e) {
+                                                error_log("Fehler beim Formatieren des Lizenz-Ablaufdatums: " . $e->getMessage());
+                                                echo ', Ablaufdatum unbekannt';
+                                            }
+                                        } else {
+                                            echo ' (unbegrenzt gültig)';
+                                        }
+                                        
+                                        echo '</li>';
+                                    }
+                                    echo '</ul>';
+                                } else {
+                                    echo '<p>Keine speziellen Lizenzen erteilt.</p>';
+                                }
+                                
+                            echo '</div>
+                        </div>
+                        
+                        <div class="certificate-footer">
+                            <div class="certificate-signature" style="width: 100%; text-align: right;">
+                                <div class="signature-line"></div>
+                                ' . htmlspecialchars($issuerName) . '<br>
+                                ' . htmlspecialchars($issuerRole) . '
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>';
+                
+                // Nach der Ausgabe des Zertifikats beenden wir das Skript
+                exit;
+            }
+        }
+        
+        if (!$businessFound) {
+            // Wenn das Unternehmen nicht gefunden wurde und wir ein Zertifikat generieren wollten
+            if (isset($action) && $action === 'generate_certificate') {
+                // Für AJAX-Anfragen: gib eine JSON-Fehlermeldung zurück
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Das angegebene Unternehmen wurde nicht gefunden.']);
+                exit;
+            }
+            
+            // Ab hier beginnt der HTML-Teil für die normale Seitenanzeige
+            include_once '../includes/header.php';
+            
+            // Füge eine Fehlermeldung hinzu, wenn wir ein Unternehmen bearbeiten wollten
+            if (isset($_GET['error']) && $_GET['error'] === 'business_not_found') {
+                $error = 'Das angegebene Unternehmen wurde nicht gefunden.';
+            }
+?>
+
+<div class="container-fluid">
+    <div class="row">
+        <?php include_once '../includes/sidebar.php'; ?>
+        
+        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Gewerbeschein-Verwaltung</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#createBusinessModal">
+                        <i class="fas fa-plus"></i> Neues Unternehmen
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Benachrichtigungsübersicht -->
+            <?php
+            $notifications = [
+                'yellow' => [], // Vorwarnung
+                'red' => [],    // Nachfrist
+                'black' => [],  // Letzter Aufschub
+                'expired' => [] // Abgelaufen
+            ];
+            
+            // Sammle alle Unternehmen mit kritischem Status
+            foreach ($businesses as $business) {
+                $status = $business['status']['status'];
+                if (in_array($status, array_keys($notifications))) {
+                    $notifications[$status][] = $business;
+                }
+            }
+            
+            // Zähle die Benachrichtigungen
+            $totalNotifications = array_sum(array_map('count', $notifications));
+            
+            if ($totalNotifications > 0) {
+                echo '<div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Handlungsbedarf: ' . $totalNotifications . ' Unternehmen benötigen Aufmerksamkeit</h4>
+                    <hr>
+                    <div class="row">';
+                
+                if (count($notifications['yellow']) > 0) {
+                    echo '<div class="col-md-3">
+                        <h5><span class="badge badge-warning">' . count($notifications['yellow']) . '</span> Vorwarnphase</h5>
+                        <ul class="small">';
+                    foreach ($notifications['yellow'] as $business) {
+                        $sentBadge = isset($business['notifications']['pre_warning_sent']) && $business['notifications']['pre_warning_sent'] 
+                            ? '<span class="badge badge-success">Benachrichtigt</span>' 
+                            : '<span class="badge badge-danger">Nicht benachrichtigt</span>';
+                        
+                        echo '<li>' . htmlspecialchars($business['name']) . ' - ' . $sentBadge . '</li>';
+                    }
+                    echo '</ul>
+                    </div>';
+                }
+                
+                if (count($notifications['red']) > 0) {
+                    echo '<div class="col-md-3">
+                        <h5><span class="badge badge-danger">' . count($notifications['red']) . '</span> Nachfrist</h5>
+                        <ul class="small">';
+                    foreach ($notifications['red'] as $business) {
+                        $sentBadge = isset($business['notifications']['expiry_notice_sent']) && $business['notifications']['expiry_notice_sent'] 
+                            ? '<span class="badge badge-success">Benachrichtigt</span>' 
+                            : '<span class="badge badge-danger">Nicht benachrichtigt</span>';
+                        
+                        echo '<li>' . htmlspecialchars($business['name']) . ' - ' . $sentBadge . '</li>';
+                    }
+                    echo '</ul>
+                    </div>';
+                }
+                
+                if (count($notifications['black']) > 0) {
+                    echo '<div class="col-md-3">
+                        <h5><span class="badge badge-dark">' . count($notifications['black']) . '</span> Letzter Aufschub</h5>
+                        <ul class="small">';
+                    foreach ($notifications['black'] as $business) {
+                        echo '<li>' . htmlspecialchars($business['name']) . ' - noch ' . $business['status']['days_remaining'] . ' Tage</li>';
+                    }
+                    echo '</ul>
+                    </div>';
+                }
+                
+                if (count($notifications['expired']) > 0) {
+                    echo '<div class="col-md-3">
+                        <h5><span class="badge badge-secondary">' . count($notifications['expired']) . '</span> Abgelaufen</h5>
+                        <ul class="small">';
+                    foreach ($notifications['expired'] as $business) {
+                        echo '<li>' . htmlspecialchars($business['name']) . '</li>';
+                    }
+                    echo '</ul>
+                    </div>';
+                }
+                
+                echo '</div>
+                </div>';
+            }
+            ?>
+            
+            <?php if (!empty($message)): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?php echo $message; ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Schließen">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            <?php endif; ?>
+            
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php echo $error; ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Schließen">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            <?php endif; ?>
+            
+            <!-- Filter -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Filter und Suche</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="form-group col-md-3">
+                            <label for="filterStatus">Status</label>
+                            <select class="form-control" id="filterStatus">
+                                <option value="all">Alle anzeigen</option>
+                                <option value="expired">Abgelaufen</option>
+                                <option value="black">Letzter Aufschub</option>
+                                <option value="red">Nachfrist</option>
+                                <option value="yellow">Vorwarnung</option>
+                                <option value="green">Gültig</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="searchBusiness">Suche</label>
+                            <input type="text" class="form-control" id="searchBusiness" placeholder="Unternehmensname, Inhaber...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unternehmensliste -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Unternehmen und Gewerbescheine</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Unternehmen</th>
+                                    <th>Inhaber</th>
+                                    <th>Stellvertreter</th>
+                                    <th>Gründungsdatum</th>
+                                    <th>Letzte Verlängerung</th>
+                                    <th>Dauer</th>
+                                    <th>Ablaufdatum</th>
+                                    <th>Verbleibend</th>
+                                    <th>Benachrichtigungen</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($businesses as $business): ?>
+                                    <tr class="business-row" data-status="<?php echo $business['status']['status']; ?>">
+                                        <td>
+                                            <span class="badge badge-pill <?php echo $business['status']['color_class']; ?> text-white">
+                                                <?php echo $business['status']['text']; ?>
+                                            </span>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($business['name']); ?></td>
+                                        <td>
+                                            <?php echo htmlspecialchars($business['owner_name']); ?>
+                                            <br>
+                                            <small class="text-muted">TG: <?php echo htmlspecialchars($business['owner_telegram']); ?></small>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($business['deputy_name'])): ?>
+                                                <?php echo htmlspecialchars($business['deputy_name']); ?>
+                                                <br>
+                                                <small class="text-muted">TG: <?php echo htmlspecialchars($business['deputy_telegram']); ?></small>
+                                            <?php else: ?>
+                                                <small class="text-muted">Nicht festgelegt</small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php echo date('d.m.Y', strtotime($business['foundation_date'])); ?></td>
+                                        <td>
+                                            <?php 
+                                            if (isset($business['license_renewal_date'])) {
+                                                echo date('d.m.Y', strtotime($business['license_renewal_date']));
+                                            } else {
+                                                echo date('d.m.Y', strtotime($business['foundation_date']));
+                                            }
+                                            ?>
+                                        </td>
+                                        <td>
+                                            28 Tage
+                                            <?php if (isset($business['remaining_days_added']) && $business['remaining_days_added'] > 0): ?>
+                                                <br>
+                                                <small class="text-success">+<?php echo htmlspecialchars($business['remaining_days_added']); ?> Resttage</small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php echo date('d.m.Y', strtotime($business['license_expiry'])); ?></td>
+                                        <td>
+                                            <?php if ($business['status']['status'] === 'expired'): ?>
+                                                <span class="text-danger">Abgelaufen</span>
+                                            <?php else: ?>
+                                                <?php echo $business['status']['days_remaining']; ?> Tage
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($business['status']['status'] === 'yellow' || $business['status']['status'] === 'red'): ?>
+                                                <?php if (isset($business['notifications']['pre_warning_sent']) && $business['notifications']['pre_warning_sent']): ?>
+                                                    <span class="badge badge-success">Vorwarnung gesendet</span>
+                                                <?php else: ?>
+                                                    <form method="post" class="d-inline">
+                                                        <input type="hidden" name="action" value="mark_notification">
+                                                        <input type="hidden" name="business_id" value="<?php echo $business['id']; ?>">
+                                                        <input type="hidden" name="notification_type" value="pre_warning">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning">Vorwarnung markieren</button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($business['status']['status'] === 'red' || $business['status']['status'] === 'black'): ?>
+                                                <?php if (isset($business['notifications']['expiry_notice_sent']) && $business['notifications']['expiry_notice_sent']): ?>
+                                                    <span class="badge badge-success">Ablaufmitteilung gesendet</span>
+                                                <?php else: ?>
+                                                    <form method="post" class="d-inline">
+                                                        <input type="hidden" name="action" value="mark_notification">
+                                                        <input type="hidden" name="business_id" value="<?php echo $business['id']; ?>">
+                                                        <input type="hidden" name="notification_type" value="expiry_notice">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Ablaufmitteilung markieren</button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#viewBusinessModal" 
+                                                    data-business-id="<?php echo $business['id']; ?>">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#editBusinessModal"
+                                                    data-business-id="<?php echo $business['id']; ?>">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-success renew-license-btn" data-toggle="modal" data-target="#renewLicenseModal"
+                                                    data-business-id="<?php echo $business['id']; ?>"
+                                                    data-business-name="<?php echo htmlspecialchars($business['name']); ?>"
+                                                    data-expiry-date="<?php echo $business['license_expiry']; ?>">
+                                                <i class="fas fa-sync-alt"></i> Verlängern
+                                            </button>
+                                            <a href="business_licenses.php?action=generate_certificate&business_id=<?php echo $business['id']; ?>" 
+                                               class="btn btn-sm btn-warning" title="Gewerbeschein generieren">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                            
+                                            <?php if (in_array('chief_justice', array_map('strtolower', $roles)) || 
+                                                     in_array('senior_associate_justice', array_map('strtolower', $roles))): ?>
+                                                <form method="post" class="d-inline">
+                                                    <input type="hidden" name="action" value="delete_business">
+                                                    <input type="hidden" name="business_id" value="<?php echo $business['id']; ?>">
+                                                    <button type="submit" class="btn btn-sm btn-danger" 
+                                                            onclick="return confirm('Sind Sie sicher, dass Sie das Unternehmen <?php echo htmlspecialchars($business['name']); ?> löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.');">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                
+                                <?php if (empty($businesses)): ?>
+                                    <tr>
+                                        <td colspan="10" class="text-center">Keine Unternehmen vorhanden.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Protokoll (maximal 10 Einträge) -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Aktivitätsprotokoll</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Zeitpunkt</th>
+                                    <th>Benutzer</th>
+                                    <th>Unternehmen</th>
+                                    <th>Aktion</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                // Sortiere Protokoll nach Zeitstempel, neueste zuerst
+                                usort($businessLogs, function($a, $b) {
+                                    return strtotime($b['timestamp']) - strtotime($a['timestamp']);
+                                });
+                                
+                                // Zeige nur die letzten 10 Einträge
+                                $logEntries = array_slice($businessLogs, 0, 10);
+                                
+                                foreach ($logEntries as $log): 
+                                ?>
+                                    <tr>
+                                        <td><?php echo date('d.m.Y H:i', strtotime($log['timestamp'])); ?></td>
+                                        <td><?php echo htmlspecialchars($log['username']); ?></td>
+                                        <td><?php echo htmlspecialchars($log['business_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($log['action']); ?></td>
+                                        <td><?php echo htmlspecialchars($log['details']); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                
+                                <?php if (empty($logEntries)): ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center">Keine Protokolleinträge vorhanden.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Neues Unternehmen Modal -->
+<div class="modal fade" id="createBusinessModal" tabindex="-1" role="dialog" aria-labelledby="createBusinessModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="business_licenses.php" method="post" id="createBusinessForm" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="create_business">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createBusinessModalLabel">Neues Unternehmen anlegen</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Schließen">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="business_name">Unternehmensname *</label>
+                        <input type="text" class="form-control" id="business_name" name="business_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="owner_name">Inhaber *</label>
+                        <input type="text" class="form-control" id="owner_name" name="owner_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="owner_telegram">Telegram Inhaber *</label>
+                        <input type="text" class="form-control" id="owner_telegram" name="owner_telegram" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deputy_name">Stellvertreter</label>
+                        <input type="text" class="form-control" id="deputy_name" name="deputy_name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="deputy_telegram">Telegram Stellvertreter</label>
+                        <input type="text" class="form-control" id="deputy_telegram" name="deputy_telegram">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="foundation_date">Gründungsdatum / Pachtbeginn *</label>
+                        <input type="date" class="form-control" id="foundation_date" name="foundation_date" value="<?php echo date('Y-m-d'); ?>" required>
+                        <small class="form-text text-muted">Datum, an dem der Pachtvertrag abgeschlossen wurde.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="foundation_date_license">Datum der Gewerbeschein-Ausstellung</label>
+                        <input type="date" class="form-control" id="foundation_date_license" name="foundation_date_license" value="<?php echo date('Y-m-d'); ?>">
+                        <small class="form-text text-muted">Das Datum, an dem der Gewerbeschein ausgestellt wurde. Hiervon wird die Laufzeit berechnet.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="license_info">Gültigkeitsdauer</label>
+                        <input type="text" class="form-control" id="license_info" value="28 Tage" readonly>
+                        <small class="form-text text-muted">Die Gültigkeitsdauer eines Gewerbescheins beträgt immer 28 Tage.</small>
+                        <!-- Hidden field to maintain compatibility -->
+                        <input type="hidden" id="license_duration" name="license_duration" value="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contract_files">Pachtverträge (Optional)</label>
+                        <input type="file" class="form-control-file" id="contract_files" name="contract_files[]" multiple>
+                        <small class="form-text text-muted">Erlaubte Dateitypen: PDF, PNG, JPEG - Mehrere Dateien möglich</small>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Gewerbeschein verlängern Modal -->
+<div class="modal fade" id="renewLicenseModal" tabindex="-1" role="dialog" aria-labelledby="renewLicenseModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form action="business_licenses.php" method="post" id="renewLicenseForm">
+                <input type="hidden" name="action" value="renew_license">
+                <input type="hidden" id="renewal_business_id" name="business_id" value="">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title" id="renewLicenseModalLabel">Gewerbeschein verlängern</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Schließen">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <p id="renewBusinessNameDisplay" class="font-weight-bold"></p>
+                    <p id="oldExpiryDateInfo" class="text-muted"></p>
+                    
+                    <div class="form-group">
+                        <label for="renewal_date">Datum der Verlängerung *</label>
+                        <input type="date" class="form-control" id="renewal_date" name="renewal_date" value="<?php echo date('Y-m-d'); ?>" required>
+                        <small class="form-text text-muted">Datum, an dem der Pachtvertrag verlängert wurde.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="license_info_renewal">Gültigkeitsdauer</label>
+                        <input type="text" class="form-control" id="license_info_renewal" value="28 Tage" readonly>
+                        <small class="form-text text-muted">Die Gültigkeitsdauer eines Gewerbescheins beträgt immer 28 Tage. Verbleibende Tage aus dem bestehenden Gewerbeschein werden automatisch übertragen.</small>
+                        <!-- Hidden field to maintain compatibility -->
+                        <input type="hidden" id="license_duration" name="license_duration" value="1">
+                    </div>
+                    
+                    <div class="alert alert-info" role="alert">
+                        <p id="newExpiryDatePreview" class="mb-0"></p>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-success" id="renewLicenseSubmitBtn">Verlängern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Unternehmen ansehen Modal -->
+<div class="modal fade" id="viewBusinessModal" tabindex="-1" role="dialog" aria-labelledby="viewBusinessModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewBusinessModalLabel">Unternehmensdetails</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Schließen">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div id="businessDetails">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="sr-only">Laden...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4" id="businessAttachments">
+                    <h5>Pachtverträge</h5>
+                    <div id="businessAttachmentsList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only">Laden...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h5>Lizenzen und Genehmigungen</h5>
+                    <div id="businessLicensesList">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only">Laden...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="toggleLicenseFormBtn" class="btn btn-outline-primary mt-3">Neue Lizenz hinzufügen</button>
+                    
+                    <form id="addLicenseForm" action="business_licenses.php" method="post" style="display: none;" class="mt-3">
+                        <input type="hidden" name="action" value="add_license">
+                        <input type="hidden" id="add_license_business_id" name="business_id" value="">
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">Neue Lizenz hinzufügen</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label for="license_name">Lizenzname *</label>
+                                    <input type="text" class="form-control" id="license_name" name="license_name" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="license_description">Beschreibung *</label>
+                                    <textarea class="form-control" id="license_description" name="license_description" rows="3" required></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="license_expiry">Ablaufdatum (optional)</label>
+                                    <input type="date" class="form-control" id="license_expiry" name="license_expiry">
+                                    <small class="form-text text-muted">Lassen Sie dieses Feld leer für die Standardlaufzeit von 3 Monaten.</small>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">Lizenz hinzufügen</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Unternehmen bearbeiten Modal -->
+<div class="modal fade" id="editBusinessModal" tabindex="-1" role="dialog" aria-labelledby="editBusinessModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="business_licenses.php" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="update_business">
+                <input type="hidden" id="edit_business_id" name="business_id" value="">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editBusinessModalLabel">Unternehmen bearbeiten</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Schließen">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_business_name">Unternehmensname *</label>
+                        <input type="text" class="form-control" id="edit_business_name" name="business_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_owner_name">Inhaber *</label>
+                        <input type="text" class="form-control" id="edit_owner_name" name="owner_name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_owner_telegram">Telegram Inhaber *</label>
+                        <input type="text" class="form-control" id="edit_owner_telegram" name="owner_telegram" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_deputy_name">Stellvertreter</label>
+                        <input type="text" class="form-control" id="edit_deputy_name" name="deputy_name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_deputy_telegram">Telegram Stellvertreter</label>
+                        <input type="text" class="form-control" id="edit_deputy_telegram" name="deputy_telegram">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_foundation_date">Gründungsdatum</label>
+                        <input type="date" class="form-control" id="edit_foundation_date" name="foundation_date">
+                        <small class="form-text text-muted">Datum, an dem der Pachtvertrag abgeschlossen wurde.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_license_date">Datum der Gewerbeschein-Ausstellung</label>
+                        <input type="date" class="form-control" id="edit_license_date" name="license_date">
+                        <small class="form-text text-muted">Datum, an dem der Gewerbeschein ausgestellt wurde.</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-info-circle"></i> Hinweis: Um den Gewerbeschein zu verlängern oder das Ablaufdatum zu aktualisieren, 
+                            nutzen Sie bitte die Funktion "Verlängern" auf der Hauptseite.
+                        </small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit_contract_files">Pachtverträge hinzufügen</label>
+                        <input type="file" class="form-control-file" id="edit_contract_files" name="contract_files[]" multiple>
+                        <small class="form-text text-muted">Erlaubte Dateitypen: PDF, PNG, JPEG - Mehrere Dateien möglich</small>
+                    </div>
+                    
+                    <div id="existing_files_container" class="mb-3">
+                        <label>Vorhandene Dateien:</label>
+                        <div id="existing_files_list" class="list-group">
+                            <!-- Hier werden die vorhandenen Dateien dynamisch eingefügt -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Suche und Filter
+    $('#searchBusiness').on('keyup', function() {
+        const searchText = $(this).val().toLowerCase();
+        $('.business-row').each(function() {
+            const rowText = $(this).text().toLowerCase();
+            $(this).toggle(rowText.indexOf(searchText) > -1);
+        });
+    });
+    
+    $('#filterStatus').on('change', function() {
+        const status = $(this).val();
+        if (status === 'all') {
+            $('.business-row').show();
+        } else {
+            $('.business-row').each(function() {
+                $(this).toggle($(this).data('status') === status);
+            });
+        }
+    });
+    
+    // Einfache Implementierung für das Bearbeiten-Modal
+    $('#editBusinessModal').on('show.bs.modal', function (event) {
+        const button = $(event.relatedTarget);
+        const businessId = button.data('business-id');
+        const modal = $(this);
+        
+        console.log('Bearbeiten-Modal geöffnet für Business-ID:', businessId);
+        
+        // Die vorhandenen Unternehmensdaten laden
+        const businesses = <?php echo json_encode($businesses); ?>;
+        
+        if (!businesses || businesses.length === 0) {
+            console.error('Keine Unternehmensdaten gefunden');
+            alert('Es wurden keine Unternehmensdaten gefunden. Bitte die Seite neu laden.');
+            return;
+        }
+        
+        // Mit String-Konvertierung suchen
+        let foundBusiness = null;
+        for (let i = 0; i < businesses.length; i++) {
+            const currentId = String(businesses[i].id || '').trim();
+            const searchId = String(businessId || '').trim();
+            
+            if (currentId === searchId) {
+                foundBusiness = businesses[i];
+                console.log('Unternehmen gefunden:', foundBusiness.name);
+                break;
+            }
+        }
+        
+        if (foundBusiness) {
+            // Das Modal mit den Daten des Unternehmens befüllen
+            modal.find('#edit_business_id').val(foundBusiness.id || '');
+            modal.find('#edit_business_name').val(foundBusiness.name || '');
+            modal.find('#edit_owner_name').val(foundBusiness.owner_name || '');
+            modal.find('#edit_owner_telegram').val(foundBusiness.owner_telegram || '');
+            modal.find('#edit_deputy_name').val(foundBusiness.deputy_name || '');
+            modal.find('#edit_deputy_telegram').val(foundBusiness.deputy_telegram || '');
+            modal.find('#edit_foundation_date').val(foundBusiness.foundation_date || '');
+            
+            // Gewerbeschein-Daten
+            if (foundBusiness.license_date) {
+                modal.find('#edit_license_date').val(foundBusiness.license_date);
+            } else if (foundBusiness.license_renewal_date) {
+                // Fallback: Verwende das letzte Verlängerungsdatum
+                modal.find('#edit_license_date').val(foundBusiness.license_renewal_date);
+            } else {
+                // Letzter Fallback: Verwende das Gründungsdatum
+                modal.find('#edit_license_date').val(foundBusiness.foundation_date || '');
+            }
+            
+            // Statusinfo anzeigen
+            if (foundBusiness.status) {
+                const statusText = foundBusiness.status.text || 'Unbekannt';
+                const statusClass = foundBusiness.status.color_class || 'bg-secondary';
+                
+                // Status-Nachricht einfügen
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'alert alert-info mt-2 mb-3';
+                statusDiv.textContent = 'Status: ' + statusText;
+                
+                // Modal-Body am Anfang einfügen
+                modal.find('.modal-body').prepend(statusDiv);
+            }
+        } else {
+            console.error('Unternehmen nicht gefunden:', businessId);
+            alert('Das angegebene Unternehmen wurde nicht gefunden.');
+        }
+    });
+    
+    // Verbesserte Gewerbeschein-Verlängerungsfunktion mit zusätzlicher Absicherung
+    $('.renew-license-btn').on('click', function(e) {
+        // Verhindern, dass das Modal automatisch geöffnet wird, bis wir Validierungen durchgeführt haben
+        e.preventDefault();
+        
+        // Direkte Extraktion der Data-Attribute vom geklickten Button
+        const businessId = $(this).attr('data-business-id');
+        const businessName = $(this).attr('data-business-name');
+        const expiryDate = $(this).attr('data-expiry-date');
+        
+        console.log('Verlängerung initiiert für Business-ID:', businessId);
+        console.log('Unternehmensname:', businessName);
+        console.log('Ablaufdatum:', expiryDate);
+        
+        // Modal referenzieren und Werte setzen
+        const modal = $('#renewLicenseModal');
+        
+        // Business ID setzen (mit verstärkter Validierung)
+        if (businessId && businessId.length > 0) {
+            // ID zweimal setzen - einmal direkt und einmal via jQuery
+            document.getElementById('renewal_business_id').value = businessId.trim();
+            modal.find('#renewal_business_id').val(businessId.trim());
+            
+            // Debug: Überprüfen, ob die ID korrekt gesetzt wurde (doppelte Überprüfung)
+            const setId = modal.find('#renewal_business_id').val();
+            const directSetId = document.getElementById('renewal_business_id').value;
+            console.log('Gesetzte Business-ID im Formular (jQuery):', setId);
+            console.log('Gesetzte Business-ID im Formular (direkt):', directSetId);
+            
+            // Zusätzliche Absicherung - ID als Data-Attribut im Formular speichern
+            modal.find('#renewLicenseForm').attr('data-business-id', businessId.trim());
+            
+            // Anzeigenamen setzen
+            if (businessName) {
+                modal.find('#renewBusinessNameDisplay').html(`Sie verlängern den Gewerbeschein für: <strong>${businessName}</strong>`);
+            }
+            
+            // Altes Ablaufdatum anzeigen
+            if (expiryDate) {
+                const formattedDate = new Date(expiryDate).toLocaleDateString('de-DE');
+                modal.find('#oldExpiryDateInfo').html(`Bisheriges Ablaufdatum: <strong>${formattedDate}</strong>`);
+            }
+            
+            // Jetzt können wir das Modal sicher öffnen
+            modal.modal('show');
+        } else {
+            console.error('WARNUNG: Keine Business-ID verfügbar!');
+            alert('Fehler: Die Unternehmens-ID konnte nicht ermittelt werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut.');
+        }
+    });
+    
+    // Zusätzliche Absicherung beim Absenden des Formulars
+    $('#renewLicenseForm').on('submit', function(e) {
+        const businessId = $(this).attr('data-business-id');
+        const inputBusinessId = $('#renewal_business_id').val();
+        
+        // Wenn die Business-ID fehlt oder nicht mit der gespeicherten übereinstimmt
+        if (!inputBusinessId || inputBusinessId.trim() === '') {
+            e.preventDefault();
+            console.error('Fehler: Business-ID fehlt im Formular beim Absenden');
+            
+            // ID erneut vom Data-Attribut des Formulars setzen, falls vorhanden
+            if (businessId) {
+                $('#renewal_business_id').val(businessId.trim());
+                console.log('Business-ID korrigiert zu:', businessId);
+                
+                // Formular erneut absenden, wenn ID korrigiert wurde
+                setTimeout(() => {
+                    $(this).submit();
+                }, 100);
+            } else {
+                alert('Fehler: Die Unternehmens-ID konnte nicht ermittelt werden. Bitte versuchen Sie es erneut.');
+            }
+        }
+    });
+    
+    // Implementiere die Vorschau des neuen Ablaufdatums
+    function updateExpiryDatePreview() {
+        const renewalDate = $('#renewal_date').val();
+        
+        if (renewalDate) {
+            // Berechne neues Ablaufdatum (28 Tage nach Verlängerung)
+            const newDate = new Date(renewalDate);
+            newDate.setDate(newDate.getDate() + 28);
+            
+            // Formatiere das Datum für die Anzeige
+            const day = String(newDate.getDate()).padStart(2, '0');
+            const month = String(newDate.getMonth() + 1).padStart(2, '0');
+            const year = newDate.getFullYear();
+            const formattedDate = `${day}.${month}.${year}`;
+            
+            $('#newExpiryDatePreview').html(`Neues Basis-Ablaufdatum: <strong>${formattedDate}</strong> <br><small class="text-muted">(28 Tage gültig + verbleibende Tage aus dem alten Gewerbeschein)</small>`);
+        }
+    }
+    
+    $('#renewal_date').on('change', updateExpiryDatePreview);
+    
+    // Initial die Vorschau aktualisieren
+    updateExpiryDatePreview();
+    // Ende der Gewerbeschein-Verlängerungsfunktion
+    
+    // Unternehmen ansehen Modal - verbesserte Implementierung
+    $('.btn-info[data-toggle="modal"][data-target="#viewBusinessModal"]').on('click', function(e) {
+        // Direktes Event vom Button statt relatedTarget
+        const businessId = $(this).data('business-id') || $(this).attr('data-business-id');
+        console.log('Unternehmensdetails anzeigen für ID:', businessId);
+        
+        // Business ID für das Lizenzformular setzen
+        $('#add_license_business_id').val(businessId);
+        
+        // Finde das Unternehmen in den vorhandenen Daten
+        const businessesData = <?php echo json_encode($businesses); ?>;
+        console.log('Verfügbare Unternehmen:', businessesData.length);
+        
+        // Debug: Alle Business-IDs ausgeben
+        businessesData.forEach(b => console.log('Vorhandene Business-ID:', b.id));
+        
+        // Verbesserte Suche mit String-Vergleich
+        const business = businessesData.find(b => String(b.id).trim() === String(businessId).trim());
+        
+        if (business) {
+            // Formatierungsfunktion für Datumswerte
+            function formatDate(dateString) {
+                try {
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) {
+                        return 'Nicht festgelegt';
+                    }
+                    return date.toLocaleDateString('de-DE');
+                } catch (e) {
+                    console.error('Fehler bei der Datumsformatierung:', e, dateString);
+                    return 'Nicht festgelegt';
+                }
+            }
+            
+            // Unternehmensdetails anzeigen
+            let statusClass = business.status ? business.status.color_class : 'bg-secondary';
+            let statusText = business.status ? business.status.text : 'Unbekannt';
+            let daysRemaining = business.status ? business.status.days_remaining : 0;
+            let needsAction = business.status ? business.status.needs_action : false;
+            
+            let detailsHtml = `
+                <div class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>${business.name || 'Unbenanntes Unternehmen'}</h5>
+                        <span class="badge badge-pill ${statusClass} text-white">${statusText}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Inhaber:</strong> ${business.owner_name || 'Nicht festgelegt'}</p>
+                                <p><strong>Telegram:</strong> ${business.owner_telegram || 'Nicht festgelegt'}</p>
+                                <p><strong>Gründungsdatum:</strong> ${formatDate(business.foundation_date)}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Stellvertreter:</strong> ${business.deputy_name || 'Nicht festgelegt'}</p>
+                                ${business.deputy_name ? `<p><strong>Telegram:</strong> ${business.deputy_telegram || 'Nicht festgelegt'}</p>` : ''}
+                                <p><strong>Letzte Verlängerung:</strong> ${formatDate(business.license_renewal_date || business.foundation_date)}</p>
+                                <p><strong>Gewerbeschein gültig bis:</strong> ${formatDate(business.license_expiry)}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="alert ${needsAction ? 'alert-warning' : 'alert-info'} mt-3">
+                            <p class="mb-0">
+                                <strong>Status:</strong> ${statusText}
+                                ${business.status && business.status.status !== 'expired' ? 
+                                    `(${daysRemaining} Tage ${business.status.status === 'green' ? 'gültig' : 'verbleibend'})` : 
+                                    '(Abgelaufen)'}
+                            </p>
+                            
+                            ${needsAction ? '<p class="mb-0 mt-2"><strong>Handlungsbedarf!</strong></p>' : ''}
+                            
+                            ${business.notifications && business.notifications.pre_warning_sent ? 
+                                '<p class="mb-0 mt-2"><i class="fas fa-check text-success"></i> Vorwarnung wurde gesendet</p>' : ''}
+                                
+                            ${business.notifications && business.notifications.expiry_notice_sent ? 
+                                '<p class="mb-0 mt-2"><i class="fas fa-check text-success"></i> Ablaufmitteilung wurde gesendet</p>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#businessDetails').html(detailsHtml);
+            
+            // Lizenzen anzeigen
+            let licensesHtml = '';
+            
+            if (business.licenses && business.licenses.length > 0) {
+                licensesHtml += '<div class="list-group">';
+                
+                business.licenses.forEach(license => {
+                    // Formatiere das Ausstellungsdatum
+                    let issueDate = formatDate(license.issue_date);
+                    
+                    // Lizenzstatus basierend auf Ablaufdatum (wenn vorhanden)
+                    let licenseStatus = '';
+                    if (license.expiry_date) {
+                        let status = calculateLicenseStatusJS(license.expiry_date);
+                        licenseStatus = `
+                            <span class="badge badge-pill ${status.color_class} text-white ml-2">
+                                ${status.status === 'expired' ? 'Abgelaufen' : 
+                                  status.status === 'yellow' ? 'Warnung' : 
+                                  status.status === 'red' ? 'Kritisch' : 
+                                  status.status === 'black' ? 'Letzter Aufschub' : 'Gültig'}
+                            </span>`;
+                            
+                        if (status.status !== 'expired' && status.status !== 'green') {
+                            licenseStatus += ` <small>(${status.days_remaining} Tage verbleibend)</small>`;
+                        }
+                    } else {
+                        licenseStatus = '<span class="badge badge-pill bg-info text-white ml-2">Unbegrenzt</span>';
+                    }
+                    
+                    licensesHtml += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-1">${license.name}</h6>
+                                <div>
+                                    <small class="text-muted">Ausgestellt am: ${issueDate}</small>
+                                    ${license.expiry_date ? `<small class="text-muted ml-2">Gültig bis: ${formatDate(license.expiry_date)}</small>` : ''}
+                                    ${licenseStatus}
+                                    <form method="post" class="d-inline ml-2">
+                                        <input type="hidden" name="action" value="delete_license">
+                                        <input type="hidden" name="business_id" value="${business.id}">
+                                        <input type="hidden" name="license_id" value="${license.id}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                onclick="return confirm('Sind Sie sicher, dass Sie diese Lizenz löschen möchten?');">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <p class="mb-1">${license.description}</p>
+                        </div>
+                    `;
+                });
+                
+                licensesHtml += '</div>';
+            } else {
+                licensesHtml = '<p class="text-muted">Keine Lizenzen vorhanden.</p>';
+            }
+            
+            $('#businessLicensesList').html(licensesHtml);
+            
+            // Anzeigen der Pachtverträge
+            let attachmentsHtml = '';
+            
+            // Kombiniere alle Anhänge (attachments und files) in ein Array
+            const allAttachments = [];
+            
+            // Füge attachments hinzu, wenn vorhanden
+            if (business.attachments && business.attachments.length > 0) {
+                business.attachments.forEach(attachment => {
+                    attachment._source = 'attachments';
+                    allAttachments.push(attachment);
+                });
+            }
+            
+            // Füge files hinzu, wenn vorhanden
+            if (business.files && business.files.length > 0) {
+                business.files.forEach(file => {
+                    file._source = 'files';
+                    allAttachments.push(file);
+                });
+            }
+            
+            if (allAttachments.length > 0) {
+                attachmentsHtml = '<div class="list-group">';
+                
+                allAttachments.forEach(attachment => {
+                    // Bestimme das passende Icon basierend auf dem MIME-Typ
+                    let icon = 'fas fa-file';
+                    if (attachment.mime_type) {
+                        if (attachment.mime_type === 'application/pdf') {
+                            icon = 'fas fa-file-pdf';
+                        } else if (attachment.mime_type.startsWith('image/')) {
+                            icon = 'fas fa-file-image';
+                        }
+                    }
+                    
+                    // Formatiere das Datum
+                    let uploadDate = 'Unbekannt';
+                    if (attachment.uploaded_at) {
+                        try {
+                            const date = new Date(attachment.uploaded_at);
+                            uploadDate = date.toLocaleDateString('de-DE') + ' ' + date.toLocaleTimeString('de-DE');
+                        } catch (e) {
+                            console.error('Fehler bei der Datumsformatierung für Anlage:', e);
+                        }
+                    }
+                    
+                    // Formatiere die Dateigröße
+                    let fileSize = 'Unbekannt';
+                    if (attachment.size) {
+                        if (attachment.size >= 1048576) {
+                            fileSize = (attachment.size / 1048576).toFixed(2) + ' MB';
+                        } else if (attachment.size >= 1024) {
+                            fileSize = (attachment.size / 1024).toFixed(2) + ' KB';
+                        } else {
+                            fileSize = attachment.size + ' Bytes';
+                        }
+                    }
+                    
+                    // Element für die Anlage erstellen
+                    attachmentsHtml += `
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">
+                                    <i class="${icon} mr-2"></i>
+                                    ${attachment.original_name || attachment.name || (attachment.path ? attachment.path.split('/').pop() : 'Unbenannte Datei')}
+                                </h5>
+                                <small>${fileSize}</small>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                <small class="text-muted">Hochgeladen: ${uploadDate}</small>
+                                <div>
+                                    <a href="${attachment.path || `../uploads/business_contracts/${attachment.file_name}`}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        <i class="fas fa-eye"></i> Anzeigen
+                                    </a>
+                                    <a href="${attachment.path || `../uploads/business_contracts/${attachment.file_name}`}" class="btn btn-sm btn-outline-success" download="${attachment.original_name || attachment.name || 'Anhang'}">
+                                        <i class="fas fa-download"></i> Herunterladen
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-danger delete-attachment-btn" 
+                                            data-business-id="${business.id}" 
+                                            data-attachment-id="${attachment.id}"
+                                            data-toggle="tooltip" 
+                                            title="Pachtvertrag löschen">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            ${(attachment.mime_type && attachment.mime_type.startsWith('image/')) || (attachment.path && attachment.path.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i)) ? `
+                                <div class="mt-3">
+                                    <img src="${attachment.path || `../uploads/business_contracts/${attachment.file_name}`}" class="img-fluid img-thumbnail" 
+                                         alt="${attachment.original_name || attachment.name || 'Pachtvertrag'}" style="max-height: 200px;">
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                attachmentsHtml += '</div>';
+            } else {
+                attachmentsHtml = '<p class="text-muted">Keine Pachtverträge hinterlegt.</p>';
+            }
+            
+            // Debug-Information ausgeben, wenn vorhanden
+            if (business.attachments || business.files) {
+                console.log('Attachments in attachments array:', business.attachments ? business.attachments.length : 0);
+                console.log('Attachments in files array:', business.files ? business.files.length : 0);
+                console.log('Combined attachments shown:', allAttachments.length);
+            }
+            
+            $('#businessAttachmentsList').html(attachmentsHtml);
+            
+            // Unternehmensprotokoll anzeigen
+            const businessLogsData = <?php echo json_encode($businessLogs); ?>;
+            let logsHtml = '<h5 class="mt-4">Verlaufsprotokoll</h5>';
+            
+            // Filtern der Logs für dieses Unternehmen
+            const filteredLogs = businessLogsData.filter(log => log.business_id === businessId);
+            
+            if (filteredLogs && filteredLogs.length > 0) {
+                logsHtml += '<div class="table-responsive"><table class="table table-sm table-striped">';
+                logsHtml += '<thead><tr><th>Datum</th><th>Benutzer</th><th>Aktion</th><th>Details</th></tr></thead>';
+                logsHtml += '<tbody>';
+                
+                // Sortiere nach neuestem Datum
+                filteredLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                filteredLogs.forEach(log => {
+                    const logDate = new Date(log.timestamp).toLocaleString('de-DE');
+                    logsHtml += `<tr>
+                        <td>${logDate}</td>
+                        <td>${log.username}</td>
+                        <td>${log.action}</td>
+                        <td>${log.details}</td>
+                    </tr>`;
+                });
+                
+                logsHtml += '</tbody></table></div>';
+            } else {
+                logsHtml += '<p class="text-muted">Keine Protokolleinträge für dieses Unternehmen vorhanden.</p>';
+            }
+            
+            // Füge das Protokoll unterhalb der Lizenzliste ein
+            $('#businessLicensesList').after(logsHtml);
+        } else {
+            $('#businessDetails').html('<div class="alert alert-danger">Unternehmen nicht gefunden.</div>');
+            $('#businessLicensesList').html('<p class="text-muted">Keine Daten verfügbar.</p>');
+            $('#businessAttachmentsList').html('<p class="text-muted">Keine Daten verfügbar.</p>');
+        }
+    });
+    
+    // Toggle Lizenz-Formular
+    document.getElementById('toggleLicenseFormBtn').addEventListener('click', function() {
+        const form = document.getElementById('addLicenseForm');
+        const isVisible = form.style.display !== 'none';
+        
+        form.style.display = isVisible ? 'none' : 'block';
+        this.textContent = isVisible ? 'Neue Lizenz hinzufügen' : 'Formular ausblenden';
+    });
+    
+    // Event-Handler für das Löschen von Pachtverträgen
+    $(document).on('click', '.delete-attachment-btn', function(e) {
+        e.preventDefault();
+        
+        const businessId = $(this).data('business-id');
+        const attachmentId = $(this).data('attachment-id');
+        
+        console.log('Löschen-Button gedrückt:', { businessId, attachmentId });
+        
+        if (!businessId || !attachmentId) {
+            alert('Fehler: Fehlende Informationen zum Löschen des Anhangs. Business ID: ' + businessId + ', Attachment ID: ' + attachmentId);
+            return;
+        }
+        
+        if (confirm('Sind Sie sicher, dass Sie diesen Pachtvertrag löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+            // AJAX-Anfrage zum Löschen des Anhangs
+            $.ajax({
+                url: 'business_licenses.php',
+                method: 'POST',
+                data: {
+                    action: 'delete_attachment',
+                    business_id: businessId,
+                    attachment_id: attachmentId
+                },
+                success: function(response) {
+                    try {
+                        const result = JSON.parse(response);
+                        if (result.success) {
+                            // Erfolg: Aktualisiere das Modal durch erneutes Öffnen
+                            const viewModal = $('#viewBusinessModal');
+                            const businessId = result.business_id;
+                            
+                            // Schließe das Modal
+                            viewModal.modal('hide');
+                            
+                            // Warte kurz und öffne es erneut mit den aktualisierten Daten
+                            setTimeout(function() {
+                                // Simuliere einen Klick auf den entsprechenden Button
+                                $(`button[data-business-id="${businessId}"][data-action="view"]`).click();
+                            }, 500);
+                        } else {
+                            alert('Fehler: ' + (result.message || 'Der Anhang konnte nicht gelöscht werden.'));
+                        }
+                    } catch (e) {
+                        console.error('Fehler beim Parsen der Antwort:', e);
+                        alert('Fehler: Unerwartete Antwort vom Server.');
+                    }
+                },
+                error: function() {
+                    alert('Fehler: Die Anfrage konnte nicht abgeschlossen werden.');
+                }
+            });
+        }
+    });
+});
+
+/**
+ * Berechnet den Status einer Lizenz basierend auf dem Ablaufdatum (JavaScript-Version)
+ * 
+ * @param {string} expiryDate Ablaufdatum im Format 'YYYY-MM-DD'
+ * @returns {object} Objekt mit Status und verbleibenden Tagen
+ */
+function calculateLicenseStatusJS(expiryDate) {
+    try {
+        if (!expiryDate) {
+            console.error('Kein Ablaufdatum angegeben');
+            return {
+                status: 'expired',
+                days_remaining: 0,
+                text: 'Ungültiges Datum',
+                color_class: 'bg-secondary',
+                needs_action: true
+            };
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const expiry = new Date(expiryDate);
+        expiry.setHours(0, 0, 0, 0);
+        
+        // Debug-Info in der Konsole
+        console.log(`Ablaufdatum JS: ${expiryDate}, Heute: ${today.toISOString().split('T')[0]}`);
+        
+        // Differenz in Tagen
+        const diffTime = expiry.getTime() - today.getTime();
+        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        console.log(`Differenz in Tagen: ${daysRemaining}`);
+        
+        // Normale Gültigkeit (grün): mehr als 7 Tage verbleibend
+        if (daysRemaining > 7) {
+            return {
+                status: 'green',
+                days_remaining: daysRemaining,
+                text: 'Gültig',
+                color_class: 'bg-success',
+                needs_action: false
+            };
+        }
+        
+        // Vorwarnphase (gelb): weniger als 7 Tage verbleibend
+        else if (daysRemaining >= 0) {
+            return {
+                status: 'yellow',
+                days_remaining: daysRemaining,
+                text: 'Vorwarnung',
+                color_class: 'bg-warning',
+                needs_action: true
+            };
+        }
+        
+        // Nachfrist (rot): 1-28 Tage abgelaufen
+        else if (daysRemaining >= -28) {
+            return {
+                status: 'red',
+                days_remaining: 28 + daysRemaining,
+                text: 'Nachfrist',
+                color_class: 'bg-danger',
+                needs_action: true
+            };
+        }
+        
+        // Letzter Aufschub (schwarz): 29-42 Tage abgelaufen
+        else if (daysRemaining >= -42) {
+            return {
+                status: 'black',
+                days_remaining: 42 + daysRemaining,
+                text: 'Letzter Aufschub',
+                color_class: 'bg-dark',
+                needs_action: true
+            };
+        }
+        
+        // Vollständig abgelaufen (grau): mehr als 42 Tage abgelaufen
+        else {
+            return {
+                status: 'expired',
+                days_remaining: 0,
+                text: 'Abgelaufen',
+                color_class: 'bg-secondary',
+                needs_action: true
+            };
+        }
+    } catch (e) {
+        console.error('Fehler bei der Statusberechnung:', e);
+        return {
+            status: 'expired',
+            days_remaining: 0,
+            text: 'Ungültiges Datum',
+            color_class: 'bg-secondary',
+            needs_action: true
+        };
+    }
+}
+</script>
+
+<?php
+        } // Ende if (!$businessFound)
+        include_once '../includes/footer.php';
+?>
