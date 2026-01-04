@@ -170,8 +170,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Prüfe auf Administratorzugriff anhand der Berechtigungen
                         $hasAdminAccess = false;
                         foreach ($roles as $r) {
-                            if ($r['id'] === $role && isset($r['permissions']['admin']['view']) && $r['permissions']['admin']['view'] === true) {
-                                $hasAdminAccess = true;
+                            if ($r['id'] === $role) {
+                                // Stored permissions may be in array form: ['admin' => ['view', 'create', ...]]
+                                if (isset($r['permissions']['admin']) && is_array($r['permissions']['admin']) && in_array('view', $r['permissions']['admin'])) {
+                                    $hasAdminAccess = true;
+                                }
+                                // Legacy boolean structure support
+                                if (isset($r['permissions']['admin']['view']) && $r['permissions']['admin']['view'] === true) {
+                                    $hasAdminAccess = true;
+                                }
                                 break;
                             }
                         }

@@ -51,35 +51,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } 
     // Create or update role
     else if (isset($_POST['save_role'])) {
-        $roleData = [
-            'name' => trim($_POST['name']),
-            'description' => trim($_POST['description'])
-        ];
+        $name = trim($_POST['name']);
+        $description = trim($_POST['description']);
 
         // Update existing role
         if (!empty($_POST['role_id'])) {
             $roleId = $_POST['role_id'];
 
-            // Check if it's a core role and only update description
-            $coreRoles = ['admin', 'prosecutor', 'judge', 'clerk'];
-            if (in_array($roleId, $coreRoles)) {
-                // For core roles, only update the description, not the name
-                $existingRole = findById('roles.json', $roleId);
-                $roleData['name'] = $existingRole['name'];
-            }
-
-            if (updateRecord('roles.json', $roleId, $roleData)) {
-                $message = "Rolle erfolgreich aktualisiert.";
+            // Load existing role to preserve fields like permissions
+            $existingRole = findById('roles.json', $roleId);
+            if (!$existingRole) {
+                $error = "Rolle nicht gefunden.";
             } else {
-                $error = "Fehler beim Aktualisieren der Rolle.";
+                // Check if it's a core role and only update description
+                $coreRoles = ['admin', 'prosecutor', 'judge', 'clerk'];
+                if (in_array($roleId, $coreRoles)) {
+                    // For core roles, only update the description, not the name
+                    $name = $existingRole['name'];
+                }
+
+                // Merge changes while preserving permissions and other meta
+                $existingRole['name'] = $name;
+                $existingRole['description'] = $description;
+
+                if (updateRecord('roles.json', $roleId, $existingRole)) {
+                    $message = "Rolle erfolgreich aktualisiert.";
+                } else {
+                    $error = "Fehler beim Aktualisieren der Rolle.";
+                }
             }
         }
         // Create new role
         else {
             // Generate a unique ID for the new role
-            $roleData['id'] = strtolower(str_replace(' ', '_', $roleData['name'])) . '_' . uniqid();
+            $roleId = strtolower(str_replace(' ', '_', $name)) . '_' . uniqid();
+            $newRole = [
+                'id' => $roleId,
+                'name' => $name,
+                'description' => $description,
+                'permissions' => []
+            ];
 
-            if (insertRecord('roles.json', $roleData)) {
+            if (insertRecord('roles.json', $newRole)) {
                 $message = "Rolle erfolgreich erstellt.";
             } else {
                 $error = "Fehler beim Erstellen der Rolle.";
