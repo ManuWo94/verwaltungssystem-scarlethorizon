@@ -7,5 +7,16 @@
         "is_admin": true,
         "status": "active",
         "date_created": "2026-01-04 23:26:37"
+    },
+    {
+        "id": "testuser",
+        "username": "tuser",
+        "password": "$2y$10$rkc67Obh1aH\/0DYxWXzZIuzzlKI1Lz73L2O0Ec07sonx606BE\/5vq",
+        "role": "Gerichtsreferendar",
+        "roles": [
+            "Gerichtsreferendar"
+        ],
+        "role_id": "gerichtsreferendar",
+        "date_created": "2026-01-04 23:55:06"
     }
 ]

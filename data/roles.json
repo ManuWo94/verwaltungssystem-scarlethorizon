@@ -25,14 +25,16 @@
         "description": "Referendar am Gericht",
         "permissions": {
             "cases": [
-                "view"
+                "view",
+                "create",
+                "edit"
             ],
             "notes": [
                 "view",
                 "create"
             ]
         },
-        "date_updated": "2026-01-04 23:33:51"
+        "date_updated": "2026-01-04 23:55:42"
     },
     {
         "id": "gerichtsvolontar",
