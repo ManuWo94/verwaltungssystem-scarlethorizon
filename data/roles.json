@@ -1,0 +1,77 @@
+[
+    {
+        "id": "admin",
+        "name": "Administrator",
+        "description": "System administrator with full access"
+    },
+    {
+        "id": "prosecutor",
+        "name": "Prosecutor",
+        "description": "Department prosecutor responsible for cases"
+    },
+    {
+        "id": "judge",
+        "name": "Judge",
+        "description": "Judicial official who presides over cases"
+    },
+    {
+        "id": "clerk",
+        "name": "Clerk",
+        "description": "Administrative staff who manages records"
+    },
+    {
+        "id": "gerichtsreferendar",
+        "name": "Gerichtsreferendar",
+        "description": "Referendar am Gericht",
+        "permissions": {
+            "cases": [
+                "view"
+            ],
+            "notes": [
+                "view",
+                "create"
+            ]
+        },
+        "date_updated": "2026-01-04 23:33:51"
+    },
+    {
+        "id": "gerichtsvolontar",
+        "name": "Gerichtsvolont\u00e4r",
+        "description": "Volont\u00e4r\/Praktikant am Gericht"
+    },
+    {
+        "id": "gerichtsassistent",
+        "name": "Gerichtsassistent",
+        "description": "Assistent f\u00fcr richterliche T\u00e4tigkeiten"
+    },
+    {
+        "id": "friedensrichter",
+        "name": "Friedensrichter",
+        "description": "Richter f\u00fcr Schlichtungsverfahren"
+    },
+    {
+        "id": "berufungsrichter",
+        "name": "Berufungsrichter",
+        "description": "Richter im Berufungsgericht"
+    },
+    {
+        "id": "beisitzender_richter",
+        "name": "Beisitzender Richter",
+        "description": "Beisitzender Richter"
+    },
+    {
+        "id": "amtsrichter",
+        "name": "Amtsrichter",
+        "description": "Amtsrichter"
+    },
+    {
+        "id": "senatsrichter",
+        "name": "Senatsrichter",
+        "description": "Senatsrichter"
+    },
+    {
+        "id": "vorsitzender_senatsrichter",
+        "name": "Vorsitzender Senatsrichter",
+        "description": "Vorsitzender Richter eines Senats"
+    }
+]

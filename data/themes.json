@@ -1,0 +1,42 @@
+[
+    {
+        "name": "Federal Archive (1899)",
+        "active": true,
+        "colors": {
+            "primary": "#0e1214",
+            "secondary": "#5a4a37",
+            "accent": "#6a2e09",
+            "light": "#e8e2d8",
+            "dark": "#0e0e0e",
+            "paper": "#a19a88",
+            "ink": "#121212",
+            "success": "#1c3821",
+            "danger": "#660000",
+            "warning": "#6a5800",
+            "info": "#192a41",
+            "sidebar-bg": "#1a1f23",
+            "sidebar-color": "#e8e2d8",
+            "content-bg": "#d0c9bc"
+        }
+    },
+    {
+        "name": "Sepia Archive",
+        "active": false,
+        "colors": {
+            "primary": "#2c1704",
+            "secondary": "#6b4f34",
+            "accent": "#8b4513",
+            "light": "#f2e8d5",
+            "dark": "#1a0d02",
+            "paper": "#d9c7a7",
+            "ink": "#0d0901",
+            "success": "#2d4925",
+            "danger": "#7b0000",
+            "warning": "#7a6307",
+            "info": "#1a384f",
+            "sidebar-bg": "#2c1704",
+            "sidebar-color": "#f2e8d5",
+            "content-bg": "#e8dbbd"
+        }
+    }
+]

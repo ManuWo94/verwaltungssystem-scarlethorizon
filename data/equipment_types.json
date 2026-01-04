@@ -1,0 +1,22 @@
+[
+    {
+        "id": "badge",
+        "name": "Badge",
+        "description": "Official department badge"
+    },
+    {
+        "id": "firearm",
+        "name": "Firearm",
+        "description": "Service weapon"
+    },
+    {
+        "id": "uniform",
+        "name": "Uniform",
+        "description": "Official department uniform"
+    },
+    {
+        "id": "handcuffs",
+        "name": "Handcuffs",
+        "description": "Restraint device"
+    }
+]
