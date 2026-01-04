@@ -30,9 +30,10 @@
             function setInertForPage(modal) {
                 // Hauptelemente auswählen, die außerhalb des Modals liegen
                 const elementsToInert = document.querySelectorAll('main, .container-fluid, #sidebarMenu, .navbar');
-                
+
                 elementsToInert.forEach(function(element) {
-                    if (element && !modal.contains(element)) {
+                    // Setze 'inert' nur für Elemente, die das Modal NICHT enthalten (also wirklich außerhalb liegen)
+                    if (element && !element.contains(modal)) {
                         // inert-Attribut setzen
                         element.setAttribute('inert', '');
                         element.setAttribute('aria-hidden', 'true');
