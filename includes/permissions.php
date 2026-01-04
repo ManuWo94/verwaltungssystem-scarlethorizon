@@ -480,6 +480,19 @@ function getRolePermissions() {
     $permissions['administrator']['users'][] = 'force_logout';
     $permissions['system_administrator']['users'][] = 'force_logout';
     
+    // Merge with stored/overridden permissions from data/roles.json (if present)
+    if (function_exists('getJsonData')) {
+        $storedRoles = getJsonData('roles.json');
+        if (is_array($storedRoles)) {
+            foreach ($storedRoles as $r) {
+                if (isset($r['id']) && isset($r['permissions']) && is_array($r['permissions'])) {
+                    // Use stored permissions as an override for this role
+                    $permissions[$r['id']] = $r['permissions'];
+                }
+            }
+        }
+    }
+
     return $permissions;
 }
 

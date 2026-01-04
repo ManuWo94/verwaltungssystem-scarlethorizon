@@ -7,6 +7,7 @@ session_start();
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
+require_once '../includes/permissions.php';
 
 // Debug-Informationen, um zu verstehen, warum Admin-Zugriff nicht funktioniert
 $isAdmin = isAdminSession();
@@ -54,11 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'name' => trim($_POST['name']),
             'description' => trim($_POST['description'])
         ];
-        
+
         // Update existing role
         if (!empty($_POST['role_id'])) {
             $roleId = $_POST['role_id'];
-            
+
             // Check if it's a core role and only update description
             $coreRoles = ['admin', 'prosecutor', 'judge', 'clerk'];
             if (in_array($roleId, $coreRoles)) {
@@ -66,18 +67,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $existingRole = findById('roles.json', $roleId);
                 $roleData['name'] = $existingRole['name'];
             }
-            
+
             if (updateRecord('roles.json', $roleId, $roleData)) {
                 $message = "Rolle erfolgreich aktualisiert.";
             } else {
                 $error = "Fehler beim Aktualisieren der Rolle.";
             }
-        } 
+        }
         // Create new role
         else {
             // Generate a unique ID for the new role
             $roleData['id'] = strtolower(str_replace(' ', '_', $roleData['name'])) . '_' . uniqid();
-            
+
             if (insertRecord('roles.json', $roleData)) {
                 $message = "Rolle erfolgreich erstellt.";
             } else {
@@ -85,6 +86,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    // Save Permissions for a role
+    else if (isset($_POST['save_permissions'])) {
+        $roleId = $_POST['role_id'] ?? '';
+        $permissionsPosted = isset($_POST['permissions']) && is_array($_POST['permissions']) ? $_POST['permissions'] : [];
+
+        // Normalize permissions: ensure arrays of unique strings
+        foreach ($permissionsPosted as $module => $acts) {
+            $permissionsPosted[$module] = array_values(array_unique(array_map('strval', (array)$acts)));
+        }
+
+        $existingRole = findById('roles.json', $roleId);
+        if ($existingRole) {
+            $existingRole['permissions'] = $permissionsPosted;
+            if (updateRecord('roles.json', $roleId, $existingRole)) {
+                $message = "Berechtigungen erfolgreich gespeichert.";
+            } else {
+                $error = "Fehler beim Speichern der Berechtigungen.";
+            }
+        } else {
+            $error = "Rolle nicht gefunden.";
+        }
+    }
+        
+
 }
 
 // Get all roles
@@ -182,6 +207,56 @@ include '../includes/header.php';
                                     <a href="?edit=<?php echo urlencode($role['id']); ?>" class="btn btn-sm btn-outline-primary">
                                         <span data-feather="edit"></span>
                                     </a>
+
+                                    <!-- Permissions button -->
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#permissionsModal<?php echo $role['id']; ?>">
+                                        <span data-feather="shield"></span>
+                                    </button>
+
+                                    <!-- Permissions Modal (always available) -->
+                                    <div class="modal fade" id="permissionsModal<?php echo $role['id']; ?>" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Berechtigungen: <?php echo htmlspecialchars($role['name']); ?></h5>
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                                        <span aria-hidden="true">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <form method="post">
+                                                    <div class="modal-body">
+                                                        <input type="hidden" name="role_id" value="<?php echo $role['id']; ?>">
+                                                        <?php
+                                                        $availableModules = getAvailableModules();
+                                                        $availableActions = getAvailableActions();
+                                                        $rolePermissionsAll = getRolePermissions();
+                                                        $currentPerms = isset($rolePermissionsAll[$role['id']]) ? $rolePermissionsAll[$role['id']] : [];
+                                                        foreach ($availableModules as $moduleId => $moduleName): ?>
+                                                            <div class="mb-3">
+                                                                <h6><?php echo htmlspecialchars($moduleName); ?></h6>
+                                                                <div class="d-flex flex-wrap">
+                                                                    <?php foreach ($availableActions as $actionKey => $actionLabel):
+                                                                        $checked = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]); ?>
+                                                                        <div class="form-check me-3">
+                                                                            <input class="form-check-input" type="checkbox" 
+                                                                                   id="perm_<?php echo $role['id'] . '_' . $moduleId . '_' . $actionKey; ?>" 
+                                                                                   name="permissions[<?php echo $moduleId; ?>][]" value="<?php echo $actionKey; ?>" <?php if ($checked) echo 'checked'; ?>>
+                                                                            <label class="form-check-label" for="perm_<?php echo $role['id'] . '_' . $moduleId . '_' . $actionKey; ?>"><?php echo htmlspecialchars($actionLabel); ?></label>
+                                                                        </div>
+                                                                    <?php endforeach; ?>
+                                                                </div>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                                                        <button type="submit" name="save_permissions" class="btn btn-primary">Speichern</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <?php if (!$isCoreRole): // Prevent deleting core roles ?>
                                         <button class="btn btn-sm btn-outline-danger" data-toggle="modal" data-target="#deleteRoleModal<?php echo $role['id']; ?>">
                                             <span data-feather="trash-2"></span>
