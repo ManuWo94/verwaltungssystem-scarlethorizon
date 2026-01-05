@@ -60,6 +60,46 @@
         }
     },
     {
+        "id": "vorsitzender_senatsrichter",
+        "name": "Vorsitzender Senatsrichter",
+        "description": "Nicht-Systemrolle ohne Adminrechte"
+    },
+    {
+        "id": "senatsrichter",
+        "name": "Senatsrichter",
+        "description": "Senatsrichter"
+    },
+    {
+        "id": "amtsrichter",
+        "name": "Amtsrichter",
+        "description": "Amtsrichter"
+    },
+    {
+        "id": "beisitzender_richter",
+        "name": "Beisitzender Richter",
+        "description": "Beisitzender Richter"
+    },
+    {
+        "id": "berufungsrichter",
+        "name": "Berufungsrichter",
+        "description": "Richter im Berufungsgericht"
+    },
+    {
+        "id": "friedensrichter",
+        "name": "Friedensrichter",
+        "description": "Richter für Schlichtungsverfahren"
+    },
+    {
+        "id": "gerichtsassistent",
+        "name": "Gerichtsassistent",
+        "description": "Assistent für richterliche Tätigkeiten"
+    },
+    {
+        "id": "gerichtsvolontar",
+        "name": "Gerichtsvolontär",
+        "description": "Volontär/Praktikant am Gericht"
+    },
+    {
         "id": "gerichtsreferendar",
         "name": "Gerichtsreferendar",
         "description": "Referendar am Gericht",
@@ -75,45 +115,5 @@
             ]
         },
         "date_updated": "2026-01-04 23:55:42"
-    },
-    {
-        "id": "gerichtsvolontar",
-        "name": "Gerichtsvolont\u00e4r",
-        "description": "Volont\u00e4r\/Praktikant am Gericht"
-    },
-    {
-        "id": "gerichtsassistent",
-        "name": "Gerichtsassistent",
-        "description": "Assistent f\u00fcr richterliche T\u00e4tigkeiten"
-    },
-    {
-        "id": "friedensrichter",
-        "name": "Friedensrichter",
-        "description": "Richter f\u00fcr Schlichtungsverfahren"
-    },
-    {
-        "id": "berufungsrichter",
-        "name": "Berufungsrichter",
-        "description": "Richter im Berufungsgericht"
-    },
-    {
-        "id": "beisitzender_richter",
-        "name": "Beisitzender Richter",
-        "description": "Beisitzender Richter"
-    },
-    {
-        "id": "amtsrichter",
-        "name": "Amtsrichter",
-        "description": "Amtsrichter"
-    },
-    {
-        "id": "senatsrichter",
-        "name": "Senatsrichter",
-        "description": "Senatsrichter"
-    },
-    {
-        "id": "vorsitzender_senatsrichter",
-        "name": "Vorsitzender Senatsrichter",
-        "description": "Nicht-Systemrolle ohne Adminrechte"
     }
 ]
