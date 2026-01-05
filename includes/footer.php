@@ -160,6 +160,9 @@
                         if (input.length) {
                             input.focus();
                         }
+                        
+                        // Initialisiere Drag & Drop für Permissions-Modal
+                        initPermissionDragDrop();
                     });
                     
                     // Event-Handler für das Schließen des Modals registrieren
@@ -190,6 +193,119 @@
         // Konsolenausgabe für Debug-Zwecke
         console.log('Footer-Script geladen, Modals via jQuery initialisiert');
     });
+    
+    // Drag & Drop Permission Editor Funktionen
+    function initPermissionDragDrop() {
+        const permissionItems = document.querySelectorAll('.permission-item');
+        
+        permissionItems.forEach(item => {
+            item.addEventListener('dragstart', handleDragStart);
+            item.addEventListener('dragend', handleDragEnd);
+        });
+        
+        const dropZones = document.querySelectorAll('.permission-source, .permission-target');
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', handleDragOver);
+            zone.addEventListener('drop', handleDrop);
+            zone.addEventListener('dragleave', handleDragLeave);
+        });
+    }
+    
+    let draggedElement = null;
+    
+    function handleDragStart(e) {
+        draggedElement = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.innerHTML);
+    }
+    
+    function handleDragEnd(e) {
+        this.classList.remove('dragging');
+        document.querySelectorAll('.permission-source, .permission-target').forEach(zone => {
+            zone.classList.remove('drag-over');
+        });
+    }
+    
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault();
+        }
+        e.dataTransfer.dropEffect = 'move';
+        this.classList.add('drag-over');
+        return false;
+    }
+    
+    function handleDragLeave(e) {
+        if (e.target === this) {
+            this.classList.remove('drag-over');
+        }
+    }
+    
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation();
+        }
+        
+        this.classList.remove('drag-over');
+        
+        if (draggedElement && draggedElement !== this) {
+            const moduleId = draggedElement.getAttribute('data-module');
+            const actionKey = draggedElement.getAttribute('data-action');
+            const isTarget = this.classList.contains('permission-target');
+            
+            // Finde das Form-Element
+            const form = draggedElement.closest('form');
+            if (!form) {
+                console.error('Form nicht gefunden');
+                return;
+            }
+            
+            // Entferne das Element aus seinem aktuellen Container
+            const oldParent = draggedElement.parentNode;
+            draggedElement.remove();
+            
+            if (isTarget) {
+                // Verschiebe zu erteilten Berechtigungen
+                draggedElement.style.backgroundColor = '#d4edda';
+                this.appendChild(draggedElement);
+                
+                // Füge verstecktes Input-Feld hinzu (wenn nicht vorhanden)
+                if (!form.querySelector(`input[name="permissions[${moduleId}][]"][value="${actionKey}"]`)) {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = `permissions[${moduleId}][]`;
+                    hiddenInput.value = actionKey;
+                    form.appendChild(hiddenInput);
+                }
+            } else {
+                // Verschiebe zurück zu verfügbaren Berechtigungen
+                draggedElement.style.backgroundColor = '';
+                this.appendChild(draggedElement);
+                
+                // Entferne verstecktes Input-Feld
+                const hiddenInput = form.querySelector(`input[name="permissions[${moduleId}][]"][value="${actionKey}"]`);
+                if (hiddenInput) {
+                    hiddenInput.remove();
+                }
+            }
+            
+            // Re-initialisiere drag events für das verschobene Element
+            draggedElement.addEventListener('dragstart', handleDragStart);
+            draggedElement.addEventListener('dragend', handleDragEnd);
+            
+            // Führe Validierung durch
+            validatePermissionForm(form);
+        }
+        
+        return false;
+    }
+    
+    function validatePermissionForm(form) {
+        // Überprüfe, dass die Form die korrekten versteckten Inputs enthält
+        const hiddenInputs = form.querySelectorAll('input[type="hidden"][name^="permissions"]');
+        console.log('Hidden inputs in form:', hiddenInputs.length);
+    }
     </script>
 </body>
 </html>

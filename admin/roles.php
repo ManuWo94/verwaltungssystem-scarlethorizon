@@ -239,27 +239,66 @@ include '../includes/header.php';
                                                 <form method="post">
                                                     <div class="modal-body">
                                                         <input type="hidden" name="role_id" value="<?php echo $role['id']; ?>">
-                                                        <?php
-                                                        $availableModules = getAvailableModules();
-                                                        $availableActions = getAvailableActions();
-                                                        $rolePermissionsAll = getRolePermissions();
-                                                        $currentPerms = isset($rolePermissionsAll[$role['id']]) ? $rolePermissionsAll[$role['id']] : [];
-                                                        foreach ($availableModules as $moduleId => $moduleName): ?>
-                                                            <div class="mb-3">
-                                                                <h6><?php echo htmlspecialchars($moduleName); ?></h6>
-                                                                <div class="d-flex flex-wrap">
-                                                                    <?php foreach ($availableActions as $actionKey => $actionLabel):
-                                                                        $checked = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]); ?>
-                                                                        <div class="form-check me-3">
-                                                                            <input class="form-check-input" type="checkbox" 
-                                                                                   id="perm_<?php echo $role['id'] . '_' . $moduleId . '_' . $actionKey; ?>" 
-                                                                                   name="permissions[<?php echo $moduleId; ?>][]" value="<?php echo $actionKey; ?>" <?php if ($checked) echo 'checked'; ?>>
-                                                                            <label class="form-check-label" for="perm_<?php echo $role['id'] . '_' . $moduleId . '_' . $actionKey; ?>"><?php echo htmlspecialchars($actionLabel); ?></label>
-                                                                        </div>
-                                                                    <?php endforeach; ?>
+                                                        
+                                                        <!-- Drag & Drop Permission Editor -->
+                                                        <div class="permission-editor">
+                                                            <div class="row">
+                                                                <div class="col-md-6">
+                                                                    <h6>Module & Aktionen</h6>
+                                                                    <div id="availablePermissions-<?php echo $role['id']; ?>" class="list-group permission-source" data-role-id="<?php echo $role['id']; ?>" style="min-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+                                                                        <?php
+                                                                        $availableModules = getAvailableModules();
+                                                                        $availableActions = getAvailableActions();
+                                                                        $rolePermissionsAll = getRolePermissions();
+                                                                        $currentPerms = isset($rolePermissionsAll[$role['id']]) ? $rolePermissionsAll[$role['id']] : [];
+                                                                        
+                                                                        foreach ($availableModules as $moduleId => $moduleName):
+                                                                            foreach ($availableActions as $actionKey => $actionLabel):
+                                                                                $permId = $moduleId . ':' . $actionKey;
+                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]);
+                                                                                
+                                                                                if (!$isGranted): ?>
+                                                                                    <div class="permission-item list-group-item" draggable="true" data-module="<?php echo $moduleId; ?>" data-action="<?php echo $actionKey; ?>" style="cursor: move; user-select: none;">
+                                                                                        <small><strong><?php echo htmlspecialchars($moduleName); ?></strong></small><br/>
+                                                                                        <small><?php echo htmlspecialchars($actionLabel); ?></small>
+                                                                                    </div>
+                                                                                <?php endif;
+                                                                            endforeach;
+                                                                        endforeach; ?>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div class="col-md-6">
+                                                                    <h6>Erteilte Berechtigungen</h6>
+                                                                    <div id="grantedPermissions-<?php echo $role['id']; ?>" class="list-group permission-target" data-role-id="<?php echo $role['id']; ?>" style="min-height: 300px; overflow-y: auto; border: 2px solid #28a745; border-radius: 4px; padding: 10px;">
+                                                                        <?php
+                                                                        foreach ($availableModules as $moduleId => $moduleName):
+                                                                            foreach ($availableActions as $actionKey => $actionLabel):
+                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]);
+                                                                                
+                                                                                if ($isGranted): ?>
+                                                                                    <div class="permission-item list-group-item" draggable="true" data-module="<?php echo $moduleId; ?>" data-action="<?php echo $actionKey; ?>" style="cursor: move; user-select: none; background-color: #d4edda;">
+                                                                                        <small><strong><?php echo htmlspecialchars($moduleName); ?></strong></small><br/>
+                                                                                        <small><?php echo htmlspecialchars($actionLabel); ?></small>
+                                                                                    </div>
+                                                                                    <input type="hidden" name="permissions[<?php echo $moduleId; ?>][]" value="<?php echo $actionKey; ?>">
+                                                                                <?php endif;
+                                                                            endforeach;
+                                                                        endforeach; ?>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        <?php endforeach; ?>
+                                                        </div>
+                                                        
+                                                        <style>
+                                                            .permission-source:hover { background-color: #f5f5f5; }
+                                                            .permission-target { background-color: #f0f9f6; }
+                                                            .permission-item { padding: 8px; margin: 4px 0; background: white; border: 1px solid #ddd; cursor: move; }
+                                                            .permission-item:hover { background-color: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                                                            .permission-item.dragging { opacity: 0.5; }
+                                                            .permission-target.drag-over { background-color: #e8f5e9 !important; }
+                                                            .permission-source.drag-over { background-color: #fce4ec !important; }
+                                                        </style>
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
@@ -360,6 +399,22 @@ include '../includes/header.php';
                     });
                 </script>
             <?php endif; ?>
+            
+            <script>
+                // Initialisiere Drag & Drop für alle Permission Modals
+                if (typeof jQuery !== 'undefined') {
+                    jQuery('[id^="permissionsModal"]').on('shown.bs.modal', function() {
+                        initPermissionDragDrop();
+                    });
+                } else {
+                    // Fallback für vanilla JavaScript
+                    document.querySelectorAll('[id^="permissionsModal"]').forEach(modal => {
+                        modal.addEventListener('shown.bs.modal', function() {
+                            initPermissionDragDrop();
+                        });
+                    });
+                }
+            </script>
         </main>
     </div>
 </div>
