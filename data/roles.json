@@ -4,29 +4,121 @@
         "name": "Vorsitzender Senatsrichter (Admin)",
         "description": "Systemrolle mit vollem Administrationszugriff",
         "permissions": {
-            "admin": ["view", "edit", "delete"],
-            "users": ["view", "edit", "delete"],
-            "roles": ["view", "edit", "delete"],
-            "cases": ["view", "edit", "delete"],
-            "indictments": ["view", "edit", "delete"],
-            "appeals": ["view", "edit", "delete"],
-            "defendants": ["view", "edit", "delete"],
-            "hearings": ["view", "edit", "delete"],
-            "templates": ["view", "edit", "delete"],
-            "warrants": ["view", "edit", "delete"],
-            "staff": ["view", "edit", "delete"],
-            "trainings": ["view", "edit", "delete"],
-            "equipment": ["view", "edit", "delete"],
-            "notes": ["view", "edit", "delete"],
-            "calendar": ["view", "edit", "delete"],
-            "files": ["view", "edit", "delete"],
-            "duty_log": ["view", "edit", "delete"],
-            "vacation": ["view", "edit", "delete"],
-            "address_book": ["view", "edit", "delete"],
-            "seized_assets": ["view", "edit", "delete"],
-            "business_licenses": ["view", "edit", "delete"],
-            "todos": ["view", "edit", "delete"],
-            "task_assignments": ["view", "edit", "delete"]
+            "admin": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ]
         }
     },
     {
@@ -34,86 +126,1310 @@
         "name": "Vorsitzender Richter",
         "description": "Systemrolle mit vollem Administrationszugriff",
         "permissions": {
-            "admin": ["view", "edit", "delete"],
-            "users": ["view", "edit", "delete"],
-            "roles": ["view", "edit", "delete"],
-            "cases": ["view", "edit", "delete"],
-            "indictments": ["view", "edit", "delete"],
-            "appeals": ["view", "edit", "delete"],
-            "defendants": ["view", "edit", "delete"],
-            "hearings": ["view", "edit", "delete"],
-            "templates": ["view", "edit", "delete"],
-            "warrants": ["view", "edit", "delete"],
-            "staff": ["view", "edit", "delete"],
-            "trainings": ["view", "edit", "delete"],
-            "equipment": ["view", "edit", "delete"],
-            "notes": ["view", "edit", "delete"],
-            "calendar": ["view", "edit", "delete"],
-            "files": ["view", "edit", "delete"],
-            "duty_log": ["view", "edit", "delete"],
-            "vacation": ["view", "edit", "delete"],
-            "address_book": ["view", "edit", "delete"],
-            "seized_assets": ["view", "edit", "delete"],
-            "business_licenses": ["view", "edit", "delete"],
-            "todos": ["view", "edit", "delete"],
-            "task_assignments": ["view", "edit", "delete"]
+            "admin": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ]
         }
     },
     {
         "id": "vorsitzender_senatsrichter",
         "name": "Vorsitzender Senatsrichter",
-        "description": "Nicht-Systemrolle ohne Adminrechte"
+        "description": "Nicht-Systemrolle ohne Adminrechte",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "senatsrichter",
         "name": "Senatsrichter",
-        "description": "Senatsrichter"
+        "description": "Senatsrichter",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "amtsrichter",
         "name": "Amtsrichter",
-        "description": "Amtsrichter"
+        "description": "Amtsrichter",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "beisitzender_richter",
         "name": "Beisitzender Richter",
-        "description": "Beisitzender Richter"
+        "description": "Beisitzender Richter",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "berufungsrichter",
         "name": "Berufungsrichter",
-        "description": "Richter im Berufungsgericht"
+        "description": "Richter im Berufungsgericht",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "friedensrichter",
         "name": "Friedensrichter",
-        "description": "Richter für Schlichtungsverfahren"
+        "description": "Richter für Schlichtungsverfahren",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "gerichtsassistent",
         "name": "Gerichtsassistent",
-        "description": "Assistent für richterliche Tätigkeiten"
+        "description": "Assistent für richterliche Tätigkeiten",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "gerichtsvolontar",
         "name": "Gerichtsvolontär",
-        "description": "Volontär/Praktikant am Gericht"
+        "description": "Volontär\/Praktikant am Gericht",
+        "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "notes": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
+            ]
+        }
     },
     {
         "id": "gerichtsreferendar",
         "name": "Gerichtsreferendar",
         "description": "Referendar am Gericht",
         "permissions": {
+            "users": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "roles": [
+                "view",
+                "edit",
+                "delete"
+            ],
             "cases": [
                 "view",
-                "create",
-                "edit"
+                "edit",
+                "delete"
+            ],
+            "indictments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "appeals": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "defendants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "hearings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "templates": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "warrants": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "staff": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "trainings": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "equipment": [
+                "view",
+                "edit",
+                "delete"
             ],
             "notes": [
                 "view",
-                "create"
+                "edit",
+                "delete"
+            ],
+            "calendar": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "duty_log": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "vacation": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "seized_assets": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "business_licenses": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "todos": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "task_assignments": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "evidence": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "justice_references": [
+                "view",
+                "edit",
+                "delete"
             ]
         },
-        "date_updated": "2026-01-04 23:55:42"
+        "date_updated": "2026-01-05 01:21:58"
     }
 ]
