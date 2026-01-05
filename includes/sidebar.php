@@ -202,3 +202,24 @@
         <?php endif; ?>
     </div>
 </nav>
+
+<script>
+// Preserve sidebar scroll position across page loads
+document.addEventListener('DOMContentLoaded', function() {
+    var sidebar = document.getElementById('sidebarMenu');
+    if (!sidebar) return;
+
+    var storageKey = 'sidebarScrollTop';
+    var saved = sessionStorage.getItem(storageKey);
+    if (saved !== null) {
+        sidebar.scrollTop = parseInt(saved, 10) || 0;
+    }
+
+    var saveScroll = function() {
+        sessionStorage.setItem(storageKey, sidebar.scrollTop);
+    };
+
+    sidebar.addEventListener('scroll', saveScroll);
+    window.addEventListener('beforeunload', saveScroll);
+});
+</script>
