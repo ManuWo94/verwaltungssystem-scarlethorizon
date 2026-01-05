@@ -17,6 +17,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce view permission for indictments
+checkPermissionOrDie('indictments', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role'];
@@ -40,6 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Gerichtsverhandlung terminieren
         if ($action === 'schedule_court_date') {
+            // Permission check: only judges and leadership can schedule
+            checkPermissionOrDie('indictments', 'schedule');
+
             $indictmentId = sanitize($_POST['indictment_id'] ?? '');
             $trialDate = sanitize($_POST['trial_date'] ?? '');
             $trialTime = sanitize($_POST['trial_time'] ?? '');
@@ -100,6 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Urteil eintragen
         if ($action === 'enter_verdict') {
+            // Permission check: only judges can enter verdicts
+            checkPermissionOrDie('indictments', 'verdict');
+
             $indictmentId = sanitize($_POST['indictment_id'] ?? '');
             $verdict = sanitize($_POST['verdict'] ?? '');
             $verdictDate = sanitize($_POST['verdict_date'] ?? date('Y-m-d'));
@@ -149,6 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Aktualisieren einer angenommenen Klageschrift und Urteil hinzufügen
         if ($action === 'update_accepted_indictment') {
+            // Permission check: requires verdict permission
+            checkPermissionOrDie('indictments', 'verdict');
+
             $indictmentId = sanitize($_POST['indictment_id'] ?? '');
             $verdict = sanitize($_POST['verdict'] ?? '');
             $verdictDate = sanitize($_POST['verdict_date'] ?? date('Y-m-d'));
@@ -194,6 +206,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Erstellen oder Aktualisieren einer Klageschrift
         if ($action === 'create' || $action === 'update') {
+            // Permission check: create or edit
+            if ($action === 'create') {
+                checkPermissionOrDie('indictments', 'create');
+            } else {
+                checkPermissionOrDie('indictments', 'edit');
+            }
+
             $caseId = sanitize($_POST['case_id'] ?? '');
             $content = sanitize($_POST['indictment_content'] ?? '');
             
@@ -448,17 +467,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         // Löschen einer Klageschrift
         else if ($action === 'delete' && isset($_POST['indictment_id'])) {
-            // Nur Führungskräfte können Klageschriften löschen
-            if (!$isLeadership) {
-                $error = 'Sie haben keine Berechtigung, Klageschriften zu löschen.';
+            // Permission check: delete permission required
+            checkPermissionOrDie('indictments', 'delete');
+
+            $indictmentId = sanitize($_POST['indictment_id']);
+            
+            if (deleteRecord('indictments.json', $indictmentId)) {
+                $message = 'Klageschrift erfolgreich gelöscht.';
             } else {
-                $indictmentId = sanitize($_POST['indictment_id']);
-                
-                if (deleteRecord('indictments.json', $indictmentId)) {
-                    $message = 'Klageschrift erfolgreich gelöscht.';
-                } else {
-                    $error = 'Fehler beim Löschen der Klageschrift.';
-                }
+                $error = 'Fehler beim Löschen der Klageschrift.';
             }
         }
     }
