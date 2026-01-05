@@ -188,13 +188,31 @@ function checkUserPermission($userId, $module, $action) {
     $roleIds = array_values(array_unique($roleIds));
 
     foreach ($roleIds as $roleId) {
-        if (isset($rolePermissions[$roleId][$module]) && in_array($action, $rolePermissions[$roleId][$module], true)) {
-            return true;
+        if (isset($rolePermissions[$roleId][$module])) {
+            $storedActions = array_map(function($a) {
+                if (is_numeric($a)) {
+                    return ['0' => 'view', '1' => 'edit', '2' => 'delete'][(string)$a] ?? $a;
+                }
+                return $a;
+            }, (array)$rolePermissions[$roleId][$module]);
+
+            if (in_array($action, $storedActions, true)) {
+                return true;
+            }
         }
 
         // Legacy mapping for Administrator name to admin ID
-        if ($roleId === 'administrator' && isset($rolePermissions['admin'][$module]) && in_array($action, $rolePermissions['admin'][$module], true)) {
-            return true;
+        if ($roleId === 'administrator' && isset($rolePermissions['admin'][$module])) {
+            $adminActions = array_map(function($a) {
+                if (is_numeric($a)) {
+                    return ['0' => 'view', '1' => 'edit', '2' => 'delete'][(string)$a] ?? $a;
+                }
+                return $a;
+            }, (array)$rolePermissions['admin'][$module]);
+
+            if (in_array($action, $adminActions, true)) {
+                return true;
+            }
         }
     }
 
