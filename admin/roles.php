@@ -104,9 +104,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $roleId = $_POST['role_id'] ?? '';
         $permissionsPosted = isset($_POST['permissions']) && is_array($_POST['permissions']) ? $_POST['permissions'] : [];
 
-        // Normalize permissions: ensure arrays of unique strings
+        // Map posted actions (which may come in as numeric indexes) to action names
+        $availableActions = getAvailableActions();
         foreach ($permissionsPosted as $module => $acts) {
-            $permissionsPosted[$module] = array_values(array_unique(array_map('strval', (array)$acts)));
+            $normalizedActs = [];
+            foreach ((array)$acts as $act) {
+                if (is_numeric($act) && isset($availableActions[(int)$act])) {
+                    $normalizedActs[] = $availableActions[(int)$act];
+                } else {
+                    $normalizedActs[] = $act;
+                }
+            }
+            // Normalize permissions: ensure arrays of unique strings
+            $permissionsPosted[$module] = array_values(array_unique(array_map('strval', $normalizedActs)));
         }
 
         $existingRole = findById('roles.json', $roleId);
@@ -277,13 +287,14 @@ include '../includes/header.php';
                                                                                     <div class="card-body" style="padding: 10px 15px;">
                                                                                         <div class="permission-actions">
                                                                                             <?php foreach ($availableActions as $actionKey => $actionLabel):
-                                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]);
+                                                                                                $actionValue = $actionLabel; // store action name, not numeric index
+                                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionValue, $currentPerms[$moduleId]);
                                                                                                 ?>
                                                                                                 <div class="form-check" style="margin-bottom: 6px;">
                                                                                                     <input class="form-check-input" type="checkbox" 
-                                                                                                           id="perm_<?php echo $moduleId . '_' . $actionKey; ?>" 
+                                                                                                           id="perm_<?php echo $moduleId . '_' . $actionValue; ?>" 
                                                                                                            name="permissions[<?php echo $moduleId; ?>][]" 
-                                                                                                           value="<?php echo $actionKey; ?>" 
+                                                                                                           value="<?php echo $actionValue; ?>" 
                                                                                                            <?php if ($isGranted) echo 'checked'; ?>>
                                                                                                     <label class="form-check-label" for="perm_<?php echo $moduleId . '_' . $actionKey; ?>">
                                                                                                         <?php echo htmlspecialchars($actionLabel); ?>
