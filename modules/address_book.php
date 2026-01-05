@@ -7,6 +7,7 @@ session_start();
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
+require_once '../includes/permissions.php';
 
 // Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
@@ -125,6 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Load address book data
 $contacts = loadJsonData('address_book.json');
+if (!is_array($contacts)) {
+    $contacts = [];
+}
 
 // Available categories
 $categories = [
