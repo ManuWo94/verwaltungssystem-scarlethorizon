@@ -42,20 +42,35 @@ function getAvailableModules() {
 function getAvailableActions() {
     return [
         'view' => 'Ansehen',
-        'create' => 'Erstellen',
         'edit' => 'Bearbeiten',
-        'delete' => 'Löschen',
-        'approve' => 'Genehmigen',
-        'reject' => 'Ablehnen',
-        'assign' => 'Zuweisen',
-        'schedule' => 'Terminieren',
-        'verdict' => 'Urteil eintragen',
-        'appeal' => 'Revision beantragen',
-        'appeal_verdict' => 'Revisionsurteil eintragen',
-        'lock' => 'Sperren',
-        'unlock' => 'Entsperren',
-        'force_logout' => 'Benutzer abmelden'
+        'delete' => 'Löschen'
     ];
+}
+
+/**
+ * Normalize any action to the simplified tri-state model (view/edit/delete)
+ */
+function normalizeAction($action) {
+    $action = strtolower(trim((string)$action));
+    if ($action === 'view') {
+        return 'view';
+    }
+    if ($action === 'delete') {
+        return 'delete';
+    }
+    // Everything else (create, approve, schedule, etc.) collapses to edit
+    return 'edit';
+}
+
+/**
+ * Collapse a list of actions to unique normalized actions
+ */
+function simplifyPermissionActions($actions) {
+    $normalized = [];
+    foreach ((array)$actions as $action) {
+        $normalized[normalizeAction($action)] = true;
+    }
+    return array_keys($normalized);
 }
 
 /**
@@ -65,12 +80,12 @@ function getAvailableActions() {
 function getRolePermissions() {
     // Common access for all roles
     $commonAccess = [
-        'duty_log' => ['view', 'create', 'edit', 'delete'],
-        'notes' => ['view', 'create', 'edit', 'delete'],
-        'todos' => ['view', 'create', 'edit', 'delete'],
-        'calendar' => ['view', 'create', 'edit', 'delete'],
-        'vacation' => ['view', 'create'],
-        'address_book' => ['view', 'create', 'edit', 'delete']
+        'duty_log' => ['view', 'edit', 'delete'],
+        'notes' => ['view', 'edit', 'delete'],
+        'todos' => ['view', 'edit', 'delete'],
+        'calendar' => ['view', 'edit', 'delete'],
+        'vacation' => ['view', 'edit'],
+        'address_book' => ['view', 'edit', 'delete']
     ];
     
     // Calculate permissions for each role
@@ -480,14 +495,25 @@ function getRolePermissions() {
     $permissions['administrator']['users'][] = 'force_logout';
     $permissions['system_administrator']['users'][] = 'force_logout';
     
+    // Simplify defaults to the tri-state model
+    foreach ($permissions as $roleId => $modules) {
+        foreach ($modules as $module => $actions) {
+            $permissions[$roleId][$module] = simplifyPermissionActions($actions);
+        }
+    }
+
     // Merge with stored/overridden permissions from data/roles.json (if present)
     if (function_exists('getJsonData')) {
         $storedRoles = getJsonData('data/roles.json');
         if (is_array($storedRoles)) {
             foreach ($storedRoles as $r) {
                 if (isset($r['id']) && isset($r['permissions']) && is_array($r['permissions'])) {
-                    // Use stored permissions as an override for this role
-                    $permissions[$r['id']] = $r['permissions'];
+                    // Normalize stored permissions to tri-state
+                    $normalized = [];
+                    foreach ($r['permissions'] as $module => $actions) {
+                        $normalized[$module] = simplifyPermissionActions($actions);
+                    }
+                    $permissions[$r['id']] = $normalized;
                 }
             }
         }
@@ -524,6 +550,9 @@ function checkUserPermission($userId, $module, $action) {
     
     // Get role permissions
     $rolePermissions = getRolePermissions();
+    
+    // Normalize requested action to tri-state model
+        $action = normalizeAction($action); // Normalize action variable
     
     // Check permissions for each role the user has
     if (isset($user['roles']) && is_array($user['roles'])) {
