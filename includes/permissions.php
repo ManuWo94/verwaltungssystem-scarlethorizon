@@ -167,34 +167,32 @@ function checkUserPermission($userId, $module, $action) {
     $rolePermissions = getRolePermissions();
     $action = normalizeAction($action);
 
-    // Check permissions for each role name (legacy) with optional explicit role_id
+    // Collect all possible role IDs for this user (primary role_id, roles array, single role)
+    $roleIds = [];
+
+    if (!empty($user['role_id'])) {
+        $roleIds[] = $user['role_id'];
+    }
+
     if (!empty($user['roles']) && is_array($user['roles'])) {
         foreach ($user['roles'] as $roleName) {
-            $roleId = isset($user['role_id']) && $user['role_id'] !== ''
-                ? $user['role_id']
-                : strtolower(str_replace(' ', '_', $roleName));
-
-            if (isset($rolePermissions[$roleId][$module]) && in_array($action, $rolePermissions[$roleId][$module], true)) {
-                return true;
-            }
-
-            // Legacy mapping for Administrator name to admin ID
-            if ($roleId === 'administrator' && isset($rolePermissions['admin'][$module]) && in_array($action, $rolePermissions['admin'][$module], true)) {
-                return true;
-            }
+            $roleIds[] = strtolower(str_replace(' ', '_', $roleName));
         }
     }
 
-    // Single role (legacy support)
     if (!empty($user['role'])) {
-        $roleId = isset($user['role_id']) && $user['role_id'] !== ''
-            ? $user['role_id']
-            : strtolower(str_replace(' ', '_', $user['role']));
+        $roleIds[] = strtolower(str_replace(' ', '_', $user['role']));
+    }
 
+    // Ensure unique list of candidate role IDs
+    $roleIds = array_values(array_unique($roleIds));
+
+    foreach ($roleIds as $roleId) {
         if (isset($rolePermissions[$roleId][$module]) && in_array($action, $rolePermissions[$roleId][$module], true)) {
             return true;
         }
 
+        // Legacy mapping for Administrator name to admin ID
         if ($roleId === 'administrator' && isset($rolePermissions['admin'][$module]) && in_array($action, $rolePermissions['admin'][$module], true)) {
             return true;
         }
