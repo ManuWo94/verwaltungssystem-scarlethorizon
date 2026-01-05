@@ -554,20 +554,19 @@ function checkUserPermission($userId, $module, $action) {
     // Normalize requested action to tri-state model
         $action = normalizeAction($action); // Normalize action variable
     
-    // Check permissions for each role the user has
+    // Check permissions for each role the user has (additive roles)
     if (isset($user['roles']) && is_array($user['roles'])) {
         foreach ($user['roles'] as $roleName) {
-            // Zuerst prüfen, ob eine role_id direkt im Benutzer gespeichert ist
-            $roleId = isset($user['role_id']) ? $user['role_id'] : strtolower(str_replace(' ', '_', $roleName));
+            // Für Mehrrollen-Benutzer: Rolle anhand des Namens ableiten
+            $roleId = strtolower(str_replace(' ', '_', $roleName));
+            // Falls role_id exakt übereinstimmt, nutze sie
+            if (isset($user['role_id']) && $user['role_id'] === $roleId) {
+                $roleId = $user['role_id'];
+            }
             
-            // Check if role exists in permissions
-            if (isset($rolePermissions[$roleId])) {
-                // Check if module exists for this role
-                if (isset($rolePermissions[$roleId][$module])) {
-                    // Check if action is allowed for this module
-                    if (in_array($action, $rolePermissions[$roleId][$module])) {
-                        return true;
-                    }
+            if (isset($rolePermissions[$roleId]) && isset($rolePermissions[$roleId][$module])) {
+                if (in_array($action, $rolePermissions[$roleId][$module])) {
+                    return true;
                 }
             }
         }
