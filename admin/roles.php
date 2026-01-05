@@ -244,8 +244,9 @@ include '../includes/header.php';
                                                             <?php
                                                             $availableModules = getAvailableModules();
                                                             $availableActions = getAvailableActions();
-                                                            $rolePermissionsAll = getRolePermissions();
-                                                            $currentPerms = isset($rolePermissionsAll[$role['id']]) ? $rolePermissionsAll[$role['id']] : [];
+                                                            // Use the permissions directly from the role, not from getRolePermissions()
+                                                            // which merges system defaults and may override stored permissions
+                                                            $currentPerms = isset($role['permissions']) && is_array($role['permissions']) ? $role['permissions'] : [];
                                                             
                                                             // Kategorisiere Module
                                                             $categories = [
