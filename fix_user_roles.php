@@ -24,7 +24,6 @@ function getRoleIdFromName($roleName, $roles) {
         'Staatsanwalt' => 'prosecutor',
         'Richter' => 'judge',
         'Administrator' => 'administrator',
-        'Vorsitzender Richter' => 'chief_justice',
         'Oberjustizinspektor' => 'chief_justice',
         'Oberstaatsanwalt' => 'senior_prosecutor',
         'Juniorstaatsanwalt' => 'junior_prosecutor',
