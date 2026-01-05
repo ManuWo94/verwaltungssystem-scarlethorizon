@@ -458,6 +458,14 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) ||
     
     $action = isset($_POST['action']) ? $_POST['action'] : $_GET['action'];
     
+    // Guard action-specific permissions
+    if (in_array($action, ['create_business', 'update_business', 'extend_license'])) {
+        checkPermissionOrDie('business_licenses', 'create');
+    }
+    if ($action === 'delete_business') {
+        checkPermissionOrDie('business_licenses', 'delete');
+    }
+    
     // Neues Unternehmen erstellen
     if ($action === 'create_business') {
         // Pflichtfelder prüfen
@@ -1532,21 +1540,13 @@ if (($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) ||
                 
                 // Nach der Ausgabe des Zertifikats beenden wir das Skript
                 exit;
-                
-                break;
             }
         }
         
         if (!$businessFound) {
             $error = 'Unternehmen für Gewerbeschein nicht gefunden.';
         }
-    }
 
-// Ab hier beginnt der HTML-Teil
-include_once '../includes/header.php';
-?>
-
-<div class="container-fluid">
     <div class="row">
         <?php include_once '../includes/sidebar.php'; ?>
         

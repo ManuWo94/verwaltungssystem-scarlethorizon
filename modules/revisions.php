@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce view permission for revisions
+checkPermissionOrDie('revisions', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role'];
@@ -40,6 +43,9 @@ if (!empty($statusFilter)) {
 // Handle review action
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'update_revision') {
+        // Require edit permission on cases to process revisions
+        checkPermissionOrDie('cases', 'edit');
+
         $caseId = $_POST['case_id'] ?? '';
         $newStatus = $_POST['revision_status'] ?? '';
         $notes = sanitize($_POST['notes'] ?? '');

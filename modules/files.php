@@ -51,6 +51,15 @@ function formatFileSize($bytes) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         $action = $_POST['action'];
+
+        // Enforce action-specific permissions
+        if ($action === 'create_folder' || $action === 'upload') {
+            checkPermissionOrDie('files', 'create');
+        } elseif (in_array($action, ['delete_file', 'delete_folder'])) {
+            checkPermissionOrDie('files', 'delete');
+        } elseif ($action === 'move_file' || $action === 'update_folder') {
+            checkPermissionOrDie('files', 'edit');
+        }
         
         if ($action === 'create_folder') {
             $folderData = [

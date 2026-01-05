@@ -21,6 +21,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce todos view permission
+checkPermissionOrDie('todos', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role']; // Hauptrolle
@@ -79,6 +82,12 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
     
     // Aufgabe als erledigt markieren
     if ($action === 'toggle_todo_status') {
+        // Permission check for modifying todos (AJAX)
+        if (!checkUserPermission($_SESSION['user_id'], 'todos', 'edit')) {
+            echo json_encode(['success' => false, 'message' => 'Zugriff verweigert']);
+            exit;
+        }
+
         $todoId = isset($_POST['todo_id']) ? sanitize($_POST['todo_id']) : '';
         $todoFound = false;
         

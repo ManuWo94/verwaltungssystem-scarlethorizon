@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce view permission for vacation
+checkPermissionOrDie('vacation', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role'];
@@ -78,9 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (!$vacation) {
                 $error = 'Urlaubsantrag nicht gefunden.';
-            } else if ($vacation['user_id'] !== $user_id && !isAdmin($user_id) && !isLeadership($user_id)) {
-                // Nur der Eigentümer, Admins oder Führungskräfte dürfen Urlaubsanträge löschen
-                $error = 'Sie haben keine Berechtigung, diesen Urlaubsantrag zu löschen.';
+            } elseif ($vacation['user_id'] !== $user_id && !checkUserPermission($_SESSION['user_id'], 'vacation', 'edit') && !isAdmin($user_id) && !isLeadership($user_id)) {
+                // Only owner, admins or leadership can cancel someone else's request
+                $error = 'Sie haben keine Berechtigung, diesen Urlaubsantrag zu stornieren.';
             } else {
                 if (deleteRecord('vacation.json', $vacationId)) {
                     $message = 'Urlaubsantrag wurde erfolgreich gelöscht.';

@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Ensure user has view permission for staff module
+checkPermissionOrDie('staff', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role']; // Hauptrolle
@@ -23,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'];
         
         if ($action === 'create_role') {
+            // Only users with edit permission on staff module can create roles
+            checkPermissionOrDie('staff', 'edit');
+
             $roleName = sanitize($_POST['role_name'] ?? '');
             $roleDescription = sanitize($_POST['role_description'] ?? '');
             
@@ -66,6 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } elseif ($action === 'create') {
+            // Only users with create permission may add staff entries
+            checkPermissionOrDie('staff', 'create');
+
             $staffData = [
                 'name' => sanitize($_POST['name'] ?? ''),
                 'role' => sanitize($_POST['staff_role'] ?? ''),

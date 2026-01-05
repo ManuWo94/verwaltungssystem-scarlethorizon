@@ -21,6 +21,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce view permission for notes
+checkPermissionOrDie('notes', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role']; // Hauptrolle
@@ -78,6 +81,16 @@ if ($categories === false) {
 
 // AJAX-Anfragen verarbeiten
 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+    // Enforce permissions for AJAX actions
+    $ajaxAction = isset($_POST['action']) ? $_POST['action'] : '';
+    if (in_array($ajaxAction, ['create_note', 'update_note', 'delete_note', 'toggle_note_status'])) {
+        $required = $ajaxAction === 'delete_note' ? 'delete' : ($ajaxAction === 'toggle_note_status' ? 'edit' : 'create');
+        if (!checkUserPermission($_SESSION['user_id'], 'notes', $required)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Zugriff verweigert']);
+            exit;
+        }
+    }
     header('Content-Type: application/json');
     
     $action = isset($_POST['action']) ? $_POST['action'] : '';

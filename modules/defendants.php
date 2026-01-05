@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce view permission for this module
+checkPermissionOrDie('defendants', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role'];
@@ -19,6 +22,9 @@ $error = '';
 // Handle defendant actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['defendant_id'])) {
+        // Permission check
+        checkPermissionOrDie('defendants', 'delete');
+
         $defendantId = $_POST['defendant_id'];
         
         if (deleteRecord('defendants.json', $defendantId)) {
@@ -28,6 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         // Handle defendant creation/edit
+        // Permission check for create/edit
+        if (isset($_POST['defendant_id']) && !empty($_POST['defendant_id'])) {
+            checkPermissionOrDie('defendants', 'edit');
+        } else {
+            checkPermissionOrDie('defendants', 'create');
+        }
+
         $defendantData = [
             'name' => sanitize($_POST['name'] ?? ''),
             'tg_number' => sanitize($_POST['tg_number'] ?? '')

@@ -20,6 +20,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce view permission for task assignments
+checkPermissionOrDie('task_assignments', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role']; // Hauptrolle
@@ -343,6 +346,11 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
 // Verarbeitung von Formularübermittlungen
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = isset($_POST['action']) ? $_POST['action'] : '';
+
+    // Enforce create/assign permission for task creation
+    if (in_array($action, ['create_task', 'assign_task'])) {
+        checkPermissionOrDie('task_assignments', 'create');
+    }
     
     // Aufgabe erstellen
     if ($action === 'create_task') {

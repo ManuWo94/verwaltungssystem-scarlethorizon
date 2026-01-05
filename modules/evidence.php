@@ -19,6 +19,9 @@ $pageTitle = 'Beschlagnahmeprotokoll';
 $successMessage = '';
 $errorMessage = '';
 
+// Enforce view permission for evidence module
+checkPermissionOrDie('evidence', 'view');
+
 // Protokolle laden
 $protocols = getJsonData('confiscation_protocols.json');
 
@@ -27,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     
     // Neues Protokoll erstellen
     if ($_POST['action'] === 'create_protocol') {
+        // Require create permission for new protocols
+        checkPermissionOrDie('evidence', 'create');
+
         $protocolType = sanitize($_POST['protocol_type']);
         $ownerId = sanitize($_POST['owner_id']);
         $ownerTgNumber = sanitize($_POST['owner_tg_number']);

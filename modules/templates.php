@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce view permission for templates
+checkPermissionOrDie('templates', 'view');
+
 // Konstante für erlaubten Zugriff
 define('ACCESS_ALLOWED', true);
 

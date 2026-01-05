@@ -14,77 +14,111 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Permission checks for this module
+$canView = checkUserPermission($_SESSION['user_id'], 'address_book', 'view');
+$canCreate = checkUserPermission($_SESSION['user_id'], 'address_book', 'create');
+$canEdit = checkUserPermission($_SESSION['user_id'], 'address_book', 'edit');
+$canDelete = checkUserPermission($_SESSION['user_id'], 'address_book', 'delete');
+
+// If user cannot view, deny access
+if (!$canView) {
+    header('Location: ../access_denied.php');
+    exit;
+}
+
 // Handle form submission for adding/editing contacts
 $success_message = '';
 $error_message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
+        // ADD or EDIT
         if ($_POST['action'] === 'add' || $_POST['action'] === 'edit') {
-            // Get all submitted data
-            $contact_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-            $contact_name = trim($_POST['name'] ?? '');
-            $contact_tg_number = trim($_POST['tg_number'] ?? '');
-            $contact_category = trim($_POST['category'] ?? '');
-            $contact_position = trim($_POST['position'] ?? '');
-            
-            // Validation
-            if (empty($contact_name) || empty($contact_tg_number) || empty($contact_category)) {
-                $error_message = 'Bitte füllen Sie alle Pflichtfelder aus.';
+            // Server-side permission enforcement
+            if ($_POST['action'] === 'add' && !$canCreate) {
+                $error_message = 'Zugriff verweigert: Sie dürfen keine Kontakte anlegen.';
+            } elseif ($_POST['action'] === 'edit' && !$canEdit) {
+                $error_message = 'Zugriff verweigert: Sie dürfen Kontakte nicht bearbeiten.';
             } else {
-                // Load existing address book
-                $contacts = loadJsonData('address_book.json');
-                
-                // For new entries, generate a new ID
-                if ($_POST['action'] === 'add') {
-                    $contact_id = getNextId($contacts);
-                    $newContact = [
-                        'id' => $contact_id,
-                        'name' => $contact_name,
-                        'tg_number' => $contact_tg_number,
-                        'category' => $contact_category,
-                        'position' => $contact_position
-                    ];
-                    $contacts[] = $newContact;
-                    $success_message = 'Kontakt erfolgreich hinzugefügt.';
+                // Get all submitted data
+                $contact_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+                $contact_name = trim($_POST['name'] ?? '');
+                $contact_tg_number = trim($_POST['tg_number'] ?? '');
+                $contact_category = trim($_POST['category'] ?? '');
+                $contact_position = trim($_POST['position'] ?? '');
+
+                // Validation
+                if (empty($contact_name) || empty($contact_tg_number) || empty($contact_category)) {
+                    $error_message = 'Bitte füllen Sie alle Pflichtfelder aus.';
                 } else {
-                    // Update existing contact
-                    foreach ($contacts as $key => $contact) {
-                        if ($contact['id'] === $contact_id) {
-                            $contacts[$key]['name'] = $contact_name;
-                            $contacts[$key]['tg_number'] = $contact_tg_number;
-                            $contacts[$key]['category'] = $contact_category;
-                            $contacts[$key]['position'] = $contact_position;
-                            break;
+                    // Load existing address book
+                    $contacts = loadJsonData('address_book.json');
+
+                    // For new entries, generate a new ID
+                    if ($_POST['action'] === 'add') {
+                        $contact_id = getNextId($contacts);
+                        $newContact = [
+                            'id' => $contact_id,
+                            'name' => $contact_name,
+                            'tg_number' => $contact_tg_number,
+                            'category' => $contact_category,
+                            'position' => $contact_position
+                        ];
+                        $contacts[] = $newContact;
+                        $success_message = 'Kontakt erfolgreich hinzugefügt.';
+                    } else {
+                        // Update existing contact
+                        $found = false;
+                        foreach ($contacts as $key => $contact) {
+                            if ($contact['id'] === $contact_id) {
+                                $contacts[$key]['name'] = $contact_name;
+                                $contacts[$key]['tg_number'] = $contact_tg_number;
+                                $contacts[$key]['category'] = $contact_category;
+                                $contacts[$key]['position'] = $contact_position;
+                                $found = true;
+                                break;
+                            }
+                        }
+                        if ($found) {
+                            $success_message = 'Kontakt erfolgreich aktualisiert.';
+                        } else {
+                            $error_message = 'Kontakt nicht gefunden.';
                         }
                     }
-                    $success_message = 'Kontakt erfolgreich aktualisiert.';
+
+                    // Save to JSON file
+                    if (empty($error_message)) {
+                        saveJsonData('address_book.json', $contacts);
+                    }
                 }
-                
+            }
+        }
+        // DELETE
+        elseif ($_POST['action'] === 'delete' && isset($_POST['id'])) {
+            if (!$canDelete) {
+                $error_message = 'Zugriff verweigert: Sie dürfen Kontakte nicht löschen.';
+            } else {
+                $contact_id = intval($_POST['id']);
+
+                // Load existing address book
+                $contacts = loadJsonData('address_book.json');
+
+                // Find and remove the contact
+                foreach ($contacts as $key => $contact) {
+                    if ($contact['id'] === $contact_id) {
+                        unset($contacts[$key]);
+                        break;
+                    }
+                }
+
+                // Reindex array
+                $contacts = array_values($contacts);
+
                 // Save to JSON file
                 saveJsonData('address_book.json', $contacts);
+
+                $success_message = 'Kontakt erfolgreich gelöscht.';
             }
-        } elseif ($_POST['action'] === 'delete' && isset($_POST['id'])) {
-            $contact_id = intval($_POST['id']);
-            
-            // Load existing address book
-            $contacts = loadJsonData('address_book.json');
-            
-            // Find and remove the contact
-            foreach ($contacts as $key => $contact) {
-                if ($contact['id'] === $contact_id) {
-                    unset($contacts[$key]);
-                    break;
-                }
-            }
-            
-            // Reindex array
-            $contacts = array_values($contacts);
-            
-            // Save to JSON file
-            saveJsonData('address_book.json', $contacts);
-            
-            $success_message = 'Kontakt erfolgreich gelöscht.';
         }
     }
 }
@@ -118,10 +152,17 @@ include '../includes/header.php';
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">Adressbuch</h1>
                 <div class="btn-toolbar mb-2 mb-md-0">
-                    <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addContactModal">
-                        <span data-feather="plus"></span>
-                        Neuen Kontakt hinzufügen
-                    </button>
+                    <?php if ($canCreate): ?>
+                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addContactModal">
+                            <span data-feather="plus"></span>
+                            Neuen Kontakt hinzufügen
+                        </button>
+                    <?php else: ?>
+                        <button type="button" class="btn btn-sm btn-primary" disabled title="Keine Berechtigung">
+                            <span data-feather="plus"></span>
+                            Neuen Kontakt hinzufügen
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -181,17 +222,30 @@ include '../includes/header.php';
                                     <td><?php echo htmlspecialchars($contact['position'] ?? ''); ?></td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-primary btn-edit-contact" 
-                                                    data-id="<?php echo $contact['id']; ?>"
-                                                    data-name="<?php echo htmlspecialchars($contact['name']); ?>"
-                                                    data-tg-number="<?php echo htmlspecialchars($contact['tg_number']); ?>"
-                                                    data-category="<?php echo htmlspecialchars($contact['category']); ?>"
-                                                    data-position="<?php echo htmlspecialchars($contact['position'] ?? ''); ?>">
-                                                <span data-feather="edit"></span>
-                                            </button>
-                                            <button type="button" class="btn btn-outline-danger btn-delete-contact" data-id="<?php echo $contact['id']; ?>" data-name="<?php echo htmlspecialchars($contact['name']); ?>">
-                                                <span data-feather="trash-2"></span>
-                                            </button>
+                                            <?php if ($canEdit): ?>
+                                                <button type="button" class="btn btn-outline-primary btn-edit-contact" 
+                                                        data-id="<?php echo $contact['id']; ?>"
+                                                        data-name="<?php echo htmlspecialchars($contact['name']); ?>"
+                                                        data-tg-number="<?php echo htmlspecialchars($contact['tg_number']); ?>"
+                                                        data-category="<?php echo htmlspecialchars($contact['category']); ?>"
+                                                        data-position="<?php echo htmlspecialchars($contact['position'] ?? ''); ?>">
+                                                    <span data-feather="edit"></span>
+                                                </button>
+                                            <?php else: ?>
+                                                <button type="button" class="btn btn-outline-secondary" disabled title="Keine Berechtigung">
+                                                    <span data-feather="edit"></span>
+                                                </button>
+                                            <?php endif; ?>
+
+                                            <?php if ($canDelete): ?>
+                                                <button type="button" class="btn btn-outline-danger btn-delete-contact" data-id="<?php echo $contact['id']; ?>" data-name="<?php echo htmlspecialchars($contact['name']); ?>">
+                                                    <span data-feather="trash-2"></span>
+                                                </button>
+                                            <?php else: ?>
+                                                <button type="button" class="btn btn-outline-secondary" disabled title="Keine Berechtigung">
+                                                    <span data-feather="trash-2"></span>
+                                                </button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>

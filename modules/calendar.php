@@ -10,6 +10,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Enforce calendar view permission
+checkPermissionOrDie('calendar', 'view');
+
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 $role = $_SESSION['role'];
@@ -22,6 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'];
         
         if ($action === 'delete' && isset($_POST['event_id'])) {
+            // Permission check
+            checkPermissionOrDie('calendar', 'delete');
+
             $eventId = $_POST['event_id'];
             
             if (deleteRecord('calendar.json', $eventId)) {
@@ -32,6 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } else {
         // Handle event creation/edit
+        // Permission check for create/edit
+        if (isset($_POST['event_id']) && !empty($_POST['event_id'])) {
+            checkPermissionOrDie('calendar', 'edit');
+        } else {
+            checkPermissionOrDie('calendar', 'create');
+        }
+
         $eventData = [
             'title' => sanitize($_POST['event_title'] ?? ''),
             'date' => sanitize($_POST['event_date'] ?? ''),
