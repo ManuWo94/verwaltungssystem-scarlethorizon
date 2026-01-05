@@ -50,6 +50,18 @@ if (function_exists('isLoggedInUserActive') && isset($_SESSION['user_id'])) {
 $currentScript = $_SERVER['SCRIPT_NAME'];
 $isAdminPage = strpos($currentScript, '/admin/') !== false;
 $pageClass = $isAdminPage ? 'admin-page' : '';
+
+// Simple theme toggle via query parameter (?theme=modern|classic)
+if (isset($_GET['theme'])) {
+    $themeChoice = $_GET['theme'] === 'modern' ? 'modern' : 'classic';
+    if ($themeChoice === 'modern') {
+        $_SESSION['theme'] = 'modern';
+    } else {
+        unset($_SESSION['theme']);
+    }
+}
+
+$isModernTheme = isset($_SESSION['theme']) && $_SESSION['theme'] === 'modern';
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -62,6 +74,9 @@ $pageClass = $isAdminPage ? 'admin-page' : '';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="<?php echo getBasePath(); ?>assets/css/style.css">
     <link rel="stylesheet" href="<?php echo getBasePath(); ?>assets/css/accordion.css">
+    <?php if ($isModernTheme): ?>
+    <link rel="stylesheet" href="<?php echo getBasePath(); ?>assets/css/theme-modern.css">
+    <?php endif; ?>
     
     <?php 
     // Lade das Theme Manager Skript und füge das aktuelle Theme CSS ein
@@ -97,6 +112,9 @@ $pageClass = $isAdminPage ? 'admin-page' : '';
                     <span class="badge badge-pill badge-secondary"><?php echo htmlspecialchars($_SESSION['role'] ?? 'User'); ?></span>
                     <?php echo htmlspecialchars($_SESSION['username'] ?? 'Guest'); ?>
                 </span>
+                <a class="nav-link" href="<?php echo getBasePath(); ?><?php echo basename($_SERVER['SCRIPT_NAME']); ?>?theme=<?php echo $isModernTheme ? 'classic' : 'modern'; ?>" title="Theme wechseln">
+                    <span data-feather="layers"></span>
+                </a>
                 <a class="nav-link" href="<?php echo getBasePath(); ?>modules/profile.php">
                     <span data-feather="user"></span>
                 </a>

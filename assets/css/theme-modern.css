@@ -1,0 +1,126 @@
+:root {
+    --bg: #0f172a;
+    --surface: #111827;
+    --surface-2: #1f2937;
+    --card: #161f33;
+    --border: #1f2937;
+    --accent: #22d3ee;
+    --accent-2: #8b5cf6;
+    --muted: #94a3b8;
+    --text: #e2e8f0;
+    --text-strong: #f8fafc;
+    --radius: 12px;
+    --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    --font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body {
+    background: radial-gradient(circle at 15% 20%, rgba(34,211,238,0.08), transparent 25%),
+                radial-gradient(circle at 80% 0%, rgba(139,92,246,0.08), transparent 30%),
+                var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+}
+
+.navbar {
+    background: linear-gradient(90deg, rgba(17,24,39,0.9), rgba(15,23,42,0.9));
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.navbar .nav-link, .navbar .navbar-brand span { color: var(--text); }
+.navbar .nav-link:hover { color: var(--accent); }
+
+.sidebar {
+    background: rgba(15,23,42,0.92);
+    border-right: 1px solid rgba(255,255,255,0.06);
+}
+
+.sidebar .nav-link {
+    color: var(--muted);
+    border-radius: 10px;
+    margin: 2px 8px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(34,211,238,0.08);
+    color: var(--text);
+}
+
+.sidebar .nav-link.active {
+    background: linear-gradient(135deg, rgba(34,211,238,0.22), rgba(139,92,246,0.22));
+    color: var(--text-strong);
+    font-weight: 600;
+}
+
+.sidebar-heading {
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+}
+
+.main-content {
+    background: transparent;
+}
+
+.card, .table, .modal-content {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    color: var(--text);
+}
+
+.table thead th {
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    color: var(--muted);
+}
+
+.table tbody tr:hover {
+    background: rgba(255,255,255,0.02);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+    border: none;
+    box-shadow: 0 10px 20px rgba(34,211,238,0.2);
+}
+
+.btn-outline-secondary, .btn-outline-primary, .btn-outline-danger {
+    border-radius: 10px;
+}
+
+.form-control, .custom-select, select.form-control {
+    background: var(--surface-2);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: var(--text);
+    border-radius: var(--radius);
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 2px rgba(34,211,238,0.25);
+    border-color: rgba(34,211,238,0.5);
+}
+
+.badge-secondary {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+}
+
+.alert {
+    border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+a { color: #38bdf8; }
+a:hover { color: #a855f7; }
+
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 999px;
+}
