@@ -93,8 +93,8 @@ $pageClass = $isAdminPage ? 'admin-page' : '';
         <ul class="navbar-nav px-3 ml-auto">
             <li class="nav-item text-nowrap d-flex align-items-center navbar-user">
                 <!-- Theme Toggle -->
-                <button id="theme-toggle" class="btn btn-sm mr-3" title="Theme wechseln" style="background: rgba(100, 181, 246, 0.15); color: #64b5f6; border: 1px solid #64b5f6; border-radius: 6px; padding: 0.4rem 0.75rem; cursor: pointer; transition: all 0.2s ease;" onclick="toggleTheme()">
-                    <span data-feather="moon" id="theme-icon" style="width: 18px; height: 18px;"></span>
+                <button id="theme-toggle" class="btn btn-sm mr-3" title="Design wechseln" style="background: rgba(100, 181, 246, 0.15); color: #64b5f6; border: 1px solid #64b5f6; border-radius: 6px; padding: 0.4rem 0.75rem; cursor: pointer; transition: all 0.2s ease;" onclick="toggleTheme(); return false;">
+                    <span data-feather="palette" style="width: 18px; height: 18px;"></span>
                 </button>
                 <!-- User Info -->
                 <span class="text-light mr-3">
@@ -109,59 +109,39 @@ $pageClass = $isAdminPage ? 'admin-page' : '';
         </ul>
     </nav>
     <script>
-        // Theme Toggle Funktionalität
+        // Theme Toggle
         function toggleTheme() {
+            const basePath = '<?php echo getBasePath(); ?>';
             const currentTheme = localStorage.getItem('theme') || 'classic';
             const newTheme = currentTheme === 'classic' ? 'modern' : 'classic';
             localStorage.setItem('theme', newTheme);
-            applyTheme(newTheme);
-        }
-
-        function applyTheme(theme) {
-            const link = document.getElementById('theme-link');
-            const icon = document.getElementById('theme-icon');
             
-            if (theme === 'modern') {
-                if (link) {
-                    link.href = '<?php echo getBasePath(); ?>assets/css/theme-modern.css';
-                } else {
-                    const newLink = document.createElement('link');
-                    newLink.id = 'theme-link';
-                    newLink.rel = 'stylesheet';
-                    newLink.href = '<?php echo getBasePath(); ?>assets/css/theme-modern.css';
-                    document.head.appendChild(newLink);
+            let themeLink = document.getElementById('modern-theme-link');
+            if (newTheme === 'modern') {
+                if (!themeLink) {
+                    themeLink = document.createElement('link');
+                    themeLink.id = 'modern-theme-link';
+                    themeLink.rel = 'stylesheet';
+                    themeLink.href = basePath + 'assets/css/theme-modern.css';
+                    document.head.appendChild(themeLink);
                 }
-                document.body.style.background = 'linear-gradient(135deg, #0a0e18 0%, #0f1419 100%)';
-                if (icon) icon.setAttribute('data-feather', 'sun');
             } else {
-                if (link) {
-                    link.remove();
+                if (themeLink) {
+                    themeLink.remove();
                 }
-                if (icon) icon.setAttribute('data-feather', 'moon');
-            }
-            
-            if (typeof feather !== 'undefined') {
-                feather.replace();
             }
         }
-
-        // Theme beim Laden setzen
+        
+        // Apply theme on load
         document.addEventListener('DOMContentLoaded', function() {
-            const theme = localStorage.getItem('theme') || 'classic';
+            const basePath = '<?php echo getBasePath(); ?>';
+            const theme = localStorage.getItem('theme');
             if (theme === 'modern') {
-                applyTheme('modern');
+                const themeLink = document.createElement('link');
+                themeLink.id = 'modern-theme-link';
+                themeLink.rel = 'stylesheet';
+                themeLink.href = basePath + 'assets/css/theme-modern.css';
+                document.head.appendChild(themeLink);
             }
         });
-
-        // Auch beim Initialisieren von Feather Icons
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(() => {
-                    const theme = localStorage.getItem('theme') || 'classic';
-                    if (theme === 'modern') {
-                        applyTheme('modern');
-                    }
-                }, 100);
-            });
-        }
     </script>
