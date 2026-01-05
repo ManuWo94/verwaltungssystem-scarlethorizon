@@ -60,21 +60,6 @@
         }
     },
     {
-        "id": "prosecutor",
-        "name": "Prosecutor",
-        "description": "Department prosecutor responsible for cases"
-    },
-    {
-        "id": "judge",
-        "name": "Judge",
-        "description": "Judicial official who presides over cases"
-    },
-    {
-        "id": "clerk",
-        "name": "Clerk",
-        "description": "Administrative staff who manages records"
-    },
-    {
         "id": "gerichtsreferendar",
         "name": "Gerichtsreferendar",
         "description": "Referendar am Gericht",
