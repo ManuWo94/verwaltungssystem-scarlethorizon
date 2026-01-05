@@ -125,7 +125,19 @@
         "id": "vorsitzender_senatsrichter",
         "name": "Vorsitzender Senatsrichter",
         "description": "Nicht-Systemrolle ohne Adminrechte",
-        "permissions": {}
+        "permissions": {
+            "address_book": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view"
+            ],
+            "justice_references": [
+                "view"
+            ]
+        }
     },
     {
         "id": "senatsrichter",
