@@ -135,15 +135,6 @@ function getRolePermissions() {
         }
     }
 
-    // Grant base view access to address book for all roles
-    foreach ($permissions as $roleId => $rolePerms) {
-        if (!isset($permissions[$roleId]['address_book'])) {
-            $permissions[$roleId]['address_book'] = ['view'];
-        } elseif (!in_array('view', $permissions[$roleId]['address_book'], true)) {
-            $permissions[$roleId]['address_book'][] = 'view';
-        }
-    }
-
     return $permissions;
 }
 

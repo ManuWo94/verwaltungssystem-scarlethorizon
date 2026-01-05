@@ -11,10 +11,15 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
+require_once '../includes/functions.php';
+require_once '../includes/auth.php';
+require_once '../includes/permissions.php';
+
+// Permission: view Bußgeldkatalog/Justizreferenzen
+checkPermissionOrDie('justice_references', 'view');
+
 include_once('../includes/header.php');
-include_once('../includes/functions.php');
 include_once('../includes/document_importer.php');
-include_once('../includes/auth.php');
 include_once('../includes/sidebar.php');
 
 // Hilfsfunktionen für Range-Eingaben

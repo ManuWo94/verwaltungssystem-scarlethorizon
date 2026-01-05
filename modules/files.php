@@ -3,12 +3,16 @@ session_start();
 require_once '../includes/functions.php';
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
+require_once '../includes/permissions.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: ../login.php');
     exit;
 }
+
+// Enforce view permission for Aktenschrank
+checkPermissionOrDie('files', 'view');
 
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
