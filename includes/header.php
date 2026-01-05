@@ -92,11 +92,7 @@ $pageClass = $isAdminPage ? 'admin-page' : '';
         </button>
         <ul class="navbar-nav px-3 ml-auto">
             <li class="nav-item text-nowrap d-flex align-items-center navbar-user">
-                <!-- Theme Toggle -->
-                <button id="theme-toggle" class="btn btn-sm mr-3" title="Design wechseln" style="background: rgba(100, 181, 246, 0.15); color: #64b5f6; border: 1px solid #64b5f6; border-radius: 6px; padding: 0.4rem 0.75rem; cursor: pointer; transition: all 0.2s ease;" onclick="toggleTheme(); return false;">
-                    <span data-feather="palette" style="width: 18px; height: 18px;"></span>
-                </button>
-                <!-- User Info -->
+                <!-- Theme Toggle-Button hier eingefügt und via JavaScript gesteuert -->
                 <span class="text-light mr-3">
                     <span class="badge badge-pill badge-secondary"><?php echo htmlspecialchars($_SESSION['role'] ?? 'User'); ?></span>
                     <?php echo htmlspecialchars($_SESSION['username'] ?? 'Guest'); ?>
@@ -108,40 +104,3 @@ $pageClass = $isAdminPage ? 'admin-page' : '';
             </li>
         </ul>
     </nav>
-    <script>
-        // Theme Toggle
-        function toggleTheme() {
-            const basePath = '<?php echo getBasePath(); ?>';
-            const currentTheme = localStorage.getItem('theme') || 'classic';
-            const newTheme = currentTheme === 'classic' ? 'modern' : 'classic';
-            localStorage.setItem('theme', newTheme);
-            
-            let themeLink = document.getElementById('modern-theme-link');
-            if (newTheme === 'modern') {
-                if (!themeLink) {
-                    themeLink = document.createElement('link');
-                    themeLink.id = 'modern-theme-link';
-                    themeLink.rel = 'stylesheet';
-                    themeLink.href = basePath + 'assets/css/theme-modern.css';
-                    document.head.appendChild(themeLink);
-                }
-            } else {
-                if (themeLink) {
-                    themeLink.remove();
-                }
-            }
-        }
-        
-        // Apply theme on load
-        document.addEventListener('DOMContentLoaded', function() {
-            const basePath = '<?php echo getBasePath(); ?>';
-            const theme = localStorage.getItem('theme');
-            if (theme === 'modern') {
-                const themeLink = document.createElement('link');
-                themeLink.id = 'modern-theme-link';
-                themeLink.rel = 'stylesheet';
-                themeLink.href = basePath + 'assets/css/theme-modern.css';
-                document.head.appendChild(themeLink);
-            }
-        });
-    </script>
