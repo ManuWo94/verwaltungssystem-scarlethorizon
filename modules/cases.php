@@ -567,3 +567,39 @@ $prosecutors = array_filter($users, function($user) {
 </div>
 
 <?php include '../includes/footer.php'; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const defendantsData = <?php echo json_encode($defendants, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+
+    const normalize = (val) => (val || '').trim().toLowerCase();
+
+    const findByName = (name) => {
+        const needle = normalize(name);
+        return defendantsData.find(d => normalize(d.name) === needle);
+    };
+
+    const wireAutoFill = (nameSelector, tgSelector) => {
+        const nameInput = document.querySelector(nameSelector);
+        const tgInput = document.querySelector(tgSelector);
+        if (!nameInput || !tgInput) return;
+
+        const fill = () => {
+            const match = findByName(nameInput.value);
+            if (match && match.tg_number) {
+                tgInput.value = match.tg_number;
+            }
+        };
+
+        nameInput.addEventListener('change', fill);
+        nameInput.addEventListener('blur', fill);
+        nameInput.addEventListener('input', () => {
+            if (!nameInput.value.trim()) {
+                tgInput.value = '';
+            }
+        });
+    };
+
+    wireAutoFill('#defendant', '#defendant_tg');
+});
+</script>

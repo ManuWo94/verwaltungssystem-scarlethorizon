@@ -23,5 +23,17 @@
         ],
         "role_id": "gerichtsreferendar",
         "date_created": "2026-01-04 23:55:06"
+    },
+    {
+        "id": "rhodes",
+        "username": "Rhodes",
+        "password": "$2y$10$KIMxyDftCnGvHtUv8ZmSweVf15AjCx7ArNjr7ytvFVvznyQ7YT7I6",
+        "role": "Vorsitzender Senatsrichter",
+        "roles": [
+            "Vorsitzender Senatsrichter"
+        ],
+        "role_id": "vorsitzender_senatsrichter",
+        "status": "active",
+        "date_created": "2026-01-05 00:00:00"
     }
 ]
