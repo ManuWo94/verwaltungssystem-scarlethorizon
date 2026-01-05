@@ -50,6 +50,23 @@ if (function_exists('isLoggedInUserActive') && isset($_SESSION['user_id'])) {
 $currentScript = $_SERVER['SCRIPT_NAME'];
 $isAdminPage = strpos($currentScript, '/admin/') !== false;
 $pageClass = $isAdminPage ? 'admin-page' : '';
+
+// Resolve a displayable role name, preferring the current role_id mapping
+$displayRole = isset($_SESSION['role']) ? $_SESSION['role'] : 'User';
+if (isset($_SESSION['role_id'])) {
+    $allRoles = loadJsonData('roles.json');
+    foreach ($allRoles as $roleEntry) {
+        if (($roleEntry['id'] ?? '') === $_SESSION['role_id']) {
+            $displayRole = $roleEntry['name'] ?? $displayRole;
+            break;
+        }
+    }
+}
+
+// Backward compatibility: map legacy role label to the current one
+if ($displayRole === 'Vorsitzender Richter') {
+    $displayRole = 'Vorsitzender Senatsrichter';
+}
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -94,7 +111,7 @@ $pageClass = $isAdminPage ? 'admin-page' : '';
             <li class="nav-item text-nowrap d-flex align-items-center navbar-user">
                 <!-- Theme Toggle-Button hier eingefügt und via JavaScript gesteuert -->
                 <span class="text-light mr-3">
-                    <span class="badge badge-pill badge-secondary"><?php echo htmlspecialchars($_SESSION['role'] ?? 'User'); ?></span>
+                    <span class="badge badge-pill badge-secondary"><?php echo htmlspecialchars($displayRole); ?></span>
                     <?php echo htmlspecialchars($_SESSION['username'] ?? 'Guest'); ?>
                 </span>
                 <a class="nav-link" href="<?php echo getBasePath(); ?>modules/profile.php">

@@ -78,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $staffData = [
                 'name' => sanitize($_POST['name'] ?? ''),
                 'role' => sanitize($_POST['staff_role'] ?? ''),
+                'department' => sanitize($_POST['department'] ?? 'Justizmitarbeiter'),
                 'tg_number' => sanitize($_POST['tg_number'] ?? ''),
                 'contact' => sanitize($_POST['contact'] ?? ''),
                 'position' => sanitize($_POST['position'] ?? ''),
@@ -108,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $staffData = [
                     'name' => sanitize($_POST['name'] ?? ''),
                     'role' => sanitize($_POST['staff_role'] ?? ''),
+                    'department' => sanitize($_POST['department'] ?? ($staff['department'] ?? 'Justizmitarbeiter')),
                     'tg_number' => sanitize($_POST['tg_number'] ?? ''),
                     'contact' => sanitize($_POST['contact'] ?? ''),
                     'position' => sanitize($_POST['position'] ?? ''),
@@ -567,10 +569,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Load staff records
 $staffRecords = loadJsonData('staff.json');
 
+// Departments used for filtering and selection
+$departmentOptions = [
+    'Justizmitarbeiter' => 'Justizmitarbeiter',
+    'Sheriffs Office' => 'Sheriffs Office'
+];
+
+// Ensure every record has a department
+foreach ($staffRecords as &$staffRecord) {
+    if (empty($staffRecord['department'])) {
+        $staffRecord['department'] = 'Justizmitarbeiter';
+    }
+}
+unset($staffRecord);
+
+// Optional filter by department
+$departmentFilter = isset($_GET['department']) ? sanitize($_GET['department']) : 'all';
+if ($departmentFilter !== 'all' && !in_array($departmentFilter, array_values($departmentOptions), true)) {
+    $departmentFilter = 'all';
+}
+
 // Sort staff by name
 usort($staffRecords, function($a, $b) {
     return strcmp($a['name'], $b['name']);
 });
+
+if ($departmentFilter !== 'all') {
+    $staffRecords = array_values(array_filter($staffRecords, function($staff) use ($departmentFilter) {
+        return isset($staff['department']) && strcasecmp($staff['department'], $departmentFilter) === 0;
+    }));
+}
 
 // Load roles from roles.json for the dropdown
 $roles = loadJsonData('roles.json');
@@ -580,6 +608,9 @@ $selectedStaff = null;
 if (isset($_GET['id'])) {
     $staffId = $_GET['id'];
     $selectedStaff = findById('staff.json', $staffId);
+    if ($selectedStaff && empty($selectedStaff['department'])) {
+        $selectedStaff['department'] = 'Justizmitarbeiter';
+    }
 }
 
 // Get training details if training ID is provided
@@ -628,18 +659,30 @@ if ($selectedStaff && isset($_GET['training_id'])) {
             <div class="row">
                 <div class="col-md-4">
                     <div class="card mb-4">
-                        <div class="card-header">
-                            <h4>Mitarbeiterverzeichnis</h4>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">Mitarbeiterverzeichnis</h4>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Abteilungsfilter">
+                                <a href="staff.php" class="btn btn-outline-primary <?php echo ($departmentFilter === 'all') ? 'active' : ''; ?>">Alle</a>
+                                <a href="staff.php?department=Justizmitarbeiter" class="btn btn-outline-primary <?php echo ($departmentFilter === 'Justizmitarbeiter') ? 'active' : ''; ?>">Justizmitarbeiter</a>
+                                <a href="staff.php?department=Sheriffs%20Office" class="btn btn-outline-primary <?php echo ($departmentFilter === 'Sheriffs Office') ? 'active' : ''; ?>">Sheriffs Office</a>
+                            </div>
                         </div>
                         <div class="card-body p-0">
                             <div class="list-group list-group-flush">
                                 <?php if (count($staffRecords) > 0): ?>
                                     <?php foreach ($staffRecords as $staff): ?>
-                                        <a href="staff.php?id=<?php echo $staff['id']; ?>" class="list-group-item list-group-item-action <?php echo (isset($_GET['id']) && $_GET['id'] === $staff['id']) ? 'active' : ''; ?>">
+                                        <?php 
+                                            $linkQuery = ['id' => $staff['id']];
+                                            if ($departmentFilter !== 'all') {
+                                                $linkQuery['department'] = $departmentFilter;
+                                            }
+                                        ?>
+                                        <a href="staff.php?<?php echo http_build_query($linkQuery); ?>" class="list-group-item list-group-item-action <?php echo (isset($_GET['id']) && $_GET['id'] === $staff['id']) ? 'active' : ''; ?>">
                                             <div class="d-flex w-100 justify-content-between">
                                                 <h5 class="mb-1"><?php echo htmlspecialchars($staff['name']); ?></h5>
                                             </div>
                                             <p class="mb-1"><?php echo htmlspecialchars($staff['role']); ?></p>
+                                            <small class="d-block text-muted"><?php echo htmlspecialchars($staff['department'] ?? ''); ?></small>
                                             <?php if (!empty($staff['tg_number'])): ?>
                                                 <small>TG-Nummer: <?php echo htmlspecialchars($staff['tg_number']); ?></small>
                                             <?php endif; ?>
@@ -678,6 +721,7 @@ if ($selectedStaff && isset($_GET['training_id'])) {
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p><strong>Rolle:</strong> <?php echo htmlspecialchars($selectedStaff['role']); ?></p>
+                                        <p><strong>Bereich:</strong> <?php echo htmlspecialchars($selectedStaff['department'] ?? 'Justizmitarbeiter'); ?></p>
                                         <p><strong>TG-Nummer:</strong> <?php echo htmlspecialchars($selectedStaff['tg_number'] ?? 'N/A'); ?></p>
                                     </div>
                                     <div class="col-md-6">
@@ -792,6 +836,16 @@ if ($selectedStaff && isset($_GET['training_id'])) {
                                                 <?php endif; ?>
                                                 <div class="mt-2">
                                                     <button type="button" class="btn btn-sm btn-info" data-toggle="modal" data-target="#viewDocModal_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $document['id']); ?>">
+                                    <div class="form-group">
+                                        <label for="edit_department">Bereich *</label>
+                                        <select class="form-control" id="edit_department" name="department" required>
+                                            <?php foreach ($departmentOptions as $departmentKey => $departmentLabel): ?>
+                                                <option value="<?php echo htmlspecialchars($departmentLabel); ?>" <?php echo (($selectedStaff['department'] ?? 'Justizmitarbeiter') === $departmentLabel) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($departmentLabel); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                                         <span data-feather="file-text"></span> Dokument ansehen
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#editDocModal_<?php echo preg_replace('/[^a-zA-Z0-9_]/', '_', $document['id']); ?>">
@@ -1033,6 +1087,14 @@ if ($selectedStaff && isset($_GET['training_id'])) {
                                 <option value="<?php echo htmlspecialchars($role['name']); ?>">
                                     <?php echo htmlspecialchars($role['name']); ?>
                                 </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="department">Bereich *</label>
+                        <select class="form-control" id="department" name="department" required>
+                            <?php foreach ($departmentOptions as $departmentKey => $departmentLabel): ?>
+                                <option value="<?php echo htmlspecialchars($departmentLabel); ?>"><?php echo htmlspecialchars($departmentLabel); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
