@@ -35,7 +35,10 @@ if (!file_exists($fineCatalogFile)) {
             'violation' => 'Überschreitung der Geschwindigkeit',
             'description' => 'Reiten oder Fahren mit überhöhter Geschwindigkeit innerhalb einer Ortschaft',
             'amount' => 5,
+            'amount_min' => 5,
+            'amount_max' => 5,
             'prison_days' => 0,
+            'community_service_hours' => 0,
             'notes' => 'Gilt auch für Kutschen und andere Fahrzeuge'
         ],
         [
@@ -44,7 +47,10 @@ if (!file_exists($fineCatalogFile)) {
             'violation' => 'Erregung öffentlichen Ärgernisses',
             'description' => 'Unangemessenes Verhalten in der Öffentlichkeit',
             'amount' => 10,
+            'amount_min' => 10,
+            'amount_max' => 10,
             'prison_days' => 0,
+            'community_service_hours' => 0,
             'notes' => 'Nach Ermessen des Sheriffs'
         ],
         [
@@ -53,7 +59,10 @@ if (!file_exists($fineCatalogFile)) {
             'violation' => 'Unbefugtes Führen einer Waffe',
             'description' => 'Führen einer Waffe ohne entsprechende Berechtigung',
             'amount' => 15,
+            'amount_min' => 15,
+            'amount_max' => 15,
             'prison_days' => 1,
+            'community_service_hours' => 0,
             'notes' => 'Waffe kann beschlagnahmt werden'
         ],
         [
@@ -62,7 +71,10 @@ if (!file_exists($fineCatalogFile)) {
             'violation' => 'Körperverletzung',
             'description' => 'Vorsätzliche Körperverletzung ohne schwerwiegende Folgen',
             'amount' => 25,
+            'amount_min' => 25,
+            'amount_max' => 25,
             'prison_days' => 3,
+            'community_service_hours' => 0,
             'notes' => 'Bei schweren Verletzungen höhere Strafe möglich'
         ],
         [
@@ -71,7 +83,10 @@ if (!file_exists($fineCatalogFile)) {
             'violation' => 'Diebstahl',
             'description' => 'Entwendung fremden Eigentums',
             'amount' => 20,
+            'amount_min' => 20,
+            'amount_max' => 20,
             'prison_days' => 2,
+            'community_service_hours' => 0,
             'notes' => 'Zusätzlich zur Rückgabe des gestohlenen Guts'
         ]
     ];
@@ -112,6 +127,23 @@ if (!file_exists($servicesFile)) {
 
 // Daten laden
 $fines = json_decode(file_get_contents($fineCatalogFile), true);
+if (!is_array($fines)) {
+    $fines = [];
+}
+$fines = array_map(function($fine) {
+    if (!isset($fine['amount'])) {
+        $fine['amount'] = 0;
+    }
+    $fine['amount_min'] = isset($fine['amount_min']) ? (float)$fine['amount_min'] : (float)$fine['amount'];
+    $fine['amount_max'] = isset($fine['amount_max']) ? (float)$fine['amount_max'] : $fine['amount_min'];
+    $fine['amount'] = isset($fine['amount']) ? (float)$fine['amount'] : (float)$fine['amount_max'];
+    if ($fine['amount'] === 0 && $fine['amount_max'] > 0) {
+        $fine['amount'] = $fine['amount_max'];
+    }
+    $fine['community_service_hours'] = isset($fine['community_service_hours']) ? (int)$fine['community_service_hours'] : 0;
+    $fine['prison_days'] = isset($fine['prison_days']) ? (int)$fine['prison_days'] : 0;
+    return $fine;
+}, $fines);
 $services = json_decode(file_get_contents($servicesFile), true);
 
 // Bearbeitung des Bußgeldkatalogs
@@ -132,7 +164,14 @@ if (isset($_POST['action']) && $_POST['action'] == 'edit_fine') {
         $fines[$fineIndex]['category'] = $_POST['category'];
         $fines[$fineIndex]['violation'] = $_POST['violation'];
         $fines[$fineIndex]['description'] = $_POST['description'];
-        $fines[$fineIndex]['amount'] = (float)$_POST['amount'];
+        $amountMin = isset($_POST['amount_min']) ? (float)$_POST['amount_min'] : 0;
+        $amountMax = (isset($_POST['amount_max']) && $_POST['amount_max'] !== '') ? (float)$_POST['amount_max'] : $amountMin;
+        $communityService = isset($_POST['community_service_hours']) ? (int)$_POST['community_service_hours'] : 0;
+
+        $fines[$fineIndex]['amount_min'] = $amountMin;
+        $fines[$fineIndex]['amount_max'] = $amountMax;
+        $fines[$fineIndex]['amount'] = $amountMax > 0 ? $amountMax : $amountMin;
+        $fines[$fineIndex]['community_service_hours'] = $communityService;
         $fines[$fineIndex]['prison_days'] = (int)$_POST['prison_days'];
         $fines[$fineIndex]['notes'] = $_POST['notes'];
 
@@ -154,14 +193,21 @@ if (isset($_POST['action']) && $_POST['action'] == 'add_fine') {
     }
     $newId = $maxId + 1;
 
+    $amountMin = isset($_POST['amount_min']) ? (float)$_POST['amount_min'] : 0;
+    $amountMax = (isset($_POST['amount_max']) && $_POST['amount_max'] !== '') ? (float)$_POST['amount_max'] : $amountMin;
+    $communityService = isset($_POST['community_service_hours']) ? (int)$_POST['community_service_hours'] : 0;
+
     // Erstelle einen neuen Eintrag
     $newFine = [
         'id' => $newId,
         'category' => $_POST['category'],
         'violation' => $_POST['violation'],
         'description' => $_POST['description'],
-        'amount' => (float)$_POST['amount'],
+        'amount' => $amountMax > 0 ? $amountMax : $amountMin,
+        'amount_min' => $amountMin,
+        'amount_max' => $amountMax,
         'prison_days' => (int)$_POST['prison_days'],
+        'community_service_hours' => $communityService,
         'notes' => $_POST['notes']
     ];
 
@@ -493,8 +539,10 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                                             <th>Kategorie</th>
                                             <th>Verstoß</th>
                                             <th>Beschreibung</th>
-                                            <th>Bußgeld ($)</th>
+                                            <th>Bußgeld Min ($)</th>
+                                            <th>Bußgeld Max ($)</th>
                                             <th>Haftzeit (Tage)</th>
+                                            <th>Strafarbeit (Std)</th>
                                             <th>Anmerkungen</th>
                                             <?php if (isUserAdmin() || hasUserRole('Richter')): ?>
                                                 <th>Aktionen</th>
@@ -507,8 +555,10 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                                                 <td><?php echo htmlspecialchars($fine['category']); ?></td>
                                                 <td><?php echo htmlspecialchars($fine['violation']); ?></td>
                                                 <td><?php echo htmlspecialchars($fine['description']); ?></td>
-                                                <td><?php echo htmlspecialchars($fine['amount']); ?></td>
+                                                <td><?php echo htmlspecialchars($fine['amount_min']); ?></td>
+                                                <td><?php echo htmlspecialchars($fine['amount_max']); ?></td>
                                                 <td><?php echo htmlspecialchars($fine['prison_days']); ?></td>
+                                                <td><?php echo htmlspecialchars($fine['community_service_hours'] ?? 0); ?></td>
                                                 <td><?php echo htmlspecialchars($fine['notes']); ?></td>
                                                 <?php if (isUserAdmin() || hasUserRole('Richter')): ?>
                                                     <td>
@@ -517,8 +567,10 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                                                             data-category="<?php echo htmlspecialchars($fine['category']); ?>"
                                                             data-violation="<?php echo htmlspecialchars($fine['violation']); ?>"
                                                             data-description="<?php echo htmlspecialchars($fine['description']); ?>"
-                                                            data-amount="<?php echo htmlspecialchars($fine['amount']); ?>"
+                                                            data-amount-min="<?php echo htmlspecialchars($fine['amount_min']); ?>"
+                                                            data-amount-max="<?php echo htmlspecialchars($fine['amount_max']); ?>"
                                                             data-prison-days="<?php echo htmlspecialchars($fine['prison_days']); ?>"
+                                                            data-community-service="<?php echo htmlspecialchars($fine['community_service_hours'] ?? 0); ?>"
                                                             data-notes="<?php echo htmlspecialchars($fine['notes']); ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
@@ -763,11 +815,21 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_amount" class="form-label">Bußgeld ($)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="edit_amount" name="amount" required>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_amount_min" class="form-label">Bußgeld Minimum ($)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="edit_amount_min" name="amount_min" required>
                         </div>
-                        
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_amount_max" class="form-label">Bußgeld Maximum ($)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="edit_amount_max" name="amount_max" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="edit_community_service_hours" class="form-label">Strafarbeit (Std)</label>
+                            <input type="number" min="0" class="form-control" id="edit_community_service_hours" name="community_service_hours" value="0">
+                        </div>
+                    </div>
+
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="edit_prison_days" class="form-label">Haftzeit (Tage)</label>
                             <input type="number" min="0" class="form-control" id="edit_prison_days" name="prison_days" required>
@@ -816,11 +878,21 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                     </div>
                     
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="add_amount" class="form-label">Bußgeld ($)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="add_amount" name="amount" required>
+                        <div class="col-md-4 mb-3">
+                            <label for="add_amount_min" class="form-label">Bußgeld Minimum ($)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="add_amount_min" name="amount_min" required>
                         </div>
-                        
+                        <div class="col-md-4 mb-3">
+                            <label for="add_amount_max" class="form-label">Bußgeld Maximum ($)</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="add_amount_max" name="amount_max" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="add_community_service_hours" class="form-label">Strafarbeit (Std)</label>
+                            <input type="number" min="0" class="form-control" id="add_community_service_hours" name="community_service_hours" value="0">
+                        </div>
+                    </div>
+
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="add_prison_days" class="form-label">Haftzeit (Tage)</label>
                             <input type="number" min="0" class="form-control" id="add_prison_days" name="prison_days" required>
@@ -968,8 +1040,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#edit_category').val($(this).data('category') || '');
                 $('#edit_violation').val($(this).data('violation') || '');
                 $('#edit_description').val($(this).data('description') || '');
-                $('#edit_amount').val($(this).data('amount') || '0');
-                $('#edit_prison_days').val($(this).data('prison-days') || '0');
+                $('#edit_amount_min').val($(this).data('amountMin') || $(this).attr('data-amount-min') || '0');
+                $('#edit_amount_max').val($(this).data('amountMax') || $(this).attr('data-amount-max') || '0');
+                $('#edit_community_service_hours').val($(this).data('communityService') || $(this).attr('data-community-service') || '0');
+                $('#edit_prison_days').val($(this).data('prisonDays') || $(this).attr('data-prison-days') || '0');
                 $('#edit_notes').val($(this).data('notes') || '');
                 
                 // Modal anzeigen

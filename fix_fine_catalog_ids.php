@@ -66,9 +66,27 @@ foreach ($fines as $index => $fine) {
         $missingFields++;
         $fieldsFixed = true;
     }
+
+    if (!isset($fine['amount_min'])) {
+        $fine['amount_min'] = isset($fine['amount']) ? (float)$fine['amount'] : 0;
+        $missingFields++;
+        $fieldsFixed = true;
+    }
+
+    if (!isset($fine['amount_max'])) {
+        $fine['amount_max'] = isset($fine['amount']) ? (float)$fine['amount'] : $fine['amount_min'];
+        $missingFields++;
+        $fieldsFixed = true;
+    }
     
     if (!isset($fine['prison_days'])) {
         $fine['prison_days'] = 0;
+        $missingFields++;
+        $fieldsFixed = true;
+    }
+
+    if (!isset($fine['community_service_hours'])) {
+        $fine['community_service_hours'] = 0;
         $missingFields++;
         $fieldsFixed = true;
     }

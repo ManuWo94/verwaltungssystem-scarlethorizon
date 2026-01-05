@@ -19,6 +19,39 @@ class DocumentParser:
     def __init__(self):
         """Initialisiert den DocumentParser."""
         pass
+
+    def _parse_amount_field(self, value: str):
+        """Zerlegt einen Betrag in Einzel-, Mindest- und Höchstwert."""
+        amount = amount_min = amount_max = 0.0
+        if not value:
+            return amount, amount_min, amount_max
+
+        normalized = value.replace('€', '').replace('$', '')
+        range_match = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:-|–|bis|to|bis zu)\s*(\d+(?:[.,]\d+)?)', normalized, flags=re.IGNORECASE)
+        if range_match:
+            amount_min = float(range_match.group(1).replace(',', '.'))
+            amount_max = float(range_match.group(2).replace(',', '.'))
+            amount = amount_max or amount_min
+            return amount, amount_min, amount_max
+
+        single_match = re.search(r'(\d+(?:[.,]\d+)?)', normalized)
+        if single_match:
+            amount = amount_min = amount_max = float(single_match.group(1).replace(',', '.'))
+
+        return amount, amount_min, amount_max
+
+    def _parse_community_service(self, value: str) -> int:
+        """Extrahiert Strafarbeitsstunden aus einem Textfragment."""
+        if not value:
+            return 0
+
+        match = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:stunden|std|h)', value, flags=re.IGNORECASE)
+        if match:
+            try:
+                return int(float(match.group(1).replace(',', '.')))
+            except ValueError:
+                return 0
+        return 0
     
     def parse_pdf(self, file_path: str) -> Dict:
         """
@@ -361,17 +394,20 @@ class DocumentParser:
         try:
             violations = re.findall(r'(?:Verstoß|Delikt|Tat):\s*([^\n]+)', text)
             amounts = re.findall(r'(?:Bußgeld|Strafe|Geldstrafe):\s*(\d+(?:[.,]\d+)?)', text)
+            amount_ranges = re.findall(r'(?:Bußgeld|Strafe|Geldstrafe)?\s*:?\s*(\d+(?:[.,]\d+)?)\s*(?:-|–|bis|to)\s*(\d+(?:[.,]\d+)?)', text, flags=re.IGNORECASE)
             prison_days = re.findall(r'(?:Haftzeit|Gefängnis|Freiheitsstrafe):\s*(\d+)', text)
             categories = re.findall(r'(?:Kategorie|Bereich):\s*([^\n]+)', text)
             notes = re.findall(r'(?:Notizen|Anmerkungen|Hinweise):\s*([^\n]+)', text)
+            community_services = re.findall(r'(?:Strafarbeit|Community Service|Dienststunden|Arbeitsstunden):\s*(\d+(?:[.,]\d+)?)', text, flags=re.IGNORECASE)
         except Exception as e:
             print(f"Fehler bei Regex-Extraktion: {str(e)}", file=sys.stderr)
-            return [{'category': 'Allgemein', 'violation': 'Extraktionsfehler', 'description': 'Fehler bei der Textextraktion', 'amount': 0, 'prison_days': 0, 'notes': str(e)}]
+            return [{'category': 'Allgemein', 'violation': 'Extraktionsfehler', 'description': 'Fehler bei der Textextraktion', 'amount': 0, 'amount_min': 0, 'amount_max': 0, 'community_service_hours': 0, 'prison_days': 0, 'notes': str(e)}]
         
         # Bestimme die maximale Anzahl von Einträgen
         max_entries = max(
             len(violations),
             len(amounts),
+            len(amount_ranges),
             len(prison_days),
             len(categories)
         )
@@ -379,24 +415,30 @@ class DocumentParser:
         if max_entries == 0:
             # Versuche allgemeinere Muster, die in Zeilen vorkommen könnten
             lines = text.split('\n')
+            fallback_entries = []
             for line in lines:
                 # Suche nach Zeilen, die ein Paragraphenzeichen und Geldbeträge enthalten
                 if ('§' in line or 'Paragraph' in line) and (re.search(r'\$\d+', line) or re.search(r'\d+\s*Euro', line)):
                     match_offense = re.search(r'§\s*\d+\s*(.+?)(?:\$|\d+\s*Euro|$)', line)
                     match_amount = re.search(r'[\$€](\d+(?:[.,]\d+)?)', line)
                     match_prison = re.search(r'(\d+)\s*(?:Tage|Tagen|Tag)', line)
+                    match_range = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:-|–|bis)\s*(\d+(?:[.,]\d+)?)', line)
+                    match_cs = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:Stunden|Std|h)', line, flags=re.IGNORECASE)
                     
                     entry = {
                         'category': 'Allgemein',
                         'violation': match_offense.group(1).strip() if match_offense else line,
-                        'amount': float(match_amount.group(1).replace(',', '.')) if match_amount else 0,
+                        'amount': float(match_amount.group(1).replace(',', '.')) if match_amount else float(match_range.group(2).replace(',', '.')) if match_range else 0,
+                        'amount_min': float(match_range.group(1).replace(',', '.')) if match_range else float(match_amount.group(1).replace(',', '.')) if match_amount else 0,
+                        'amount_max': float(match_range.group(2).replace(',', '.')) if match_range else float(match_amount.group(1).replace(',', '.')) if match_amount else 0,
                         'prison_days': int(match_prison.group(1)) if match_prison else 0,
+                        'community_service_hours': int(float(match_cs.group(1).replace(',', '.'))) if match_cs else 0,
                         'description': line.strip(),
                         'notes': ''
                     }
-                    violations.append(entry)
+                    fallback_entries.append(entry)
             
-            return violations
+            return fallback_entries
         
         # Erzeuge die Einträge
         catalog = []
@@ -413,13 +455,22 @@ class DocumentParser:
             else:
                 entry['violation'] = f'Unbekannter Verstoß {i+1}'
             
-            if i < len(amounts):
+            amount_value = amount_min = amount_max = 0.0
+            if i < len(amount_ranges):
                 try:
-                    entry['amount'] = float(amounts[i].replace(',', '.'))
+                    amount_min = float(amount_ranges[i][0].replace(',', '.'))
+                    amount_max = float(amount_ranges[i][1].replace(',', '.'))
+                    amount_value = amount_max or amount_min
+                except (ValueError, IndexError):
+                    pass
+            elif i < len(amounts):
+                try:
+                    amount_value = amount_min = amount_max = float(amounts[i].replace(',', '.'))
                 except ValueError:
-                    entry['amount'] = 0
-            else:
-                entry['amount'] = 0
+                    pass
+            entry['amount'] = amount_value
+            entry['amount_min'] = amount_min
+            entry['amount_max'] = amount_max
             
             if i < len(prison_days):
                 try:
@@ -428,6 +479,14 @@ class DocumentParser:
                     entry['prison_days'] = 0
             else:
                 entry['prison_days'] = 0
+
+            if i < len(community_services):
+                try:
+                    entry['community_service_hours'] = int(float(community_services[i].replace(',', '.')))
+                except ValueError:
+                    entry['community_service_hours'] = 0
+            else:
+                entry['community_service_hours'] = 0
             
             entry['description'] = entry['violation']
             
@@ -459,69 +518,91 @@ class DocumentParser:
         for table in tables:
             current_category = 'Allgemein'
             
-            # Suche nach Zeilen in der Tabelle
             rows = table.find_all('tr')
-            
-            for row in rows:
-                # Suche nach Zellen in der Zeile
+            if not rows:
+                continue
+
+            header_cells = rows[0].find_all(['th', 'td'])
+            header_titles = [cell.get_text(strip=True).lower() for cell in header_cells]
+            header_map = {}
+            for idx, title in enumerate(header_titles):
+                if 'kategorie' in title:
+                    header_map['category'] = idx
+                if 'verstoß' in title or 'tat' in title:
+                    header_map['violation'] = idx
+                if 'bußgeld' in title or 'strafe' in title:
+                    header_map['amount'] = idx
+                if 'haft' in title or 'tage' in title or 'freiheitsstrafe' in title:
+                    header_map['prison'] = idx
+                if 'strafarbeit' in title or 'community' in title or 'arbeits' in title:
+                    header_map['community_service'] = idx
+                if 'anmerk' in title or 'notiz' in title or 'hinweis' in title:
+                    header_map['notes'] = idx
+
+            start_index = 1 if header_cells and any(cell.name == 'th' for cell in header_cells) else 0
+
+            for row_index, row in enumerate(rows[start_index:], start=start_index):
                 cells = row.find_all('td')
-                
-                # Wenn wir eine Kategoriezeile gefunden haben (normalerweise fett formatiert)
+                if not cells:
+                    continue
+
+                cell_texts = [cell.get_text(strip=True) for cell in cells]
+                if not any(cell_texts):
+                    continue
+
                 if len(cells) >= 2:
-                    # Überprüfe, ob es eine Überschrift sein könnte
-                    second_cell = cells[1].get_text().strip()
-                    if second_cell.startswith('I.') or second_cell.startswith('II.') or second_cell.startswith('III.'):
-                        current_category = second_cell
+                    potential_category = cell_texts[1]
+                    if potential_category.startswith(('I.', 'II.', 'III.', 'IV.', 'V.')):
+                        current_category = potential_category
                         continue
-                
-                # Nur Zeilen mit ausreichend Zellen verarbeiten
-                if len(cells) >= 5:
-                    # Versuche, einen Paragraphen (§) in der ersten oder zweiten Zelle zu finden
-                    first_cell = cells[0].get_text().strip()
-                    second_cell = cells[1].get_text().strip()
-                    
-                    if '§' in first_cell or '§' in second_cell:
-                        # Extrahiere den Verstoß
-                        violation = second_cell.strip()
-                        
-                        # Extrahiere den Geldbetrag (3. Zelle)
-                        amount_text = cells[2].get_text().strip()
-                        amount = 0
-                        if amount_text and amount_text != '-':
-                            # Entferne $ und konvertiere zu Float
-                            amount_match = re.search(r'\$?(\d+(?:[.,]\d+)?)', amount_text)
-                            if amount_match:
-                                try:
-                                    amount = float(amount_match.group(1).replace(',', '.'))
-                                except ValueError:
-                                    pass
-                        
-                        # Extrahiere die Haftzeit (4. Zelle)
-                        prison_text = cells[3].get_text().strip()
-                        prison_days = 0
-                        if prison_text and prison_text != '-':
-                            # Konvertiere zu Integer
-                            prison_match = re.search(r'(\d+)', prison_text)
-                            if prison_match:
-                                try:
-                                    prison_days = int(prison_match.group(1))
-                                except ValueError:
-                                    pass
-                        
-                        # Extrahiere Notizen (5. Zelle)
-                        notes = cells[4].get_text().strip() if len(cells) > 4 else ''
-                        
-                        # Erstelle den Eintrag
-                        entry = {
-                            'category': current_category,
-                            'violation': violation,
-                            'description': violation,
-                            'amount': amount,
-                            'prison_days': prison_days,
-                            'notes': notes
-                        }
-                        
-                        catalog.append(entry)
+
+                category_idx = header_map.get('category')
+                category_value = current_category
+                if category_idx is not None and category_idx < len(cell_texts) and cell_texts[category_idx]:
+                    category_value = cell_texts[category_idx]
+
+                violation_idx = header_map.get('violation', 1 if len(cell_texts) > 1 else 0)
+                violation = cell_texts[violation_idx] if violation_idx < len(cell_texts) else ''
+                if not violation:
+                    continue
+
+                amount_idx = header_map.get('amount', 2 if len(cell_texts) > 2 else 0)
+                amount_text = cell_texts[amount_idx] if amount_idx < len(cell_texts) else ''
+                amount_value, amount_min, amount_max = self._parse_amount_field(amount_text)
+
+                prison_days = 0
+                prison_idx = header_map.get('prison', 3 if len(cell_texts) > 3 else None)
+                if prison_idx is not None and prison_idx < len(cell_texts):
+                    prison_match = re.search(r'(\d+)', cell_texts[prison_idx])
+                    if prison_match:
+                        try:
+                            prison_days = int(prison_match.group(1))
+                        except ValueError:
+                            prison_days = 0
+
+                community_service_hours = 0
+                community_idx = header_map.get('community_service')
+                if community_idx is not None and community_idx < len(cell_texts):
+                    community_service_hours = self._parse_community_service(cell_texts[community_idx])
+                elif len(cell_texts) >= 6:
+                    community_service_hours = self._parse_community_service(cell_texts[4])
+
+                notes_idx = header_map.get('notes', len(cell_texts) - 1)
+                notes = cell_texts[notes_idx] if notes_idx is not None and notes_idx < len(cell_texts) else ''
+
+                entry = {
+                    'category': category_value,
+                    'violation': violation,
+                    'description': violation,
+                    'amount': amount_value,
+                    'amount_min': amount_min,
+                    'amount_max': amount_max,
+                    'prison_days': prison_days,
+                    'community_service_hours': community_service_hours,
+                    'notes': notes
+                }
+
+                catalog.append(entry)
         
         return catalog
 

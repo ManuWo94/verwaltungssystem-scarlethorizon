@@ -20,6 +20,19 @@ function parseDocument($inputPath, $mode = 'text', $outputPath = null) {
             'error' => 'Keine Eingabedatei oder URL angegeben.'
         ];
     }
+
+    // Lokale Pfade auflösen, damit der Python-Parser sie zuverlässig findet
+    $isUrl = preg_match('~^https?://~i', $inputPath) === 1;
+    if (!$isUrl) {
+        $resolvedPath = realpath($inputPath);
+        if ($resolvedPath === false || !file_exists($resolvedPath)) {
+            return [
+                'success' => false,
+                'error' => 'Eingabedatei wurde nicht gefunden: ' . $inputPath
+            ];
+        }
+        $inputPath = $resolvedPath;
+    }
     
     // Verfügbare Modi überprüfen
     $availableModes = ['text', 'sections', 'catalog'];
@@ -134,6 +147,26 @@ function importFineCatalog($inputPath, $merge = true) {
             $existingCatalog = [];
         }
     }
+
+    // Bestehende Einträge auf neue Felder und Typen normalisieren
+    foreach ($existingCatalog as &$existingEntry) {
+        if (!isset($existingEntry['amount_min'])) {
+            $existingEntry['amount_min'] = isset($existingEntry['amount']) ? (float)$existingEntry['amount'] : 0;
+        }
+        if (!isset($existingEntry['amount_max'])) {
+            $existingEntry['amount_max'] = isset($existingEntry['amount']) ? (float)$existingEntry['amount'] : $existingEntry['amount_min'];
+        }
+        if (!isset($existingEntry['community_service_hours'])) {
+            $existingEntry['community_service_hours'] = 0;
+        }
+        $existingEntry['amount_min'] = (float)$existingEntry['amount_min'];
+        $existingEntry['amount_max'] = (float)$existingEntry['amount_max'];
+        $existingEntry['community_service_hours'] = (int)$existingEntry['community_service_hours'];
+        if (!isset($existingEntry['prison_days'])) {
+            $existingEntry['prison_days'] = 0;
+        }
+    }
+    unset($existingEntry);
     
     // Finde die höchste ID im bestehenden Katalog
     $maxId = 0;
@@ -155,8 +188,24 @@ function importFineCatalog($inputPath, $merge = true) {
         if (!isset($entry['category'])) $entry['category'] = 'Allgemein';
         if (!isset($entry['description'])) $entry['description'] = $entry['violation'];
         if (!isset($entry['amount'])) $entry['amount'] = 0;
+        if (!isset($entry['amount_min'])) $entry['amount_min'] = isset($entry['amount']) ? (float)$entry['amount'] : 0;
+        if (!isset($entry['amount_max'])) $entry['amount_max'] = isset($entry['amount']) ? (float)$entry['amount'] : $entry['amount_min'];
+        if (!isset($entry['community_service_hours'])) $entry['community_service_hours'] = 0;
         if (!isset($entry['prison_days'])) $entry['prison_days'] = 0;
         if (!isset($entry['notes'])) $entry['notes'] = '';
+
+        // Typkonvertierungen und Ableitung eines kompatiblen Einzelbetrags
+        $entry['amount_min'] = (float)$entry['amount_min'];
+        $entry['amount_max'] = (float)$entry['amount_max'];
+        $entry['amount'] = isset($entry['amount']) ? (float)$entry['amount'] : (float)$entry['amount_max'];
+        if ($entry['amount'] === 0 && $entry['amount_max'] > 0) {
+            $entry['amount'] = (float)$entry['amount_max'];
+        }
+        if ($entry['amount_min'] > 0 && $entry['amount_max'] === 0) {
+            $entry['amount_max'] = $entry['amount_min'];
+        }
+        $entry['community_service_hours'] = (int)$entry['community_service_hours'];
+        $entry['prison_days'] = (int)$entry['prison_days'];
         
         // Wenn eine ID bereits existiert, behalte sie bei
         if (!isset($entry['id']) || empty($entry['id'])) {
