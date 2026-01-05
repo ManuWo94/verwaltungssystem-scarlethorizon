@@ -482,7 +482,7 @@ function getRolePermissions() {
     
     // Merge with stored/overridden permissions from data/roles.json (if present)
     if (function_exists('getJsonData')) {
-        $storedRoles = getJsonData('roles.json');
+        $storedRoles = getJsonData('data/roles.json');
         if (is_array($storedRoles)) {
             foreach ($storedRoles as $r) {
                 if (isset($r['id']) && isset($r['permissions']) && is_array($r['permissions'])) {
