@@ -98,9 +98,6 @@ if ($displayRole === 'Vorsitzender Richter') {
     <!-- CKEditor für Rich-Text-Bearbeitung -->
     <script src="https://cdn.ckeditor.com/4.16.2/standard/ckeditor.js"></script>
     
-    <!-- Bootstrap 5 JS (für Modal-Funktionen) -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    
     <!-- Permission Utility Functions -->
     <script src="<?php echo getBasePath(); ?>assets/js/permissions.js"></script>
 </head>

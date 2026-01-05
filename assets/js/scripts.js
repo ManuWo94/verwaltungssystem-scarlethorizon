@@ -102,43 +102,29 @@ function setupModals() {
         });
     });
     
-    // Initialisiere alle Bootstrap-Modals
+    // Initialisiere alle Bootstrap-Modals (Bootstrap 4 compatible)
     if (typeof $ !== 'undefined') {
-        // Initialisiere alle modalen Dialoge
-        $('.modal').modal({
-            show: false,
-            keyboard: true
+        // Initialize all modal dialogs - Bootstrap 4 compatible
+        $('.modal').on('show.bs.modal', function() {
+            // Clean up any backdrop issues
+            $('.modal-backdrop').remove();
         });
         
-        // Speziell für die Modalfenster bei Klageschriften
-        // Fallback für die data-toggle-Attribute
+        // Fallback for data-toggle-Attribute (Bootstrap 4)
         $('button[data-toggle="modal"]').on('click', function(e) {
             e.preventDefault();
             var target = $(this).data('target');
-            $(target).modal('show');
+            if (target && $(target).length) {
+                $(target).modal('show');
+            }
         });
         
-        // Explizite Initialisierung für die wichtigen Modalfenster
-        // Gerichtsverhandlung terminieren Modal
-        const scheduleCourtBtn = document.querySelector('[data-target="#scheduleCourtModal"]');
-        if (scheduleCourtBtn) {
-            scheduleCourtBtn.addEventListener('click', function() {
-                $('#scheduleCourtModal').modal('show');
-            });
-        }
-        
-        // Urteil eintragen Modal
-        const enterVerdictBtn = document.querySelector('[data-target="#enterVerdictModal"]');
-        if (enterVerdictBtn) {
-            enterVerdictBtn.addEventListener('click', function() {
-                $('#enterVerdictModal').modal('show');
-            });
-        }
-        
-        // Initialisiere Bootstrap Accordions korrekt
-        $('.accordion .btn-link').on('click', function(e) {
-            // Pfeil-Icon drehen
-            $(this).find('.fas.fa-chevron-down').toggleClass('rotate-180');
+        // Handle modal close buttons properly
+        $('[data-dismiss="modal"]').on('click', function() {
+            var modal = $(this).closest('.modal');
+            if (modal.length) {
+                modal.modal('hide');
+            }
         });
     }
 }

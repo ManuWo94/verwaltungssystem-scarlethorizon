@@ -18,14 +18,23 @@ function showPermissionDenied() {
     alertDiv.innerHTML = `
         <strong>Zugriff verweigert!</strong><br>
         Du hast keine Berechtigung dies zu tun.
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-dismiss="alert" aria-label="Close"></button>
     `;
     
     document.body.appendChild(alertDiv);
     
+    // Initialize Bootstrap alert dismiss
+    if (typeof $ !== 'undefined') {
+        $(alertDiv).find('.btn-close').on('click', function() {
+            $(alertDiv).remove();
+        });
+    }
+    
     // Auto-dismiss after 5 seconds
     setTimeout(() => {
-        alertDiv.remove();
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
     }, 5000);
 }
 
@@ -33,20 +42,23 @@ function showPermissionDenied() {
  * Show modal-based permission denial
  */
 function showPermissionDeniedModal() {
+    // Use Bootstrap 4 compatible modal approach
     const modalHtml = `
-        <div class="modal fade" id="permissionDeniedModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
+        <div class="modal fade" id="permissionDeniedModal" tabindex="-1" role="dialog" aria-labelledby="permissionDeniedModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Zugriff verweigert</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="permissionDeniedModalLabel">Zugriff verweigert</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
                     </div>
                     <div class="modal-body">
                         <p><strong>Du hast keine Berechtigung dies zu tun.</strong></p>
                         <p>Kontaktiere einen Administrator, wenn du diese Berechtigung benötigst.</p>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Schließen</button>
                     </div>
                 </div>
             </div>
@@ -59,10 +71,11 @@ function showPermissionDeniedModal() {
         existingModal.remove();
     }
     
-    // Create and show modal
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    const modal = new bootstrap.Modal(document.getElementById('permissionDeniedModal'));
-    modal.show();
+    // Create and show modal using jQuery/Bootstrap 4
+    if (typeof $ !== 'undefined') {
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        $('#permissionDeniedModal').modal('show');
+    }
 }
 
 /**
@@ -105,38 +118,64 @@ function checkDeletePermission(event) {
 
 /**
  * Disable edit buttons if no permission
+ * Uses event delegation to avoid adding multiple listeners
  */
 function disableEditButtons() {
-    document.querySelectorAll('button[data-requires-permission="edit"]').forEach(btn => {
+    const editButtons = document.querySelectorAll('button[data-requires-permission="edit"]');
+    
+    editButtons.forEach(btn => {
         if (btn.hasAttribute('data-has-permission') && 
             btn.getAttribute('data-has-permission') === 'false') {
             btn.disabled = true;
             btn.classList.add('permission-denied');
             btn.setAttribute('title', 'Du hast keine Berechtigung zum Bearbeiten');
-            btn.addEventListener('click', checkEditPermission);
+            
+            // Remove any existing listeners first (prevents duplicate listeners)
+            btn.removeEventListener('click', checkEditPermission);
+            // Add listener once
+            btn.addEventListener('click', checkEditPermission, { once: false });
         }
     });
 }
 
 /**
  * Disable delete buttons if no permission
+ * Uses event delegation to avoid adding multiple listeners
  */
 function disableDeleteButtons() {
-    document.querySelectorAll('button[data-requires-permission="delete"]').forEach(btn => {
+    const deleteButtons = document.querySelectorAll('button[data-requires-permission="delete"]');
+    
+    deleteButtons.forEach(btn => {
         if (btn.hasAttribute('data-has-permission') && 
             btn.getAttribute('data-has-permission') === 'false') {
             btn.disabled = true;
             btn.classList.add('permission-denied');
             btn.setAttribute('title', 'Du hast keine Berechtigung zum Löschen');
-            btn.addEventListener('click', checkDeletePermission);
+            
+            // Remove any existing listeners first (prevents duplicate listeners)
+            btn.removeEventListener('click', checkDeletePermission);
+            // Add listener once
+            btn.addEventListener('click', checkDeletePermission, { once: false });
         }
     });
 }
 
 /**
  * Initialize permission checks on page load
+ * Add a small delay to ensure DOM is ready
  */
-document.addEventListener('DOMContentLoaded', function() {
-    disableEditButtons();
-    disableDeleteButtons();
-});
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            disableEditButtons();
+            disableDeleteButtons();
+        }, 100);
+    });
+} else {
+    // DOM is already ready
+    setTimeout(() => {
+        disableEditButtons();
+        disableDeleteButtons();
+    }, 100);
+}
+
