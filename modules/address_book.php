@@ -7,6 +7,7 @@ session_start();
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
+require_once '../includes/permissions.php';
 
 // Ensure user is logged in
 if (!isset($_SESSION['user_id'])) {
