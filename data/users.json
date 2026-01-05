@@ -6,8 +6,7 @@
         "role": "Admin Zusatzrolle",
         "role_id": "admin_extra",
         "roles": [
-            "Admin Zusatzrolle",
-            "Gerichtsreferendar"
+            "Admin Zusatzrolle"
         ],
         "status": "active",
         "date_created": "2026-01-04 23:26:37"
