@@ -35,4 +35,3 @@ if ($user) {
 } else {
     echo "Admin user not found. Please create an admin user first.";
 }
-?>
