@@ -124,8 +124,87 @@
     {
         "id": "vorsitzender_senatsrichter",
         "name": "Vorsitzender Senatsrichter",
-        "description": "Nicht-Systemrolle ohne Adminrechte",
-        "permissions": {}
+        "description": "Vorsitzender mit Leserecht auf alle Module",
+        "permissions": {
+            "admin": [
+                "view"
+            ],
+            "users": [
+                "view"
+            ],
+            "roles": [
+                "view"
+            ],
+            "cases": [
+                "view"
+            ],
+            "indictments": [
+                "view"
+            ],
+            "appeals": [
+                "view"
+            ],
+            "defendants": [
+                "view"
+            ],
+            "hearings": [
+                "view"
+            ],
+            "templates": [
+                "view"
+            ],
+            "warrants": [
+                "view"
+            ],
+            "staff": [
+                "view"
+            ],
+            "trainings": [
+                "view"
+            ],
+            "equipment": [
+                "view"
+            ],
+            "notes": [
+                "view"
+            ],
+            "calendar": [
+                "view"
+            ],
+            "files": [
+                "view"
+            ],
+            "duty_log": [
+                "view"
+            ],
+            "vacation": [
+                "view"
+            ],
+            "address_book": [
+                "view"
+            ],
+            "seized_assets": [
+                "view"
+            ],
+            "business_licenses": [
+                "view"
+            ],
+            "todos": [
+                "view"
+            ],
+            "task_assignments": [
+                "view"
+            ],
+            "evidence": [
+                "view"
+            ],
+            "revisions": [
+                "view"
+            ],
+            "justice_references": [
+                "view"
+            ]
+        }
     },
     {
         "id": "senatsrichter",

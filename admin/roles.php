@@ -264,7 +264,7 @@ include '../includes/header.php';
                                                                 'Fälle & Anklagen' => ['cases', 'indictments', 'appeals', 'defendants', 'hearings', 'warrants', 'verdicts'],
                                                                 'Personal & Schulung' => ['staff', 'trainings', 'equipment', 'vacation'],
                                                                 'Dokumentation & Dateien' => ['templates', 'files', 'notes', 'revisions'],
-                                                                'Zeitverwaltung' => ['calendar', 'duty_log', 'task_assignments'],
+                                                                'Zeitverwaltung' => ['calendar', 'duty_log', 'task_assignments', 'todos'],
                                                                 'Weitere' => ['address_book', 'evidence', 'seized_assets', 'justice_references']
                                                             ];
                                                             

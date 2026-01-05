@@ -254,4 +254,19 @@ function getBaseUrl() {
 
     return $baseUrl;
 }
+
+/**
+ * Generate button attributes for permission checking
+ * Returns data attributes for client-side permission validation
+ */
+function getPermissionButtonAttributes($module, $action) {
+    if (!isset($_SESSION['user_id'])) {
+        return 'data-requires-permission="' . htmlspecialchars($action) . '" data-has-permission="false" disabled';
+    }
+
+    $hasPermission = checkUserPermission($_SESSION['user_id'], $module, $action);
+    
+    return 'data-requires-permission="' . htmlspecialchars($action) . '" data-has-permission="' . ($hasPermission ? 'true' : 'false') . '"' . 
+           (!$hasPermission ? ' disabled' : '');
+}
 ?>
