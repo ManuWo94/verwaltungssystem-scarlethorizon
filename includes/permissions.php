@@ -40,11 +40,14 @@ function getAvailableModules() {
  * Defines all available actions for permission checking
     $permissions = [];
 
-    // Administrator Zusatzrolle mit Vollzugriff (tri-state model)
+    // Systemrollen mit Vollzugriff (tri-state model)
     $availableActions = getAvailableActions();
-    $permissions['admin'] = [];
-    foreach (array_keys(getAvailableModules()) as $module) {
-        $permissions['admin'][$module] = $availableActions;
+    $fullAccessRoles = ['admin', 'vorsitzender_richter_admin'];
+    foreach ($fullAccessRoles as $sysRoleId) {
+        $permissions[$sysRoleId] = [];
+        foreach (array_keys(getAvailableModules()) as $module) {
+            $permissions[$sysRoleId][$module] = $availableActions;
+        }
     }
     // Junior Prosecutor
     $permissions['junior_prosecutor'] = array_merge($commonAccess, [
