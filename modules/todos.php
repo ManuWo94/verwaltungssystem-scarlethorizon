@@ -670,12 +670,16 @@ include_once '../includes/header.php';
                                                             <i class="fas fa-ellipsis-v"></i>
                                                         </button>
                                                         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMenuButton-<?php echo htmlspecialchars($todo['id']); ?>">
-                                                            <button class="dropdown-item edit-todo-btn" data-todo-id="<?php echo htmlspecialchars($todo['id']); ?>">
-                                                                <i class="fas fa-edit"></i> Bearbeiten
-                                                            </button>
-                                                            <button class="dropdown-item delete-todo-btn" data-todo-id="<?php echo htmlspecialchars($todo['id']); ?>" data-todo-title="<?php echo htmlspecialchars($todo['title']); ?>">
-                                                                <i class="fas fa-trash"></i> Löschen
-                                                            </button>
+                                                            <?php if (checkUserPermission($_SESSION['user_id'], 'todos', 'edit')): ?>
+                                                                <button class="dropdown-item edit-todo-btn" data-todo-id="<?php echo htmlspecialchars($todo['id']); ?>">
+                                                                    <i class="fas fa-edit"></i> Bearbeiten
+                                                                </button>
+                                                            <?php endif; ?>
+                                                            <?php if (checkUserPermission($_SESSION['user_id'], 'todos', 'delete')): ?>
+                                                                <button class="dropdown-item delete-todo-btn" data-todo-id="<?php echo htmlspecialchars($todo['id']); ?>" data-todo-title="<?php echo htmlspecialchars($todo['title']); ?>">
+                                                                    <i class="fas fa-trash"></i> Löschen
+                                                                </button>
+                                                            <?php endif; ?>
                                                         </div>
                                                     </div>
                                                 </div>
