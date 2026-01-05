@@ -20,38 +20,42 @@ class DocumentParser:
         """Initialisiert den DocumentParser."""
         pass
 
+    def _parse_range(self, value: str, as_int: bool = False):
+        """Zerlegt einen Wert (optional mit Range) in min/max."""
+        v = (value or '').strip()
+        if not v:
+            return 0, 0
+
+        normalized = v.replace('€', '').replace('$', '')
+        match = re.search(r'(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|bis|to|bis zu)\s*(\d+(?:[.,]\d+)?))?', normalized, flags=re.IGNORECASE)
+        if not match:
+            return 0, 0
+
+        first = match.group(1)
+        second = match.group(2) if match.group(2) is not None else match.group(1)
+
+        min_val = float(first.replace(',', '.'))
+        max_val = float(second.replace(',', '.'))
+
+        if as_int:
+            min_val = int(round(min_val))
+            max_val = int(round(max_val))
+
+        return min_val, max_val
+
     def _parse_amount_field(self, value: str):
         """Zerlegt einen Betrag in Einzel-, Mindest- und Höchstwert."""
-        amount = amount_min = amount_max = 0.0
-        if not value:
-            return amount, amount_min, amount_max
-
-        normalized = value.replace('€', '').replace('$', '')
-        range_match = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:-|–|bis|to|bis zu)\s*(\d+(?:[.,]\d+)?)', normalized, flags=re.IGNORECASE)
-        if range_match:
-            amount_min = float(range_match.group(1).replace(',', '.'))
-            amount_max = float(range_match.group(2).replace(',', '.'))
-            amount = amount_max or amount_min
-            return amount, amount_min, amount_max
-
-        single_match = re.search(r'(\d+(?:[.,]\d+)?)', normalized)
-        if single_match:
-            amount = amount_min = amount_max = float(single_match.group(1).replace(',', '.'))
-
+        amount_min, amount_max = self._parse_range(value, as_int=False)
+        amount = amount_max or amount_min
         return amount, amount_min, amount_max
 
-    def _parse_community_service(self, value: str) -> int:
-        """Extrahiert Strafarbeitsstunden aus einem Textfragment."""
-        if not value:
-            return 0
+    def _parse_community_service(self, value: str):
+        """Extrahiert Strafarbeitsstunden (min/max)."""
+        return self._parse_range(value, as_int=True)
 
-        match = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:stunden|std|h)', value, flags=re.IGNORECASE)
-        if match:
-            try:
-                return int(float(match.group(1).replace(',', '.')))
-            except ValueError:
-                return 0
-        return 0
+    def _parse_prison_days(self, value: str):
+        """Extrahiert Hafttage (min/max)."""
+        return self._parse_range(value, as_int=True)
     
     def parse_pdf(self, file_path: str) -> Dict:
         """
@@ -378,7 +382,7 @@ class DocumentParser:
         """
         # Fallback für leeren oder ungültigen Text
         if not text or not isinstance(text, str):
-            return [{'category': 'Allgemein', 'violation': 'Fehlerhafte Eingabe', 'description': 'Fehlerhafte Eingabe', 'amount': 0, 'prison_days': 0, 'notes': 'Automatisch generiert nach Fehler'}]
+            return [{'category': 'Allgemein', 'violation': 'Fehlerhafte Eingabe', 'description': 'Fehlerhafte Eingabe', 'amount': 0, 'amount_min': 0, 'amount_max': 0, 'prison_days': 0, 'prison_days_min': 0, 'prison_days_max': 0, 'community_service_hours': 0, 'community_service_hours_min': 0, 'community_service_hours_max': 0, 'notes': 'Automatisch generiert nach Fehler'}]
             
         try:
             # Versuche zuerst die strukturierte HTML-Tabellenextraktion
@@ -395,13 +399,13 @@ class DocumentParser:
             violations = re.findall(r'(?:Verstoß|Delikt|Tat):\s*([^\n]+)', text)
             amounts = re.findall(r'(?:Bußgeld|Strafe|Geldstrafe):\s*(\d+(?:[.,]\d+)?)', text)
             amount_ranges = re.findall(r'(?:Bußgeld|Strafe|Geldstrafe)?\s*:?\s*(\d+(?:[.,]\d+)?)\s*(?:-|–|bis|to)\s*(\d+(?:[.,]\d+)?)', text, flags=re.IGNORECASE)
-            prison_days = re.findall(r'(?:Haftzeit|Gefängnis|Freiheitsstrafe):\s*(\d+)', text)
+            prison_days = re.findall(r'(?:Haftzeit|Gefängnis|Freiheitsstrafe):\s*([\d\-–bis\s.,]+)', text)
             categories = re.findall(r'(?:Kategorie|Bereich):\s*([^\n]+)', text)
             notes = re.findall(r'(?:Notizen|Anmerkungen|Hinweise):\s*([^\n]+)', text)
-            community_services = re.findall(r'(?:Strafarbeit|Community Service|Dienststunden|Arbeitsstunden):\s*(\d+(?:[.,]\d+)?)', text, flags=re.IGNORECASE)
+            community_services = re.findall(r'(?:Strafarbeit|Community Service|Dienststunden|Arbeitsstunden):\s*([\d\-–bis\s.,]+)', text, flags=re.IGNORECASE)
         except Exception as e:
             print(f"Fehler bei Regex-Extraktion: {str(e)}", file=sys.stderr)
-            return [{'category': 'Allgemein', 'violation': 'Extraktionsfehler', 'description': 'Fehler bei der Textextraktion', 'amount': 0, 'amount_min': 0, 'amount_max': 0, 'community_service_hours': 0, 'prison_days': 0, 'notes': str(e)}]
+            return [{'category': 'Allgemein', 'violation': 'Extraktionsfehler', 'description': 'Fehler bei der Textextraktion', 'amount': 0, 'amount_min': 0, 'amount_max': 0, 'prison_days': 0, 'prison_days_min': 0, 'prison_days_max': 0, 'community_service_hours': 0, 'community_service_hours_min': 0, 'community_service_hours_max': 0, 'notes': str(e)}]
         
         # Bestimme die maximale Anzahl von Einträgen
         max_entries = max(
@@ -409,7 +413,8 @@ class DocumentParser:
             len(amounts),
             len(amount_ranges),
             len(prison_days),
-            len(categories)
+            len(categories),
+            len(community_services)
         )
         
         if max_entries == 0:
@@ -421,18 +426,30 @@ class DocumentParser:
                 if ('§' in line or 'Paragraph' in line) and (re.search(r'\$\d+', line) or re.search(r'\d+\s*Euro', line)):
                     match_offense = re.search(r'§\s*\d+\s*(.+?)(?:\$|\d+\s*Euro|$)', line)
                     match_amount = re.search(r'[\$€](\d+(?:[.,]\d+)?)', line)
-                    match_prison = re.search(r'(\d+)\s*(?:Tage|Tagen|Tag)', line)
+                    match_prison = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:-|–|bis)\s*(\d+(?:[.,]\d+)?)', line)
+                    match_prison_single = re.search(r'(\d+)\s*(?:Tage|Tagen|Tag)', line)
                     match_range = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:-|–|bis)\s*(\d+(?:[.,]\d+)?)', line)
                     match_cs = re.search(r'(\d+(?:[.,]\d+)?)\s*(?:Stunden|Std|h)', line, flags=re.IGNORECASE)
                     
+                    prison_min = prison_max = 0
+                    if match_prison:
+                        prison_min = int(float(match_prison.group(1).replace(',', '.')))
+                        prison_max = int(float(match_prison.group(2).replace(',', '.')))
+                    elif match_prison_single:
+                        prison_min = prison_max = int(match_prison_single.group(1))
+
                     entry = {
                         'category': 'Allgemein',
                         'violation': match_offense.group(1).strip() if match_offense else line,
                         'amount': float(match_amount.group(1).replace(',', '.')) if match_amount else float(match_range.group(2).replace(',', '.')) if match_range else 0,
                         'amount_min': float(match_range.group(1).replace(',', '.')) if match_range else float(match_amount.group(1).replace(',', '.')) if match_amount else 0,
                         'amount_max': float(match_range.group(2).replace(',', '.')) if match_range else float(match_amount.group(1).replace(',', '.')) if match_amount else 0,
-                        'prison_days': int(match_prison.group(1)) if match_prison else 0,
+                        'prison_days': prison_max or prison_min,
+                        'prison_days_min': prison_min,
+                        'prison_days_max': prison_max or prison_min,
                         'community_service_hours': int(float(match_cs.group(1).replace(',', '.'))) if match_cs else 0,
+                        'community_service_hours_min': int(float(match_cs.group(1).replace(',', '.'))) if match_cs else 0,
+                        'community_service_hours_max': int(float(match_cs.group(1).replace(',', '.'))) if match_cs else 0,
                         'description': line.strip(),
                         'notes': ''
                     }
@@ -472,21 +489,19 @@ class DocumentParser:
             entry['amount_min'] = amount_min
             entry['amount_max'] = amount_max
             
+            prison_min = prison_max = 0
             if i < len(prison_days):
-                try:
-                    entry['prison_days'] = int(prison_days[i])
-                except ValueError:
-                    entry['prison_days'] = 0
-            else:
-                entry['prison_days'] = 0
+                prison_min, prison_max = self._parse_prison_days(prison_days[i])
+            entry['prison_days'] = prison_max or prison_min
+            entry['prison_days_min'] = prison_min
+            entry['prison_days_max'] = prison_max or prison_min
 
+            cs_min = cs_max = 0
             if i < len(community_services):
-                try:
-                    entry['community_service_hours'] = int(float(community_services[i].replace(',', '.')))
-                except ValueError:
-                    entry['community_service_hours'] = 0
-            else:
-                entry['community_service_hours'] = 0
+                cs_min, cs_max = self._parse_community_service(community_services[i])
+            entry['community_service_hours'] = cs_max or cs_min
+            entry['community_service_hours_min'] = cs_min
+            entry['community_service_hours_max'] = cs_max or cs_min
             
             entry['description'] = entry['violation']
             
@@ -570,22 +585,19 @@ class DocumentParser:
                 amount_text = cell_texts[amount_idx] if amount_idx < len(cell_texts) else ''
                 amount_value, amount_min, amount_max = self._parse_amount_field(amount_text)
 
-                prison_days = 0
+                prison_days_min = prison_days_max = 0
                 prison_idx = header_map.get('prison', 3 if len(cell_texts) > 3 else None)
                 if prison_idx is not None and prison_idx < len(cell_texts):
-                    prison_match = re.search(r'(\d+)', cell_texts[prison_idx])
-                    if prison_match:
-                        try:
-                            prison_days = int(prison_match.group(1))
-                        except ValueError:
-                            prison_days = 0
+                    prison_days_min, prison_days_max = self._parse_prison_days(cell_texts[prison_idx])
+                prison_days = prison_days_max or prison_days_min
 
-                community_service_hours = 0
+                community_service_hours_min = community_service_hours_max = 0
                 community_idx = header_map.get('community_service')
                 if community_idx is not None and community_idx < len(cell_texts):
-                    community_service_hours = self._parse_community_service(cell_texts[community_idx])
+                    community_service_hours_min, community_service_hours_max = self._parse_community_service(cell_texts[community_idx])
                 elif len(cell_texts) >= 6:
-                    community_service_hours = self._parse_community_service(cell_texts[4])
+                    community_service_hours_min, community_service_hours_max = self._parse_community_service(cell_texts[4])
+                community_service_hours = community_service_hours_max or community_service_hours_min
 
                 notes_idx = header_map.get('notes', len(cell_texts) - 1)
                 notes = cell_texts[notes_idx] if notes_idx is not None and notes_idx < len(cell_texts) else ''
@@ -598,7 +610,11 @@ class DocumentParser:
                     'amount_min': amount_min,
                     'amount_max': amount_max,
                     'prison_days': prison_days,
+                    'prison_days_min': prison_days_min,
+                    'prison_days_max': prison_days_max or prison_days_min,
                     'community_service_hours': community_service_hours,
+                    'community_service_hours_min': community_service_hours_min,
+                    'community_service_hours_max': community_service_hours_max or community_service_hours_min,
                     'notes': notes
                 }
 

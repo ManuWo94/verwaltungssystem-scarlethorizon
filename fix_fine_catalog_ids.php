@@ -85,8 +85,32 @@ foreach ($fines as $index => $fine) {
         $fieldsFixed = true;
     }
 
+    if (!isset($fine['prison_days_min'])) {
+        $fine['prison_days_min'] = isset($fine['prison_days']) ? (int)$fine['prison_days'] : 0;
+        $missingFields++;
+        $fieldsFixed = true;
+    }
+
+    if (!isset($fine['prison_days_max'])) {
+        $fine['prison_days_max'] = isset($fine['prison_days']) ? (int)$fine['prison_days'] : $fine['prison_days_min'];
+        $missingFields++;
+        $fieldsFixed = true;
+    }
+
     if (!isset($fine['community_service_hours'])) {
         $fine['community_service_hours'] = 0;
+        $missingFields++;
+        $fieldsFixed = true;
+    }
+
+    if (!isset($fine['community_service_hours_min'])) {
+        $fine['community_service_hours_min'] = isset($fine['community_service_hours']) ? (int)$fine['community_service_hours'] : 0;
+        $missingFields++;
+        $fieldsFixed = true;
+    }
+
+    if (!isset($fine['community_service_hours_max'])) {
+        $fine['community_service_hours_max'] = isset($fine['community_service_hours']) ? (int)$fine['community_service_hours'] : $fine['community_service_hours_min'];
         $missingFields++;
         $fieldsFixed = true;
     }

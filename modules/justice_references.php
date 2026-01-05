@@ -17,6 +17,56 @@ include_once('../includes/document_importer.php');
 include_once('../includes/auth.php');
 include_once('../includes/sidebar.php');
 
+// Hilfsfunktionen für Range-Eingaben
+function parseRangeInput($value, $asInt = false) {
+    $text = trim((string)$value);
+    if ($text === '') {
+        return [0, 0];
+    }
+    if (preg_match('/(\d+(?:[.,]\d+)?)(?:\s*(?:-|–|bis|to)\s*(\d+(?:[.,]\d+)?))?/i', $text, $m)) {
+        $min = (float)str_replace(',', '.', $m[1]);
+        $max = isset($m[2]) && $m[2] !== '' ? (float)str_replace(',', '.', $m[2]) : $min;
+    } else {
+        $min = $max = 0;
+    }
+    if ($asInt) {
+        $min = (int)round($min);
+        $max = (int)round($max);
+    }
+    return [$min, $max];
+}
+
+function formatRangeDisplay($min, $max) {
+    if ($min === null && $max === null) return '';
+    if ($max === $min) return $min;
+    return $min . ' - ' . $max;
+}
+
+function normalizeFinesArray($fines) {
+    if (!is_array($fines)) {
+        return [];
+    }
+
+    return array_map(function($fine) {
+        if (!isset($fine['amount'])) {
+            $fine['amount'] = 0;
+        }
+        $fine['amount_min'] = isset($fine['amount_min']) ? (float)$fine['amount_min'] : (float)$fine['amount'];
+        $fine['amount_max'] = isset($fine['amount_max']) ? (float)$fine['amount_max'] : $fine['amount_min'];
+        $fine['amount'] = isset($fine['amount']) ? (float)$fine['amount'] : (float)$fine['amount_max'];
+        if ($fine['amount'] === 0 && $fine['amount_max'] > 0) {
+            $fine['amount'] = $fine['amount_max'];
+        }
+        $fine['community_service_hours'] = isset($fine['community_service_hours']) ? (int)$fine['community_service_hours'] : 0;
+        $fine['community_service_hours_min'] = isset($fine['community_service_hours_min']) ? (int)$fine['community_service_hours_min'] : (int)$fine['community_service_hours'];
+        $fine['community_service_hours_max'] = isset($fine['community_service_hours_max']) ? (int)$fine['community_service_hours_max'] : (int)$fine['community_service_hours'];
+        $fine['prison_days'] = isset($fine['prison_days']) ? (int)$fine['prison_days'] : 0;
+        $fine['prison_days_min'] = isset($fine['prison_days_min']) ? (int)$fine['prison_days_min'] : (int)$fine['prison_days'];
+        $fine['prison_days_max'] = isset($fine['prison_days_max']) ? (int)$fine['prison_days_max'] : (int)$fine['prison_days'];
+        return $fine;
+    }, $fines);
+}
+
 // Bearbeitung des Bußgeldkatalogs
 $message = '';
 $messageType = '';
@@ -38,7 +88,11 @@ if (!file_exists($fineCatalogFile)) {
             'amount_min' => 5,
             'amount_max' => 5,
             'prison_days' => 0,
+            'prison_days_min' => 0,
+            'prison_days_max' => 0,
             'community_service_hours' => 0,
+            'community_service_hours_min' => 0,
+            'community_service_hours_max' => 0,
             'notes' => 'Gilt auch für Kutschen und andere Fahrzeuge'
         ],
         [
@@ -50,7 +104,11 @@ if (!file_exists($fineCatalogFile)) {
             'amount_min' => 10,
             'amount_max' => 10,
             'prison_days' => 0,
+            'prison_days_min' => 0,
+            'prison_days_max' => 0,
             'community_service_hours' => 0,
+            'community_service_hours_min' => 0,
+            'community_service_hours_max' => 0,
             'notes' => 'Nach Ermessen des Sheriffs'
         ],
         [
@@ -62,7 +120,11 @@ if (!file_exists($fineCatalogFile)) {
             'amount_min' => 15,
             'amount_max' => 15,
             'prison_days' => 1,
+            'prison_days_min' => 1,
+            'prison_days_max' => 1,
             'community_service_hours' => 0,
+            'community_service_hours_min' => 0,
+            'community_service_hours_max' => 0,
             'notes' => 'Waffe kann beschlagnahmt werden'
         ],
         [
@@ -74,7 +136,11 @@ if (!file_exists($fineCatalogFile)) {
             'amount_min' => 25,
             'amount_max' => 25,
             'prison_days' => 3,
+            'prison_days_min' => 3,
+            'prison_days_max' => 3,
             'community_service_hours' => 0,
+            'community_service_hours_min' => 0,
+            'community_service_hours_max' => 0,
             'notes' => 'Bei schweren Verletzungen höhere Strafe möglich'
         ],
         [
@@ -86,7 +152,11 @@ if (!file_exists($fineCatalogFile)) {
             'amount_min' => 20,
             'amount_max' => 20,
             'prison_days' => 2,
+            'prison_days_min' => 2,
+            'prison_days_max' => 2,
             'community_service_hours' => 0,
+            'community_service_hours_min' => 0,
+            'community_service_hours_max' => 0,
             'notes' => 'Zusätzlich zur Rückgabe des gestohlenen Guts'
         ]
     ];
@@ -126,24 +196,7 @@ if (!file_exists($servicesFile)) {
 }
 
 // Daten laden
-$fines = json_decode(file_get_contents($fineCatalogFile), true);
-if (!is_array($fines)) {
-    $fines = [];
-}
-$fines = array_map(function($fine) {
-    if (!isset($fine['amount'])) {
-        $fine['amount'] = 0;
-    }
-    $fine['amount_min'] = isset($fine['amount_min']) ? (float)$fine['amount_min'] : (float)$fine['amount'];
-    $fine['amount_max'] = isset($fine['amount_max']) ? (float)$fine['amount_max'] : $fine['amount_min'];
-    $fine['amount'] = isset($fine['amount']) ? (float)$fine['amount'] : (float)$fine['amount_max'];
-    if ($fine['amount'] === 0 && $fine['amount_max'] > 0) {
-        $fine['amount'] = $fine['amount_max'];
-    }
-    $fine['community_service_hours'] = isset($fine['community_service_hours']) ? (int)$fine['community_service_hours'] : 0;
-    $fine['prison_days'] = isset($fine['prison_days']) ? (int)$fine['prison_days'] : 0;
-    return $fine;
-}, $fines);
+$fines = normalizeFinesArray(json_decode(file_get_contents($fineCatalogFile), true));
 $services = json_decode(file_get_contents($servicesFile), true);
 
 // Bearbeitung des Bußgeldkatalogs
@@ -164,15 +217,20 @@ if (isset($_POST['action']) && $_POST['action'] == 'edit_fine') {
         $fines[$fineIndex]['category'] = $_POST['category'];
         $fines[$fineIndex]['violation'] = $_POST['violation'];
         $fines[$fineIndex]['description'] = $_POST['description'];
-        $amountMin = isset($_POST['amount_min']) ? (float)$_POST['amount_min'] : 0;
-        $amountMax = (isset($_POST['amount_max']) && $_POST['amount_max'] !== '') ? (float)$_POST['amount_max'] : $amountMin;
-        $communityService = isset($_POST['community_service_hours']) ? (int)$_POST['community_service_hours'] : 0;
+
+        list($amountMin, $amountMax) = parseRangeInput($_POST['amount_range'] ?? '');
+        list($prisonMin, $prisonMax) = parseRangeInput($_POST['prison_range'] ?? '', true);
+        list($csMin, $csMax) = parseRangeInput($_POST['community_service_range'] ?? '', true);
 
         $fines[$fineIndex]['amount_min'] = $amountMin;
         $fines[$fineIndex]['amount_max'] = $amountMax;
         $fines[$fineIndex]['amount'] = $amountMax > 0 ? $amountMax : $amountMin;
-        $fines[$fineIndex]['community_service_hours'] = $communityService;
-        $fines[$fineIndex]['prison_days'] = (int)$_POST['prison_days'];
+        $fines[$fineIndex]['community_service_hours'] = $csMax > 0 ? $csMax : $csMin;
+        $fines[$fineIndex]['community_service_hours_min'] = $csMin;
+        $fines[$fineIndex]['community_service_hours_max'] = $csMax > 0 ? $csMax : $csMin;
+        $fines[$fineIndex]['prison_days'] = $prisonMax > 0 ? $prisonMax : $prisonMin;
+        $fines[$fineIndex]['prison_days_min'] = $prisonMin;
+        $fines[$fineIndex]['prison_days_max'] = $prisonMax > 0 ? $prisonMax : $prisonMin;
         $fines[$fineIndex]['notes'] = $_POST['notes'];
 
         // Speichere die Änderungen
@@ -193,9 +251,9 @@ if (isset($_POST['action']) && $_POST['action'] == 'add_fine') {
     }
     $newId = $maxId + 1;
 
-    $amountMin = isset($_POST['amount_min']) ? (float)$_POST['amount_min'] : 0;
-    $amountMax = (isset($_POST['amount_max']) && $_POST['amount_max'] !== '') ? (float)$_POST['amount_max'] : $amountMin;
-    $communityService = isset($_POST['community_service_hours']) ? (int)$_POST['community_service_hours'] : 0;
+    list($amountMin, $amountMax) = parseRangeInput($_POST['amount_range'] ?? '');
+    list($prisonMin, $prisonMax) = parseRangeInput($_POST['prison_range'] ?? '', true);
+    list($csMin, $csMax) = parseRangeInput($_POST['community_service_range'] ?? '', true);
 
     // Erstelle einen neuen Eintrag
     $newFine = [
@@ -206,8 +264,12 @@ if (isset($_POST['action']) && $_POST['action'] == 'add_fine') {
         'amount' => $amountMax > 0 ? $amountMax : $amountMin,
         'amount_min' => $amountMin,
         'amount_max' => $amountMax,
-        'prison_days' => (int)$_POST['prison_days'],
-        'community_service_hours' => $communityService,
+        'prison_days' => $prisonMax > 0 ? $prisonMax : $prisonMin,
+        'prison_days_min' => $prisonMin,
+        'prison_days_max' => $prisonMax > 0 ? $prisonMax : $prisonMin,
+        'community_service_hours' => $csMax > 0 ? $csMax : $csMin,
+        'community_service_hours_min' => $csMin,
+        'community_service_hours_max' => $csMax > 0 ? $csMax : $csMin,
         'notes' => $_POST['notes']
     ];
 
@@ -353,7 +415,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'import_fine_catalog') {
                 $messageType = 'success';
                 
                 // Neu laden der Bußgeldkatalog-Daten
-                $fines = json_decode(file_get_contents($fineCatalogFile), true);
+                $fines = normalizeFinesArray(json_decode(file_get_contents($fineCatalogFile), true));
             } else {
                 $message = 'Fehler beim Importieren des Bußgeldkatalogs: ' . $importResult['message'];
                 $messageType = 'danger';
@@ -371,7 +433,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'import_fine_catalog') {
             $messageType = 'success';
             
             // Neu laden der Bußgeldkatalog-Daten
-            $fines = json_decode(file_get_contents($fineCatalogFile), true);
+            $fines = normalizeFinesArray(json_decode(file_get_contents($fineCatalogFile), true));
         } else {
             $message = 'Fehler beim Importieren des Bußgeldkatalogs: ' . $importResult['message'];
             $messageType = 'danger';
@@ -539,8 +601,7 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                                             <th>Kategorie</th>
                                             <th>Verstoß</th>
                                             <th>Beschreibung</th>
-                                            <th>Bußgeld Min ($)</th>
-                                            <th>Bußgeld Max ($)</th>
+                                            <th>Bußgeld ($)</th>
                                             <th>Haftzeit (Tage)</th>
                                             <th>Strafarbeit (Std)</th>
                                             <th>Anmerkungen</th>
@@ -555,10 +616,9 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                                                 <td><?php echo htmlspecialchars($fine['category']); ?></td>
                                                 <td><?php echo htmlspecialchars($fine['violation']); ?></td>
                                                 <td><?php echo htmlspecialchars($fine['description']); ?></td>
-                                                <td><?php echo htmlspecialchars($fine['amount_min']); ?></td>
-                                                <td><?php echo htmlspecialchars($fine['amount_max']); ?></td>
-                                                <td><?php echo htmlspecialchars($fine['prison_days']); ?></td>
-                                                <td><?php echo htmlspecialchars($fine['community_service_hours'] ?? 0); ?></td>
+                                                <td><?php echo htmlspecialchars(formatRangeDisplay($fine['amount_min'], $fine['amount_max'])); ?></td>
+                                                <td><?php echo htmlspecialchars(formatRangeDisplay($fine['prison_days_min'] ?? $fine['prison_days'], $fine['prison_days_max'] ?? $fine['prison_days'])); ?></td>
+                                                <td><?php echo htmlspecialchars(formatRangeDisplay($fine['community_service_hours_min'] ?? 0, $fine['community_service_hours_max'] ?? ($fine['community_service_hours_min'] ?? 0))); ?></td>
                                                 <td><?php echo htmlspecialchars($fine['notes']); ?></td>
                                                 <?php if (isUserAdmin() || hasUserRole('Richter')): ?>
                                                     <td>
@@ -567,10 +627,9 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                                                             data-category="<?php echo htmlspecialchars($fine['category']); ?>"
                                                             data-violation="<?php echo htmlspecialchars($fine['violation']); ?>"
                                                             data-description="<?php echo htmlspecialchars($fine['description']); ?>"
-                                                            data-amount-min="<?php echo htmlspecialchars($fine['amount_min']); ?>"
-                                                            data-amount-max="<?php echo htmlspecialchars($fine['amount_max']); ?>"
-                                                            data-prison-days="<?php echo htmlspecialchars($fine['prison_days']); ?>"
-                                                            data-community-service="<?php echo htmlspecialchars($fine['community_service_hours'] ?? 0); ?>"
+                                                            data-amount-range="<?php echo htmlspecialchars(formatRangeDisplay($fine['amount_min'], $fine['amount_max'])); ?>"
+                                                            data-prison-range="<?php echo htmlspecialchars(formatRangeDisplay($fine['prison_days_min'] ?? $fine['prison_days'], $fine['prison_days_max'] ?? $fine['prison_days'])); ?>"
+                                                            data-community-range="<?php echo htmlspecialchars(formatRangeDisplay($fine['community_service_hours_min'] ?? 0, $fine['community_service_hours_max'] ?? ($fine['community_service_hours_min'] ?? 0))); ?>"
                                                             data-notes="<?php echo htmlspecialchars($fine['notes']); ?>">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
@@ -816,23 +875,16 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                     
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="edit_amount_min" class="form-label">Bußgeld Minimum ($)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="edit_amount_min" name="amount_min" required>
+                            <label for="edit_amount_range" class="form-label">Bußgeld (z.B. 5-10)</label>
+                            <input type="text" class="form-control" id="edit_amount_range" name="amount_range" placeholder="5-10" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="edit_amount_max" class="form-label">Bußgeld Maximum ($)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="edit_amount_max" name="amount_max" required>
+                            <label for="edit_prison_range" class="form-label">Haftzeit (Tage, z.B. 1-3)</label>
+                            <input type="text" class="form-control" id="edit_prison_range" name="prison_range" placeholder="1-3">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="edit_community_service_hours" class="form-label">Strafarbeit (Std)</label>
-                            <input type="number" min="0" class="form-control" id="edit_community_service_hours" name="community_service_hours" value="0">
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="edit_prison_days" class="form-label">Haftzeit (Tage)</label>
-                            <input type="number" min="0" class="form-control" id="edit_prison_days" name="prison_days" required>
+                            <label for="edit_community_service_range" class="form-label">Strafarbeit (Std, z.B. 5-8)</label>
+                            <input type="text" class="form-control" id="edit_community_service_range" name="community_service_range" placeholder="5-8">
                         </div>
                     </div>
                     
@@ -879,23 +931,16 @@ $activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'fines';
                     
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="add_amount_min" class="form-label">Bußgeld Minimum ($)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="add_amount_min" name="amount_min" required>
+                            <label for="add_amount_range" class="form-label">Bußgeld (z.B. 5-10)</label>
+                            <input type="text" class="form-control" id="add_amount_range" name="amount_range" placeholder="5-10" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="add_amount_max" class="form-label">Bußgeld Maximum ($)</label>
-                            <input type="number" step="0.01" min="0" class="form-control" id="add_amount_max" name="amount_max" required>
+                            <label for="add_prison_range" class="form-label">Haftzeit (Tage, z.B. 1-3)</label>
+                            <input type="text" class="form-control" id="add_prison_range" name="prison_range" placeholder="1-3">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label for="add_community_service_hours" class="form-label">Strafarbeit (Std)</label>
-                            <input type="number" min="0" class="form-control" id="add_community_service_hours" name="community_service_hours" value="0">
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="add_prison_days" class="form-label">Haftzeit (Tage)</label>
-                            <input type="number" min="0" class="form-control" id="add_prison_days" name="prison_days" required>
+                            <label for="add_community_service_range" class="form-label">Strafarbeit (Std, z.B. 5-8)</label>
+                            <input type="text" class="form-control" id="add_community_service_range" name="community_service_range" placeholder="5-8">
                         </div>
                     </div>
                     
@@ -1040,10 +1085,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#edit_category').val($(this).data('category') || '');
                 $('#edit_violation').val($(this).data('violation') || '');
                 $('#edit_description').val($(this).data('description') || '');
-                $('#edit_amount_min').val($(this).data('amountMin') || $(this).attr('data-amount-min') || '0');
-                $('#edit_amount_max').val($(this).data('amountMax') || $(this).attr('data-amount-max') || '0');
-                $('#edit_community_service_hours').val($(this).data('communityService') || $(this).attr('data-community-service') || '0');
-                $('#edit_prison_days').val($(this).data('prisonDays') || $(this).attr('data-prison-days') || '0');
+                $('#edit_amount_range').val($(this).data('amountRange') || $(this).attr('data-amount-range') || '');
+                $('#edit_prison_range').val($(this).data('prisonRange') || $(this).attr('data-prison-range') || '');
+                $('#edit_community_service_range').val($(this).data('communityRange') || $(this).attr('data-community-range') || '');
                 $('#edit_notes').val($(this).data('notes') || '');
                 
                 // Modal anzeigen

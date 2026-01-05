@@ -77,8 +77,11 @@ function parseDocument($inputPath, $mode = 'text', $outputPath = null) {
     
     // Entferne mögliche Fehlermeldungen, die vor dem JSON-Teil stehen könnten
     $cleanedJson = $jsonResult;
-    // Suche nach der ersten öffnenden eckigen Klammer für ein Array
+    // Suche nach der ersten öffnenden Klammer (Array oder Objekt)
     $jsonStartPos = strpos($jsonResult, '[');
+    if ($jsonStartPos === false) {
+        $jsonStartPos = strpos($jsonResult, '{');
+    }
     if ($jsonStartPos !== false) {
         $cleanedJson = substr($jsonResult, $jsonStartPos);
     }
@@ -99,7 +102,14 @@ function parseDocument($inputPath, $mode = 'text', $outputPath = null) {
                 'violation' => 'Importfehler',
                 'description' => 'Fehler beim Import des Bußgeldkatalogs',
                 'amount' => 0,
+                'amount_min' => 0,
+                'amount_max' => 0,
                 'prison_days' => 0,
+                'prison_days_min' => 0,
+                'prison_days_max' => 0,
+                'community_service_hours' => 0,
+                'community_service_hours_min' => 0,
+                'community_service_hours_max' => 0,
                 'notes' => 'Parser-Fehler: ' . json_last_error_msg()
             ]
         ];
@@ -159,12 +169,28 @@ function importFineCatalog($inputPath, $merge = true) {
         if (!isset($existingEntry['community_service_hours'])) {
             $existingEntry['community_service_hours'] = 0;
         }
+        if (!isset($existingEntry['community_service_hours_min'])) {
+            $existingEntry['community_service_hours_min'] = (int)$existingEntry['community_service_hours'];
+        }
+        if (!isset($existingEntry['community_service_hours_max'])) {
+            $existingEntry['community_service_hours_max'] = (int)$existingEntry['community_service_hours'];
+        }
+        if (!isset($existingEntry['prison_days_min'])) {
+            $existingEntry['prison_days_min'] = isset($existingEntry['prison_days']) ? (int)$existingEntry['prison_days'] : 0;
+        }
+        if (!isset($existingEntry['prison_days_max'])) {
+            $existingEntry['prison_days_max'] = isset($existingEntry['prison_days']) ? (int)$existingEntry['prison_days'] : (int)$existingEntry['prison_days_min'];
+        }
         $existingEntry['amount_min'] = (float)$existingEntry['amount_min'];
         $existingEntry['amount_max'] = (float)$existingEntry['amount_max'];
         $existingEntry['community_service_hours'] = (int)$existingEntry['community_service_hours'];
+        $existingEntry['community_service_hours_min'] = (int)$existingEntry['community_service_hours_min'];
+        $existingEntry['community_service_hours_max'] = (int)$existingEntry['community_service_hours_max'];
         if (!isset($existingEntry['prison_days'])) {
             $existingEntry['prison_days'] = 0;
         }
+        $existingEntry['prison_days_min'] = (int)$existingEntry['prison_days_min'];
+        $existingEntry['prison_days_max'] = (int)$existingEntry['prison_days_max'];
     }
     unset($existingEntry);
     
@@ -191,7 +217,11 @@ function importFineCatalog($inputPath, $merge = true) {
         if (!isset($entry['amount_min'])) $entry['amount_min'] = isset($entry['amount']) ? (float)$entry['amount'] : 0;
         if (!isset($entry['amount_max'])) $entry['amount_max'] = isset($entry['amount']) ? (float)$entry['amount'] : $entry['amount_min'];
         if (!isset($entry['community_service_hours'])) $entry['community_service_hours'] = 0;
+        if (!isset($entry['community_service_hours_min'])) $entry['community_service_hours_min'] = (int)$entry['community_service_hours'];
+        if (!isset($entry['community_service_hours_max'])) $entry['community_service_hours_max'] = (int)$entry['community_service_hours'];
         if (!isset($entry['prison_days'])) $entry['prison_days'] = 0;
+        if (!isset($entry['prison_days_min'])) $entry['prison_days_min'] = (int)$entry['prison_days'];
+        if (!isset($entry['prison_days_max'])) $entry['prison_days_max'] = (int)$entry['prison_days'];
         if (!isset($entry['notes'])) $entry['notes'] = '';
 
         // Typkonvertierungen und Ableitung eines kompatiblen Einzelbetrags
@@ -205,7 +235,11 @@ function importFineCatalog($inputPath, $merge = true) {
             $entry['amount_max'] = $entry['amount_min'];
         }
         $entry['community_service_hours'] = (int)$entry['community_service_hours'];
+        $entry['community_service_hours_min'] = (int)$entry['community_service_hours_min'];
+        $entry['community_service_hours_max'] = (int)$entry['community_service_hours_max'];
         $entry['prison_days'] = (int)$entry['prison_days'];
+        $entry['prison_days_min'] = (int)$entry['prison_days_min'];
+        $entry['prison_days_max'] = (int)$entry['prison_days_max'];
         
         // Wenn eine ID bereits existiert, behalte sie bei
         if (!isset($entry['id']) || empty($entry['id'])) {
