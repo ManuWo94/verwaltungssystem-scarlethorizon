@@ -85,7 +85,7 @@ function simplifyPermissionActions($actions) {
  * System roles that always receive full access
  */
 function getFullAccessRoleIds() {
-    return ['admin', 'vorsitzender_richter_admin', 'vorsitzender_senatsrichter_admin'];
+    return ['admin', 'vorsitzender_richter_admin'];
 }
 
 /**

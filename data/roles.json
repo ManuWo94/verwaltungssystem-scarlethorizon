@@ -1,8 +1,8 @@
 [
     {
         "id": "admin",
-        "name": "Administrator",
-        "description": "Zusatzrolle mit vollem Administrationszugriff",
+        "name": "Vorsitzender Senatsrichter (Admin)",
+        "description": "Systemrolle mit vollem Administrationszugriff",
         "permissions": {
             "admin": ["view", "edit", "delete"],
             "users": ["view", "edit", "delete"],
@@ -110,36 +110,6 @@
         "id": "senatsrichter",
         "name": "Senatsrichter",
         "description": "Senatsrichter"
-    },
-    {
-        "id": "vorsitzender_senatsrichter_admin",
-        "name": "Vorsitzender Senatsrichter",
-        "description": "Systemrolle mit vollem Administrationszugriff",
-        "permissions": {
-            "admin": ["view", "edit", "delete"],
-            "users": ["view", "edit", "delete"],
-            "roles": ["view", "edit", "delete"],
-            "cases": ["view", "edit", "delete"],
-            "indictments": ["view", "edit", "delete"],
-            "appeals": ["view", "edit", "delete"],
-            "defendants": ["view", "edit", "delete"],
-            "hearings": ["view", "edit", "delete"],
-            "templates": ["view", "edit", "delete"],
-            "warrants": ["view", "edit", "delete"],
-            "staff": ["view", "edit", "delete"],
-            "trainings": ["view", "edit", "delete"],
-            "equipment": ["view", "edit", "delete"],
-            "notes": ["view", "edit", "delete"],
-            "calendar": ["view", "edit", "delete"],
-            "files": ["view", "edit", "delete"],
-            "duty_log": ["view", "edit", "delete"],
-            "vacation": ["view", "edit", "delete"],
-            "address_book": ["view", "edit", "delete"],
-            "seized_assets": ["view", "edit", "delete"],
-            "business_licenses": ["view", "edit", "delete"],
-            "todos": ["view", "edit", "delete"],
-            "task_assignments": ["view", "edit", "delete"]
-        }
     },
     {
         "id": "vorsitzender_senatsrichter",
