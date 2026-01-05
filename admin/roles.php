@@ -225,10 +225,9 @@ include '../includes/header.php';
                                     <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#permissionsModal<?php echo $role['id']; ?>">
                                         <span data-feather="shield"></span>
                                     </button>
-
                                     <!-- Permissions Modal (always available) -->
                                     <div class="modal fade" id="permissionsModal<?php echo $role['id']; ?>" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-lg">
+                                        <div class="modal-dialog modal-xl">
                                             <div class="modal-content">
                                                 <div class="modal-header">
                                                     <h5 class="modal-title">Berechtigungen: <?php echo htmlspecialchars($role['name']); ?></h5>
@@ -237,67 +236,92 @@ include '../includes/header.php';
                                                     </button>
                                                 </div>
                                                 <form method="post">
-                                                    <div class="modal-body">
+                                                    <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                                                         <input type="hidden" name="role_id" value="<?php echo $role['id']; ?>">
                                                         
-                                                        <!-- Drag & Drop Permission Editor -->
+                                                        <!-- Permission Editor mit Kategorien -->
                                                         <div class="permission-editor">
-                                                            <div class="row">
-                                                                <div class="col-md-6">
-                                                                    <h6>Module & Aktionen</h6>
-                                                                    <div id="availablePermissions-<?php echo $role['id']; ?>" class="list-group permission-source" data-role-id="<?php echo $role['id']; ?>" style="min-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
-                                                                        <?php
-                                                                        $availableModules = getAvailableModules();
-                                                                        $availableActions = getAvailableActions();
-                                                                        $rolePermissionsAll = getRolePermissions();
-                                                                        $currentPerms = isset($rolePermissionsAll[$role['id']]) ? $rolePermissionsAll[$role['id']] : [];
-                                                                        
-                                                                        foreach ($availableModules as $moduleId => $moduleName):
-                                                                            foreach ($availableActions as $actionKey => $actionLabel):
-                                                                                $permId = $moduleId . ':' . $actionKey;
-                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]);
-                                                                                
-                                                                                if (!$isGranted): ?>
-                                                                                    <div class="permission-item list-group-item" draggable="true" data-module="<?php echo $moduleId; ?>" data-action="<?php echo $actionKey; ?>" style="cursor: move; user-select: none;">
-                                                                                        <small><strong><?php echo htmlspecialchars($moduleName); ?></strong></small><br/>
-                                                                                        <small><?php echo htmlspecialchars($actionLabel); ?></small>
+                                                            <?php
+                                                            $availableModules = getAvailableModules();
+                                                            $availableActions = getAvailableActions();
+                                                            $rolePermissionsAll = getRolePermissions();
+                                                            $currentPerms = isset($rolePermissionsAll[$role['id']]) ? $rolePermissionsAll[$role['id']] : [];
+                                                            
+                                                            // Kategorisiere Module
+                                                            $categories = [
+                                                                'Verwaltung' => ['admin', 'users', 'roles', 'business_licenses'],
+                                                                'Fälle & Anklagen' => ['cases', 'indictments', 'appeals', 'defendants', 'hearings', 'warrants', 'verdicts'],
+                                                                'Personal & Schulung' => ['staff', 'trainings', 'equipment', 'vacation'],
+                                                                'Dokumentation & Dateien' => ['templates', 'files', 'notes', 'revisions'],
+                                                                'Zeitverwaltung' => ['calendar', 'duty_log', 'task_assignments'],
+                                                                'Weitere' => ['address_book', 'evidence', 'seized_assets', 'justice_references']
+                                                            ];
+                                                            
+                                                            foreach ($categories as $categoryName => $categoryModules): ?>
+                                                                <div class="permission-category mb-4">
+                                                                    <h6 class="border-bottom pb-2 mb-3" style="color: #333; font-weight: 600;">
+                                                                        <span data-feather="folder"></span> <?php echo $categoryName; ?>
+                                                                    </h6>
+                                                                    
+                                                                    <div class="row">
+                                                                        <?php foreach ($categoryModules as $moduleId):
+                                                                            if (!isset($availableModules[$moduleId])) continue;
+                                                                            $moduleName = $availableModules[$moduleId];
+                                                                            ?>
+                                                                            <div class="col-12 col-lg-6 mb-3">
+                                                                                <div class="card" style="border-left: 4px solid #6c757d;">
+                                                                                    <div class="card-header" style="background-color: #f8f9fa; padding: 10px 15px;">
+                                                                                        <strong><?php echo htmlspecialchars($moduleName); ?></strong>
                                                                                     </div>
-                                                                                <?php endif;
-                                                                            endforeach;
-                                                                        endforeach; ?>
+                                                                                    <div class="card-body" style="padding: 10px 15px;">
+                                                                                        <div class="permission-actions">
+                                                                                            <?php foreach ($availableActions as $actionKey => $actionLabel):
+                                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]);
+                                                                                                ?>
+                                                                                                <div class="form-check" style="margin-bottom: 6px;">
+                                                                                                    <input class="form-check-input" type="checkbox" 
+                                                                                                           id="perm_<?php echo $moduleId . '_' . $actionKey; ?>" 
+                                                                                                           name="permissions[<?php echo $moduleId; ?>][]" 
+                                                                                                           value="<?php echo $actionKey; ?>" 
+                                                                                                           <?php if ($isGranted) echo 'checked'; ?>>
+                                                                                                    <label class="form-check-label" for="perm_<?php echo $moduleId . '_' . $actionKey; ?>">
+                                                                                                        <?php echo htmlspecialchars($actionLabel); ?>
+                                                                                                    </label>
+                                                                                                </div>
+                                                                                            <?php endforeach; ?>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        <?php endforeach; ?>
                                                                     </div>
                                                                 </div>
-                                                                
-                                                                <div class="col-md-6">
-                                                                    <h6>Erteilte Berechtigungen</h6>
-                                                                    <div id="grantedPermissions-<?php echo $role['id']; ?>" class="list-group permission-target" data-role-id="<?php echo $role['id']; ?>" style="min-height: 300px; overflow-y: auto; border: 2px solid #28a745; border-radius: 4px; padding: 10px;">
-                                                                        <?php
-                                                                        foreach ($availableModules as $moduleId => $moduleName):
-                                                                            foreach ($availableActions as $actionKey => $actionLabel):
-                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]);
-                                                                                
-                                                                                if ($isGranted): ?>
-                                                                                    <div class="permission-item list-group-item" draggable="true" data-module="<?php echo $moduleId; ?>" data-action="<?php echo $actionKey; ?>" style="cursor: move; user-select: none; background-color: #d4edda;">
-                                                                                        <small><strong><?php echo htmlspecialchars($moduleName); ?></strong></small><br/>
-                                                                                        <small><?php echo htmlspecialchars($actionLabel); ?></small>
-                                                                                    </div>
-                                                                                    <input type="hidden" name="permissions[<?php echo $moduleId; ?>][]" value="<?php echo $actionKey; ?>">
-                                                                                <?php endif;
-                                                                            endforeach;
-                                                                        endforeach; ?>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                            <?php endforeach; ?>
                                                         </div>
                                                         
                                                         <style>
-                                                            .permission-source:hover { background-color: #f5f5f5; }
-                                                            .permission-target { background-color: #f0f9f6; }
-                                                            .permission-item { padding: 8px; margin: 4px 0; background: white; border: 1px solid #ddd; cursor: move; }
-                                                            .permission-item:hover { background-color: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                                                            .permission-item.dragging { opacity: 0.5; }
-                                                            .permission-target.drag-over { background-color: #e8f5e9 !important; }
-                                                            .permission-source.drag-over { background-color: #fce4ec !important; }
+                                                            .permission-editor .form-check-input:checked {
+                                                                background-color: #28a745;
+                                                                border-color: #28a745;
+                                                            }
+                                                            .permission-category {
+                                                                border-bottom: 1px solid #e9ecef;
+                                                                padding-bottom: 20px;
+                                                            }
+                                                            .permission-category h6 {
+                                                                margin-bottom: 15px !important;
+                                                            }
+                                                            .card {
+                                                                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+                                                                transition: box-shadow 0.3s ease;
+                                                            }
+                                                            .card:hover {
+                                                                box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+                                                            }
+                                                            .permission-actions {
+                                                                max-height: 200px;
+                                                                overflow-y: auto;
+                                                            }
                                                         </style>
                                                     </div>
                                                     <div class="modal-footer">
@@ -399,22 +423,6 @@ include '../includes/header.php';
                     });
                 </script>
             <?php endif; ?>
-            
-            <script>
-                // Initialisiere Drag & Drop für alle Permission Modals
-                if (typeof jQuery !== 'undefined') {
-                    jQuery('[id^="permissionsModal"]').on('shown.bs.modal', function() {
-                        initPermissionDragDrop();
-                    });
-                } else {
-                    // Fallback für vanilla JavaScript
-                    document.querySelectorAll('[id^="permissionsModal"]').forEach(modal => {
-                        modal.addEventListener('shown.bs.modal', function() {
-                            initPermissionDragDrop();
-                        });
-                    });
-                }
-            </script>
         </main>
     </div>
 </div>
