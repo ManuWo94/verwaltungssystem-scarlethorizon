@@ -297,5 +297,17 @@
         "description": "Referendar am Gericht",
         "permissions": {},
         "date_updated": "2026-01-05 01:21:58"
+    },
+    {
+        "id": "us_marshal",
+        "name": "U.S. Marshal",
+        "description": "US Marshal",
+        "permissions": {}
+    },
+    {
+        "id": "marshal_secretary",
+        "name": "Marshal Secretary",
+        "description": "Sekretariat des Marshal",
+        "permissions": {}
     }
 ]
