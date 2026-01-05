@@ -3,9 +3,10 @@
         "id": "admin",
         "username": "OConnor",
         "password": "$2y$10$BUu20bqYRoAR58dTj0DfAeza9bt5bRzgkf.tKr3w6B5ShsBQFQRCO",
-        "role": "Administrator",
-        "role_id": "admin",
+        "role": "Vorsitzender Richter",
+        "role_id": "vorsitzender_richter_admin",
         "roles": [
+            "Vorsitzender Richter",
             "Administrator"
         ],
         "is_admin": true,
