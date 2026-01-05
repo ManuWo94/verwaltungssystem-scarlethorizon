@@ -27,6 +27,10 @@ if (!isset($_GET['id'])) {
 
 $case_id = $_GET['id'];
 $case = findById('cases.json', $case_id);
+$defendantRecord = null;
+if ($case && isset($case['defendant_id'])) {
+    $defendantRecord = findById('defendants.json', $case['defendant_id']);
+}
 
 if (!$case) {
     $error = 'Fall nicht gefunden.';
@@ -175,7 +179,12 @@ include '../includes/header.php';
                                 <table class="table table-bordered">
                                     <tr>
                                         <th style="width: 30%">Angeklagter</th>
-                                        <td><?php echo htmlspecialchars($case['defendant']); ?></td>
+                                        <td>
+                                            <?php echo htmlspecialchars($case['defendant']); ?>
+                                            <?php if ($defendantRecord && !empty($defendantRecord['tg_number'])): ?>
+                                                <br><small class="text-muted">TG: <?php echo htmlspecialchars($defendantRecord['tg_number']); ?></small>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th>Anklage</th>
@@ -292,6 +301,45 @@ include '../includes/header.php';
                                     </tr>
                                     <?php endif; ?>
                                 </table>
+                                <?php if ($defendantRecord && !empty($defendantRecord['history'])): ?>
+                                    <h6 class="mt-3">Historie des Angeklagten</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Datum</th>
+                                                    <th>Typ</th>
+                                                    <th>Details</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($defendantRecord['history'] as $entry): ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars(!empty($entry['date']) ? formatDateTime($entry['date']) : ''); ?></td>
+                                                        <td><?php echo htmlspecialchars($entry['type'] ?? ''); ?></td>
+                                                        <td>
+                                                            <?php if (!empty($entry['charge'])): ?>
+                                                                <div><strong>Anklage:</strong> <?php echo htmlspecialchars($entry['charge']); ?></div>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($entry['status'])): ?>
+                                                                <div><strong>Status:</strong> <?php echo htmlspecialchars(mapStatusToGerman($entry['status'])); ?></div>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($entry['verdict'])): ?>
+                                                                <div><strong>Urteil:</strong> <?php echo nl2br(htmlspecialchars($entry['verdict'])); ?></div>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($entry['verdict_date'])): ?>
+                                                                <div><strong>Urteilsdatum:</strong> <?php echo htmlspecialchars(formatDate($entry['verdict_date'])); ?></div>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($entry['case_id'])): ?>
+                                                                <div><small class="text-muted">Fall: <a href="case_view.php?id=<?php echo htmlspecialchars($entry['case_id']); ?>"><?php echo htmlspecialchars($entry['case_id']); ?></a></small></div>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
 

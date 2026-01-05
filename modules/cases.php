@@ -14,6 +14,58 @@ $role = $_SESSION['role'];
 $message = '';
 $error = '';
 
+// Helper: find or create defendant by name/tg
+function findOrCreateDefendant($name, $tgNumber, $userId) {
+    $defendants = loadJsonData('defendants.json');
+    $normalizedName = strtolower(trim($name));
+    $matchId = null;
+
+    foreach ($defendants as $defendant) {
+        $defName = strtolower(trim($defendant['name'] ?? ''));
+        $defTg = strtolower(trim($defendant['tg_number'] ?? ''));
+        if ($defName === $normalizedName || (!empty($tgNumber) && $defTg === strtolower(trim($tgNumber)))) {
+            $matchId = $defendant['id'];
+            // optional: backfill TG if missing
+            if (empty($defendant['tg_number']) && !empty($tgNumber)) {
+                $defendant['tg_number'] = $tgNumber;
+                updateRecord('defendants.json', $matchId, $defendant);
+            }
+            break;
+        }
+    }
+
+    if (!$matchId) {
+        $newDefendant = [
+            'id' => generateUniqueId(),
+            'name' => $name,
+            'tg_number' => $tgNumber,
+            'history' => [],
+            'created_by' => $userId,
+            'date_created' => date('Y-m-d H:i:s')
+        ];
+        insertRecord('defendants.json', $newDefendant);
+        $matchId = $newDefendant['id'];
+    }
+
+    return $matchId;
+}
+
+// Helper: append history entry for defendant
+function appendDefendantHistory($defendantId, $entry) {
+    if (!$defendantId) {
+        return;
+    }
+    $defendant = findById('defendants.json', $defendantId);
+    if (!$defendant) {
+        return;
+    }
+    if (!isset($defendant['history']) || !is_array($defendant['history'])) {
+        $defendant['history'] = [];
+    }
+    array_unshift($defendant['history'], $entry);
+    updateRecord('defendants.json', $defendantId, $defendant);
+}
+
 // Handle case actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
@@ -40,11 +92,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Handle case creation/edit
+        $defendantName = sanitize($_POST['defendant'] ?? '');
+        $defendantTg = sanitize($_POST['defendant_tg'] ?? '');
+        $limitationId = sanitize($_POST['limitation_id'] ?? '');
+        $incidentDate = sanitize($_POST['incident_date'] ?? '');
+        $expirationDateInput = sanitize($_POST['expiration_date'] ?? '');
+        $limitations = loadJsonData('limitations.json');
+        $limitationDays = null;
+        foreach ($limitations as $lim) {
+            if (($lim['id'] ?? '') === $limitationId) {
+                $limitationDays = (int) ($lim['days'] ?? 0);
+                break;
+            }
+        }
+
+        // Compute expiration date if not manually provided
+        if (empty($expirationDateInput) && !empty($incidentDate) && $limitationDays) {
+            $expirationDateInput = date('Y-m-d', strtotime($incidentDate . " +{$limitationDays} days"));
+        }
+
+        // Resolve defendant id (create if needed)
+        $defendantId = null;
+        if (!empty($defendantName)) {
+            $defendantId = findOrCreateDefendant($defendantName, $defendantTg, $user_id);
+        }
+
         $caseData = [
-            'defendant' => sanitize($_POST['defendant'] ?? ''),
+            'defendant_id' => $defendantId,
+            'defendant' => $defendantName,
+            'defendant_tg' => $defendantTg,
             'charge' => sanitize($_POST['charge'] ?? ''),
-            'incident_date' => sanitize($_POST['incident_date'] ?? ''),
-            'expiration_date' => sanitize($_POST['expiration_date'] ?? ''),
+            'incident_date' => $incidentDate,
+            'expiration_date' => $expirationDateInput,
+            'limitation_id' => $limitationId,
             'bail_amount' => sanitize($_POST['bail_amount'] ?? ''),
             'district' => sanitize($_POST['district'] ?? ''),
             'prosecutor' => sanitize($_POST['prosecutor'] ?? ''),
@@ -87,6 +167,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     if (insertRecord('cases.json', $caseData)) {
                         $message = 'Fall wurde erfolgreich erstellt.';
+                        // history entry for defendant
+                        appendDefendantHistory($defendantId, [
+                            'case_id' => $caseData['id'],
+                            'type' => 'charge',
+                            'charge' => $caseData['charge'],
+                            'status' => $caseData['status'],
+                            'date' => date('Y-m-d H:i:s')
+                        ]);
                     } else {
                         $error = 'Fehler beim Erstellen des Falls.';
                     }
@@ -121,6 +209,9 @@ usort($cases, function($a, $b) {
 
 // Load defendants for dropdown
 $defendants = loadJsonData('defendants.json');
+
+// Load limitations for dropdown
+$limitations = loadJsonData('limitations.json');
 
 // Load users for prosecutor/judge dropdowns
 $users = getAllUsers();
@@ -346,18 +437,18 @@ $prosecutors = array_filter($users, function($user) {
                     </div>
                     <div class="form-group">
                         <label for="defendant">Angeklagter *</label>
-                        <select class="form-control" id="defendant" name="defendant" required>
-                            <option value="">Angeklagten auswählen</option>
+                        <input list="defendant_list" class="form-control" id="defendant" name="defendant" required placeholder="Name eingeben oder auswählen">
+                        <datalist id="defendant_list">
                             <?php foreach ($defendants as $defendant): ?>
-                                <option value="<?php echo htmlspecialchars($defendant['name']); ?>">
-                                    <?php echo htmlspecialchars($defendant['name'] . ' (' . $defendant['tg_number'] . ')'); ?>
-                                </option>
+                                <option value="<?php echo htmlspecialchars($defendant['name']); ?>"><?php echo htmlspecialchars($defendant['tg_number'] ?? ''); ?></option>
                             <?php endforeach; ?>
-                        </select>
-                        <small class="form-text text-muted">
-                            <a href="defendants.php" target="_blank">Neuen Angeklagten hinzufügen</a> falls nicht in der Liste.
-                        </small>
-                        <div class="invalid-feedback">Bitte wählen Sie einen Angeklagten aus.</div>
+                        </datalist>
+                        <small class="form-text text-muted">Vorhandene Angeklagte können gewählt oder neue eingetragen werden.</small>
+                        <div class="invalid-feedback">Bitte wählen oder erfassen Sie einen Angeklagten.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="defendant_tg">TG-Nummer des Angeklagten</label>
+                        <input type="text" class="form-control" id="defendant_tg" name="defendant_tg" placeholder="z.B. TG-1234">
                     </div>
                     <div class="form-group">
                         <label for="charge">Anklage *</label>
@@ -365,18 +456,30 @@ $prosecutors = array_filter($users, function($user) {
                         <div class="invalid-feedback">Bitte geben Sie die Anklage ein.</div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label for="incident_date">Vorfallsdatum *</label>
                                 <input type="date" class="form-control" id="incident_date" name="incident_date" required>
                                 <div class="invalid-feedback">Bitte geben Sie das Vorfallsdatum ein.</div>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="limitation_id">Verjährungsfrist</label>
+                                <select class="form-control" id="limitation_id" name="limitation_id">
+                                    <option value="">Manuell/keine Vorlage</option>
+                                    <?php foreach ($limitations as $lim): ?>
+                                        <option value="<?php echo htmlspecialchars($lim['id']); ?>"><?php echo htmlspecialchars($lim['label'] . ' (' . $lim['days'] . ' Tage)'); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="form-text text-muted">Wird genutzt, um Verjährungsdatum aus dem Vorfallsdatum zu berechnen.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label for="expiration_date">Verjährungsdatum</label>
                                 <input type="date" class="form-control" id="expiration_date" name="expiration_date">
-                                <small class="form-text text-muted">Automatisch 21 Tage nach dem Vorfallsdatum gesetzt.</small>
+                                <small class="form-text text-muted">Automatisch basierend auf ausgewählter Frist, kann überschrieben werden.</small>
                             </div>
                         </div>
                     </div>

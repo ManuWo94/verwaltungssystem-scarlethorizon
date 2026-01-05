@@ -26,6 +26,55 @@ $role = $_SESSION['role'];
 $message = '';
 $error = '';
 
+function ce_findOrCreateDefendant($name, $tgNumber, $userId) {
+    $defendants = loadJsonData('defendants.json');
+    $normalizedName = strtolower(trim($name));
+    $matchId = null;
+
+    foreach ($defendants as $defendant) {
+        $defName = strtolower(trim($defendant['name'] ?? ''));
+        $defTg = strtolower(trim($defendant['tg_number'] ?? ''));
+        if ($defName === $normalizedName || (!empty($tgNumber) && $defTg === strtolower(trim($tgNumber)))) {
+            $matchId = $defendant['id'];
+            if (empty($defendant['tg_number']) && !empty($tgNumber)) {
+                $defendant['tg_number'] = $tgNumber;
+                updateRecord('defendants.json', $matchId, $defendant);
+            }
+            break;
+        }
+    }
+
+    if (!$matchId) {
+        $newDefendant = [
+            'id' => generateUniqueId(),
+            'name' => $name,
+            'tg_number' => $tgNumber,
+            'history' => [],
+            'created_by' => $userId,
+            'date_created' => date('Y-m-d H:i:s')
+        ];
+        insertRecord('defendants.json', $newDefendant);
+        $matchId = $newDefendant['id'];
+    }
+
+    return $matchId;
+}
+
+function ce_appendDefendantHistory($defendantId, $entry) {
+    if (!$defendantId) {
+        return;
+    }
+    $defendant = findById('defendants.json', $defendantId);
+    if (!$defendant) {
+        return;
+    }
+    if (!isset($defendant['history']) || !is_array($defendant['history'])) {
+        $defendant['history'] = [];
+    }
+    array_unshift($defendant['history'], $entry);
+    updateRecord('defendants.json', $defendantId, $defendant);
+}
+
 // Verwende die checkUserHasRoleType Funktion für konsistente Rollenüberprüfung
 $userRole = $_SESSION['role'];
 $isProsecutor = checkUserHasRoleType($userRole, 'prosecutor');
@@ -100,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Fallaktualisierung (grundlegende Informationen)
     if (isset($_POST['action']) && $_POST['action'] === 'update_case') {
         $defendant = sanitize($_POST['defendant'] ?? '');
+        $defendantTg = sanitize($_POST['defendant_tg'] ?? '');
         $charge = sanitize($_POST['charge'] ?? '');
         $incidentDate = sanitize($_POST['incident_date'] ?? '');
         $district = sanitize($_POST['district'] ?? '');
@@ -109,6 +159,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bailAmount = sanitize($_POST['bail_amount'] ?? '');
         $witnesses = sanitize($_POST['witnesses'] ?? '');
         $victims = sanitize($_POST['victims'] ?? '');
+        $limitationId = sanitize($_POST['limitation_id'] ?? ($caseData['limitation_id'] ?? ''));
+        $expirationDateInput = sanitize($_POST['expiration_date'] ?? '');
+        $limitations = loadJsonData('limitations.json');
+        $limitationDays = null;
+        foreach ($limitations as $lim) {
+            if (($lim['id'] ?? '') === $limitationId) {
+                $limitationDays = (int) ($lim['days'] ?? 0);
+                break;
+            }
+        }
+        if (empty($expirationDateInput) && !empty($incidentDate) && $limitationDays) {
+            $expirationDateInput = date('Y-m-d', strtotime($incidentDate . " +{$limitationDays} days"));
+        }
         
         // Verjährungsdatum berechnen (standardmäßig 21 Tage nach Vorfalldatum)
         $expirationDays = 21;
@@ -118,12 +181,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($defendant) || empty($charge) || empty($incidentDate) || empty($district)) {
             $error = 'Bitte füllen Sie alle Pflichtfelder aus.';
         } else {
+            $defendantId = ce_findOrCreateDefendant($defendant, $defendantTg, $user_id);
             // Fall aktualisieren
             $updatedCase = $caseData;
             $updatedCase['defendant'] = $defendant;
+            $updatedCase['defendant_id'] = $defendantId;
+            $updatedCase['defendant_tg'] = $defendantTg;
             $updatedCase['charge'] = $charge;
             $updatedCase['incident_date'] = $incidentDate;
-            $updatedCase['expiration_date'] = $expirationDate;
+            $updatedCase['limitation_id'] = $limitationId;
+            $updatedCase['expiration_date'] = $expirationDateInput;
             $updatedCase['district'] = $district;
             $updatedCase['prosecutor'] = $prosecutorName;
             $updatedCase['judge'] = $judgeName;
@@ -465,6 +532,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (updateRecord('cases.json', $caseId, $updatedCase)) {
                 $message = 'Urteil wurde erfolgreich hinzugefügt.';
                 $caseData = $updatedCase;
+
+                // Historie beim Angeklagten ergänzen
+                ce_appendDefendantHistory($updatedCase['defendant_id'] ?? null, [
+                    'case_id' => $caseId,
+                    'type' => 'verdict',
+                    'charge' => $updatedCase['charge'] ?? '',
+                    'status' => $verdictStatus,
+                    'verdict' => $verdictText,
+                    'verdict_date' => $verdictDate,
+                    'date' => date('Y-m-d H:i:s')
+                ]);
                 
                 // Weiterleitung zur Fallansicht nach erfolgreichem Hinzufügen des Urteils
                 header('Location: case_view.php?id=' . $caseId);
@@ -785,7 +863,17 @@ include '../includes/header.php';
                                 
                                 <div class="form-group">
                                     <label for="defendant">Angeklagter *</label>
-                                    <input type="text" class="form-control" id="defendant" name="defendant" value="<?php echo htmlspecialchars($caseData['defendant']); ?>" required>
+                                    <?php $allDefendants = loadJsonData('defendants.json'); ?>
+                                    <input list="defendant_list_edit" class="form-control" id="defendant" name="defendant" value="<?php echo htmlspecialchars($caseData['defendant']); ?>" required>
+                                    <datalist id="defendant_list_edit">
+                                        <?php foreach ($allDefendants as $defendant): ?>
+                                            <option value="<?php echo htmlspecialchars($defendant['name']); ?>"><?php echo htmlspecialchars($defendant['tg_number'] ?? ''); ?></option>
+                                        <?php endforeach; ?>
+                                    </datalist>
+                                </div>
+                                <div class="form-group">
+                                    <label for="defendant_tg">TG-Nummer des Angeklagten</label>
+                                    <input type="text" class="form-control" id="defendant_tg" name="defendant_tg" value="<?php echo htmlspecialchars($caseData['defendant_tg'] ?? ''); ?>" placeholder="z.B. TG-1234">
                                 </div>
                                 
                                 <div class="form-group">
@@ -794,11 +882,32 @@ include '../includes/header.php';
                                 </div>
                                 
                                 <div class="form-row">
-                                    <div class="form-group col-md-6">
+                                    <div class="form-group col-md-4">
                                         <label for="incident_date">Vorfalldatum *</label>
                                         <input type="date" class="form-control" id="incident_date" name="incident_date" value="<?php echo isset($caseData['incident_date']) ? htmlspecialchars($caseData['incident_date']) : date('Y-m-d'); ?>" required>
                                     </div>
                                     
+                                    <div class="form-group col-md-4">
+                                        <label for="limitation_id">Verjährungsfrist</label>
+                                        <?php $limitations = loadJsonData('limitations.json'); ?>
+                                        <select class="form-control" id="limitation_id" name="limitation_id">
+                                            <option value="">Manuell/keine Vorlage</option>
+                                            <?php foreach ($limitations as $lim): ?>
+                                                <option value="<?php echo htmlspecialchars($lim['id']); ?>" <?php echo (($caseData['limitation_id'] ?? '') === $lim['id']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($lim['label'] . ' (' . $lim['days'] . ' Tage)'); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group col-md-4">
+                                        <label for="expiration_date">Verjährungsdatum</label>
+                                        <input type="date" class="form-control" id="expiration_date" name="expiration_date" value="<?php echo htmlspecialchars($caseData['expiration_date'] ?? ''); ?>">
+                                        <small class="form-text text-muted">Automatisch basierend auf Frist, kann überschrieben werden.</small>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
                                     <div class="form-group col-md-6">
                                         <label for="district">Bezirk *</label>
                                         <select class="form-control" id="district" name="district" required>
