@@ -204,22 +204,43 @@
 </nav>
 
 <script>
-// Preserve sidebar scroll position across page loads
+// Preserve sidebar scroll position across page loads; also save before navigation clicks
 document.addEventListener('DOMContentLoaded', function() {
-    var sidebar = document.getElementById('sidebarMenu');
-    if (!sidebar) return;
-
     var storageKey = 'sidebarScrollTop';
+
+    // Determine the actual scrollable sidebar element
+    var sidebarNav = document.getElementById('sidebarMenu');
+    if (!sidebarNav) return;
+    var sticky = sidebarNav.querySelector('.sidebar-sticky');
+    var scrollEl = sidebarNav;
+    if (sticky && sticky.scrollHeight > sticky.clientHeight) {
+        scrollEl = sticky;
+    } else if (sidebarNav.scrollHeight <= sidebarNav.clientHeight && sticky) {
+        // If nav itself isn't scrollable but sticky is, prefer sticky
+        scrollEl = sticky;
+    }
+
     var saved = sessionStorage.getItem(storageKey);
     if (saved !== null) {
-        sidebar.scrollTop = parseInt(saved, 10) || 0;
+        scrollEl.scrollTop = parseInt(saved, 10) || 0;
     }
 
     var saveScroll = function() {
-        sessionStorage.setItem(storageKey, sidebar.scrollTop);
+        sessionStorage.setItem(storageKey, scrollEl.scrollTop);
     };
 
-    sidebar.addEventListener('scroll', saveScroll);
+    scrollEl.addEventListener('scroll', saveScroll);
     window.addEventListener('beforeunload', saveScroll);
+
+    // Save immediately when a sidebar link is clicked (before navigation unloads)
+    sidebarNav.addEventListener('click', function(ev) {
+        var target = ev.target;
+        if (target.tagName !== 'A') {
+            target = target.closest('a');
+        }
+        if (target && target.matches('a.nav-link')) {
+            saveScroll();
+        }
+    });
 });
 </script>
