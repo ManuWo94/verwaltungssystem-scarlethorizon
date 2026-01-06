@@ -31,6 +31,7 @@ function getAvailableModules() {
         'address_book' => 'Adressbuch',
         'seized_assets' => 'Beschlagnahmungen',
         'business_licenses' => 'Gewerbeschein',
+        'licenses' => 'Lizenzverwaltung',
         'todos' => 'Aufgabenliste',
         'task_assignments' => 'Aufgabenverteilung',
         'evidence' => 'Beweismittel',
