@@ -364,6 +364,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
 // Preserve sidebar scroll position across page loads; also save before navigation clicks
 document.addEventListener('DOMContentLoaded', function() {
     var storageKey = 'sidebarScrollTop';
+    var collapseStateKey = 'sidebarCollapseStates';
 
     // Determine the actual scrollable sidebar element
     var sidebarNav = document.getElementById('sidebarMenu');
@@ -408,6 +409,44 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {
         // SessionStorage nicht verfügbar - weiterhin funktionieren
         console.warn('SessionStorage nicht verfügbar:', e);
+    }
+
+    // Collapse-Status speichern und wiederherstellen
+    try {
+        var collapseElements = document.querySelectorAll('.sidebar-section .collapse');
+        
+        // Lade gespeicherte Zustände
+        var savedStates = sessionStorage.getItem(collapseStateKey);
+        if (savedStates) {
+            savedStates = JSON.parse(savedStates);
+            collapseElements.forEach(function(el) {
+                var id = el.id;
+                if (savedStates[id] !== undefined) {
+                    if (savedStates[id]) {
+                        $(el).collapse('show');
+                    } else {
+                        $(el).collapse('hide');
+                    }
+                }
+            });
+        }
+
+        // Speichere Zustand bei Änderung
+        collapseElements.forEach(function(el) {
+            $(el).on('shown.bs.collapse hidden.bs.collapse', function() {
+                var states = {};
+                collapseElements.forEach(function(elem) {
+                    states[elem.id] = $(elem).hasClass('show');
+                });
+                try {
+                    sessionStorage.setItem(collapseStateKey, JSON.stringify(states));
+                } catch (e) {
+                    console.warn('Konnte Collapse-Status nicht speichern:', e);
+                }
+            });
+        });
+    } catch (e) {
+        console.warn('Collapse-Status-Speicherung nicht verfügbar:', e);
     }
 });
 </script>
