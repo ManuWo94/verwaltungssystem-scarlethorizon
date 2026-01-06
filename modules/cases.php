@@ -136,12 +136,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Validate required fields
         if (empty($caseData['defendant']) || empty($caseData['charge']) || empty($caseData['incident_date'])) {
             $error = 'Please fill in all required fields.';
-        } elseif (empty($caseData['case_type']) || !in_array($caseData['case_type'], ['Straf', 'Zivil'])) {
-            $error = 'Fehler: Aktentyp (Straf/Zivil) wurde nicht korrekt übermittelt.';
         } else {
+            // Nur bei NEUEN Akten case_type validieren (beim Bearbeiten wird es von case_edit.php nicht gesendet)
+            if (!isset($_POST['case_id']) || empty($_POST['case_id'])) {
+                if (empty($caseData['case_type']) || !in_array($caseData['case_type'], ['Straf', 'Zivil'])) {
+                    $error = 'Fehler: Aktentyp (Straf/Zivil) wurde nicht korrekt übermittelt.';
+                }
+            }
+        }
+        
+        if (empty($error)) {
             if (isset($_POST['case_id']) && !empty($_POST['case_id'])) {
-                // Update existing case
+                // Update existing case - case_type NICHT überschreiben wenn nicht gesendet
                 $caseId = $_POST['case_id'];
+                $existingCase = findById('cases.json', $caseId);
+                if ($existingCase && empty($caseData['case_type'])) {
+                    // case_type vom existierenden Fall übernehmen
+                    $caseData['case_type'] = $existingCase['case_type'] ?? 'Straf';
+                }
                 
                 if (updateRecord('cases.json', $caseId, $caseData)) {
                     $message = 'Fall wurde erfolgreich aktualisiert.';
