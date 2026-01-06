@@ -5,44 +5,10 @@
  */
 
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/db.php'; // Enthält getJsonData() und saveJsonData()
 
-$notificationsFile = __DIR__ . '/../data/notifications.json';
-
-/**
- * Liest JSON-Daten aus einer Datei
- */
-function getJsonData($file) {
-    if (!file_exists($file)) {
-        return [];
-    }
-    
-    $content = file_get_contents($file);
-    if ($content === false) {
-        return [];
-    }
-    
-    $data = json_decode($content, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        error_log("JSON Decode Error in $file: " . json_last_error_msg());
-        return [];
-    }
-    
-    return is_array($data) ? $data : [];
-}
-
-/**
- * Speichert JSON-Daten in eine Datei
- */
-function saveJsonData($file, $data) {
-    $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    if ($json === false) {
-        error_log("JSON Encode Error: " . json_last_error_msg());
-        return false;
-    }
-    
-    $result = file_put_contents($file, $json);
-    return $result !== false;
-}
+// Nur Dateiname verwenden, nicht kompletter Pfad (getJsonData in db.php fügt Pfad hinzu)
+$notificationsFile = 'notifications.json';
 
 /**
  * Erstellt eine neue Benachrichtigung
