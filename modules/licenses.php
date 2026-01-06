@@ -93,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'category_id' => $categoryId,
             'category_name' => $category['name'],
             'license_number' => $licenseNumber,
+            'tg_number' => $_POST['tg_number'] ?? '',
             'start_date' => $startDate,
             'end_date' => $endDate,
             'duration_days' => $durationDays,
@@ -436,6 +437,13 @@ usort($activeLicenses, function($a, $b) {
                         <!-- Dynamische Felder -->
                         <div id="dynamicFields"></div>
                         
+                        <!-- TG-Nummer -->
+                        <div class="form-group">
+                            <label for="tgNumber">TG-Nummer</label>
+                            <input type="text" class="form-control" id="tgNumber" name="tg_number" placeholder="z.B. TG-2026-001">
+                            <small class="form-text text-muted">Optional: Interne Tracking/Geschäftsnummer</small>
+                        </div>
+                        
                         <!-- Laufzeit -->
                         <div class="row">
                             <div class="col-md-6">
@@ -589,14 +597,25 @@ $(document).ready(function() {
     $('#createLicenseForm').submit(function(e) {
         e.preventDefault();
         
+        const $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true).html('<i data-feather="loader"></i> Speichert...');
+        
         $.post('', $(this).serialize(), function(response) {
+            $btn.prop('disabled', false).html('<i data-feather="check"></i> Lizenz erstellen');
+            feather.replace();
+            
             if (response.success) {
+                $('#createLicenseModal').modal('hide');
                 alert('Lizenz erfolgreich erstellt!');
                 location.reload();
             } else {
                 alert('Fehler: ' + response.message);
             }
-        }, 'json');
+        }, 'json').fail(function(xhr) {
+            $btn.prop('disabled', false).html('<i data-feather="check"></i> Lizenz erstellen');
+            feather.replace();
+            alert('Fehler beim Speichern: ' + (xhr.responseText || 'Unbekannter Fehler'));
+        });
     });
     
     // Lizenz anzeigen

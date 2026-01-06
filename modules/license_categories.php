@@ -430,14 +430,25 @@ $(document).ready(function() {
         
         $('#fieldsJson').val(JSON.stringify(fields));
         
+        const $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true).html('<i data-feather="loader"></i> Speichert...');
+        
         $.post('', $(this).serialize(), function(response) {
+            $btn.prop('disabled', false).html('<i data-feather="save"></i> Speichern');
+            feather.replace();
+            
             if (response.success) {
+                $('#categoryModal').modal('hide');
                 alert(response.message);
                 location.reload();
             } else {
                 alert('Fehler: ' + response.message);
             }
-        }, 'json');
+        }, 'json').fail(function(xhr) {
+            $btn.prop('disabled', false).html('<i data-feather="save"></i> Speichern');
+            feather.replace();
+            alert('Fehler beim Speichern: ' + (xhr.responseText || 'Unbekannter Fehler'));
+        });
     });
     
     // Kategorie aktivieren/deaktivieren
