@@ -1,0 +1,24 @@
+# PHP OPcache Deaktivierung für sofortige Updates
+# Funktioniert mit PHP-FPM und mod_php
+
+<IfModule mod_php.c>
+    php_value opcache.revalidate_freq 0
+    php_value opcache.validate_timestamps 1
+    php_value opcache.enable 0
+</IfModule>
+
+<IfModule mod_php7.c>
+    php_value opcache.revalidate_freq 0
+    php_value opcache.validate_timestamps 1
+    php_value opcache.enable 0
+</IfModule>
+
+<IfModule mod_php8.c>
+    php_value opcache.revalidate_freq 0
+    php_value opcache.validate_timestamps 1
+    php_value opcache.enable 0
+</IfModule>
+
+# Falls PHP-FPM: Diese Einstellungen in php.ini oder Pool-Config setzen
+# opcache.revalidate_freq=0
+# opcache.validate_timestamps=1
