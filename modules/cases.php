@@ -430,26 +430,35 @@ $prosecutors = array_filter($users, function($user) {
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addCaseModalLab</label>
+                <h5 class="modal-title" id="addCaseModalLabel">Neue Akte anlegen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Schließen">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="cases.php" class="needs-validation" novalidate>
+                <div class="modal-body">
+                    <!-- Aktentyp Auswahl - Prominent am Anfang -->
+                    <div class="form-group">
+                        <label class="font-weight-bold">Art der Angelegenheit *</label>
+                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+                            <label class="btn btn-outline-danger active">
+                                <input type="radio" name="case_type" value="Straf" checked> 
+                                <i data-feather="alert-triangle"></i> Strafangelegenheit
+                            </label>
+                            <label class="btn btn-outline-primary">
+                                <input type="radio" name="case_type" value="Zivil"> 
+                                <i data-feather="briefcase"></i> Zivilangelegenheit
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="form-group">
+                        <label for="custom_id">Aktenzeichen (optional)</label>
                         <input type="text" class="form-control" id="custom_id" name="custom_id" placeholder="z.B. A-2026-0001 oder aus Ermittlungsakte">
                         <small class="form-text text-muted">
                             Geben Sie das Aktenzeichen aus der Ermittlungsakte ein oder lassen Sie das Feld leer für automatische Generierung.
-                        </small>
-                    </div>
-                    <div class="form-group">
-                        <label for="case_type">Aktentyp *</label>
-                        <select class="form-control" id="case_type" name="case_type" required>
-                            <option value="Straf">Strafangelegenheit</option>
-                            <option value="Zivil">Zivilangelegenheit</option>
-                        </select>
-                        <div class="invalid-feedback">Bitte wählen Sie einen Aktentyp.</div
-            <form method="post" action="cases.php" class="needs-validation" novalidate>
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="custom_id">Aktenzeichen (optional)</label>
-                        <input type="text" class="form-control" id="custom_id" name="custom_id">
-                        <small class="form-text text-muted">
-                            Lassen Sie dieses Feld leer, um automatisch ein Aktenzeichen zu generieren.
                         </small>
                     </div>
                     <div class="form-group">
@@ -587,6 +596,11 @@ $prosecutors = array_filter($users, function($user) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Feather Icons initialisieren
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+    
     const defendantsData = <?php echo json_encode($defendants, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 
     const normalize = (val) => (val || '').trim().toLowerCase();
