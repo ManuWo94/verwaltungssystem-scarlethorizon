@@ -213,7 +213,7 @@ a:hover {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--primary);
+    color: #ffffff;
     font-weight: bold;
     background-color: rgba(106, 46, 9, 0.1);
     border-left: 3px solid var(--accent);
