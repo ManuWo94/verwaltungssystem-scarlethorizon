@@ -262,9 +262,61 @@ require_once __DIR__ . '/../includes/header.php';
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="numberSchema">Nummern-Schema *</label>
-                                <input type="text" class="form-control" name="number_schema" id="numberSchema" 
-                                       placeholder="z.B. BL-{YEAR}-{NUM:4}" required>
+                                <label>Nummern-Schema *</label>
+                                <input type="hidden" name="number_schema" id="numberSchema" required>
+                                
+                                <!-- Drag & Drop Builder -->
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <small class="text-muted">Bausteine (ziehen Sie die Elemente in die Drop-Zone)</small>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        <div class="d-flex flex-wrap gap-2" id="schemaBlocks" style="gap: 8px;">
+                                            <span class="badge badge-primary schema-block" draggable="true" data-value="PREFIX" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                PREFIX
+                                            </span>
+                                            <span class="badge badge-info schema-block" draggable="true" data-value="{YEAR}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                JAHR
+                                            </span>
+                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:3}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                NUMMER (3)
+                                            </span>
+                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:4}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                NUMMER (4)
+                                            </span>
+                                            <span class="badge badge-warning schema-block" draggable="true" data-value="{MONTH}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                MONAT
+                                            </span>
+                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="-" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                -
+                                            </span>
+                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="/" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                /
+                                            </span>
+                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="_" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                _
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Drop Zone -->
+                                <div class="mt-2 p-3 border rounded" id="schemaDropZone" 
+                                     style="min-height: 60px; background: #f8f9fa; border: 2px dashed #dee2e6 !important;">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <small class="text-muted">Ziehen Sie Bausteine hierher...</small>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" id="resetSchema" title="Schema zurücksetzen">
+                                            <i data-feather="x"></i>
+                                        </button>
+                                    </div>
+                                    <div id="schemaPreview" class="d-flex flex-wrap align-items-center" style="gap: 4px; min-height: 30px;"></div>
+                                </div>
+                                
+                                <!-- Live Vorschau -->
+                                <div class="mt-2 d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">Vorschau:</small>
+                                    <code id="schemaOutput" class="flex-grow-1 ml-2 p-2 bg-white border rounded">PREFIX-{YEAR}-{NUM:3}</code>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -327,6 +379,79 @@ $(document).ready(function() {
     feather.replace();
     
     let fields = [];
+    let schemaElements = [];
+    
+    // === DRAG & DROP SCHEMA BUILDER ===
+    
+    // Drag Start auf Bausteinen
+    $(document).on('dragstart', '.schema-block', function(e) {
+        e.originalEvent.dataTransfer.effectAllowed = 'copy';
+        e.originalEvent.dataTransfer.setData('text/plain', $(this).data('value'));
+    });
+    
+    // Drop Zone Events
+    $('#schemaDropZone').on('dragover', function(e) {
+        e.preventDefault();
+        e.originalEvent.dataTransfer.dropEffect = 'copy';
+        $(this).addClass('border-primary');
+    });
+    
+    $('#schemaDropZone').on('dragleave', function(e) {
+        $(this).removeClass('border-primary');
+    });
+    
+    $('#schemaDropZone').on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('border-primary');
+        
+        const value = e.originalEvent.dataTransfer.getData('text/plain');
+        schemaElements.push(value);
+        updateSchemaPreview();
+    });
+    
+    // Vorschau aktualisieren
+    function updateSchemaPreview() {
+        const preview = $('#schemaPreview');
+        preview.empty();
+        
+        if (schemaElements.length === 0) {
+            preview.html('<small class="text-muted">Ziehen Sie Bausteine hierher...</small>');
+            $('#schemaOutput').text('');
+            $('#numberSchema').val('');
+            return;
+        }
+        
+        // Elemente anzeigen mit Löschen-Button
+        schemaElements.forEach((elem, index) => {
+            const displayText = elem.replace('{', '').replace('}', '').replace('NUM:', 'NR-');
+            const badge = $('<span class="badge badge-secondary mr-1" style="padding: 6px 10px; font-size: 12px;"></span>')
+                .text(displayText)
+                .append(' <span style="cursor: pointer; font-weight: bold;" data-index="' + index + '" class="remove-schema-elem">×</span>');
+            preview.append(badge);
+        });
+        
+        // Schema zusammenbauen
+        const schema = schemaElements.join('');
+        $('#schemaOutput').text(schema);
+        $('#numberSchema').val(schema);
+    }
+    
+    // Element aus Schema entfernen
+    $(document).on('click', '.remove-schema-elem', function() {
+        const index = $(this).data('index');
+        schemaElements.splice(index, 1);
+        updateSchemaPreview();
+    });
+    
+    // Schema komplett zurücksetzen
+    $(document).on('click', '#resetSchema', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        schemaElements = [];
+        updateSchemaPreview();
+    });
+    
+    // === ENDE DRAG & DROP ===
     
     // "Neue Kategorie" Button - öffnet das categoryModal direkt
     $(document).on('click', '[data-target="#createCategoryModal"]', function(e) {
@@ -423,6 +548,10 @@ $(document).ready(function() {
             $('#categoryModalTitle').text('Kategorie erstellen');
             fields = [];
             renderFields();
+            
+            // Schema Builder zurücksetzen
+            schemaElements = [];
+            updateSchemaPreview();
         }
     });
     
@@ -440,11 +569,30 @@ $(document).ready(function() {
         $('#notificationDaysBefore').val(category.notification_days_before);
         $('#categoryTemplate').val(category.template);
         
+        // Schema in Drag & Drop Builder laden
+        schemaElements = parseSchemaToElements(category.number_schema);
+        updateSchemaPreview();
+        
         fields = category.fields || [];
         renderFields();
         
         $('#categoryModal').modal('show');
     });
+    
+    // Schema aus String parsen (für Bearbeitung)
+    function parseSchemaToElements(schema) {
+        const elements = [];
+        const regex = /(\{[^}]+\}|[^{]+)/g;
+        const matches = schema.match(regex);
+        
+        if (matches) {
+            matches.forEach(match => {
+                elements.push(match);
+            });
+        }
+        
+        return elements;
+    }
     
     // Formular absenden
     $('#categoryForm').submit(function(e) {
