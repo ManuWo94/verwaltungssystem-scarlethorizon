@@ -35,8 +35,13 @@ $managerRoles = [
     'Director', 'Commander', 'Administrative Assistant', 'System Administrator', 'Administrator'
 ];
 
-// System Administrator und Administrator haben vollen Zugriff
-if ($role === 'System Administrator' || $role === 'Administrator' || 
+// Neues Kriterium: Berechtigungen aus dem Rollensystem
+$hasTaskPerm = checkUserPermission($user_id, 'task_assignments', 'edit') 
+    || checkUserPermission($user_id, 'task_assignments', 'create') 
+    || checkUserPermission($user_id, 'task_assignments', 'delete');
+
+// System Administrator und Administrator haben vollen Zugriff oder Berechtigung aus Rollen
+if ($hasTaskPerm || $role === 'System Administrator' || $role === 'Administrator' || 
     in_array('System Administrator', $roles) || in_array('Administrator', $roles) || 
     in_array('Chief Justice', $roles)) {
     $canAssignTasks = true;

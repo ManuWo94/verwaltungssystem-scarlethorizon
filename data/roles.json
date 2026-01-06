@@ -130,89 +130,142 @@
     {
         "id": "vorsitzender_senatsrichter",
         "name": "Vorsitzender Senatsrichter",
-        "description": "Vorsitzender mit Leserecht auf alle Module",
+        "description": "Vorsitzender mit Vollzugriff (ohne Admin-Bereich)",
         "permissions": {
-            "admin": [
-                "view"
-            ],
             "users": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "roles": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "cases": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "indictments": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "appeals": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "defendants": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "hearings": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "templates": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "warrants": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "staff": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "trainings": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "equipment": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "notes": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "public_notes": [
                 "view",
-                "create"
+                "edit",
+                "delete"
             ],
             "calendar": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "files": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "duty_log": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "vacation": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "address_book": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "seized_assets": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "business_licenses": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "todos": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "task_assignments": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "evidence": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "revisions": [
-                "view"
+                "view",
+                "edit",
+                "delete"
             ],
             "justice_references": [
-                "view"
+                "view",
+                "edit",
+                "delete"
+            ],
+            "files": [
+                "view",
+                "edit",
+                "delete"
             ]
         }
     },
