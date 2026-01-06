@@ -801,7 +801,7 @@ include '../includes/header.php';
                 <li class="nav-item">
                     <a class="nav-link active" id="edit-tab" data-toggle="tab" href="#edit" role="tab" aria-controls="edit" aria-selected="true">Fall bearbeiten</a>
                 </li>
-                <?php if (!$existingIndictment && ($isProsecutor || $isLeadership)): ?>
+                <?php if (!$existingIndictment && currentUserCan('cases', 'edit')): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="indictment-tab" data-toggle="tab" href="#indictment" role="tab" aria-controls="indictment" aria-selected="false">Klageschrift einreichen</a>
                     </li>
@@ -963,7 +963,7 @@ include '../includes/header.php';
                 </div>
                 
                 <!-- Tab: Klageschrift einreichen -->
-                <?php if (!$existingIndictment && ($isProsecutor || $isLeadership)): ?>
+                <?php if (!$existingIndictment && currentUserCan('cases', 'edit')): ?>
                     <div class="tab-pane fade" id="indictment" role="tabpanel" aria-labelledby="indictment-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">

@@ -103,8 +103,8 @@ include '../includes/header.php';
                     $isLeadership = checkUserHasRoleType($userRole, 'leadership');
                     $isJudge = checkUserHasRoleType($userRole, 'judge');
                     
-                    // Wenn Benutzer Leitung oder Richter ist - Bearbeitungsbuttons
-                    if ($isLeadership || $isJudge):
+                    // Wenn Benutzer Edit-Rechte hat - Klageschrift einreichen
+                    if (currentUserCan('civil_cases', 'edit')):
                     ?>
                     <a href="civil_case_edit.php?id=<?php echo $case_id; ?>#indictment" class="btn btn-success">
                         <span data-feather="file-plus"></span> Klageschrift einreichen

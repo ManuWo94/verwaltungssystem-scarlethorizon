@@ -118,14 +118,8 @@ include '../includes/header.php';
                     $isJudge = checkUserHasRoleType($userRole, 'judge');
                     $isMarshal = checkUserHasRoleType($userRole, 'marshal');
                     
-                    // Debug-Output für Rollenprüfung
-                    echo "<!-- DEBUG: isProsecutor: " . ($isProsecutor ? "true" : "false") . " -->";
-                    echo "<!-- DEBUG: isLeadership: " . ($isLeadership ? "true" : "false") . " -->";
-                    echo "<!-- DEBUG: isJudge: " . ($isJudge ? "true" : "false") . " -->";
-                    echo "<!-- DEBUG: isMarshal: " . ($isMarshal ? "true" : "false") . " -->";
-                    
-                    // Wenn Benutzer Staatsanwalt oder Leitung ist - Klageschrift Button
-                    if ($isProsecutor || $isLeadership):
+                    // Wenn Benutzer Edit-Rechte hat - Klageschrift Button
+                    if (currentUserCan('cases', 'edit')):
                     ?>
                     <a href="case_edit.php?id=<?php echo $case_id; ?>#indictment" class="btn btn-success">
                         <span data-feather="file-plus"></span> Klageschrift einreichen
