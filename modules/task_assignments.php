@@ -1061,7 +1061,10 @@ include_once '../includes/header.php';
                                                     </button>
                                                     
                                                     <?php if ($userCanEditTask): ?>
-                                                        <button class="btn btn-sm btn-outline-secondary edit-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Bearbeiten / Weiterleiten">
+                                                        <button class="btn btn-sm btn-outline-info forward-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Weiterleiten">
+                                                            <i class="fas fa-share"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-secondary edit-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Bearbeiten">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
                                                     <?php endif; ?>
@@ -2077,7 +2080,7 @@ $(document).ready(function() {
     }
     
     // Aufgabe bearbeiten / weiterleiten (für Berechtigte, Ersteller oder Zugewiesene)
-    $('.edit-task-btn').on('click', function(e) {
+    $(document).on('click', '.edit-task-btn, .forward-task-btn', function(e) {
         e.preventDefault();
         const taskId = $(this).data('task-id');
         
