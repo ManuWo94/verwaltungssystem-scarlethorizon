@@ -38,7 +38,7 @@
     {
         "id": "cat_driver",
         "name": "Driver's License",
-        "active": true,
+        "active": false,
         "number_schema": "DL-{YEAR}-{NUM:5}",
         "default_duration_days": 1825,
         "notification_enabled": true,

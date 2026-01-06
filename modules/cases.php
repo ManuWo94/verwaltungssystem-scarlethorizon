@@ -122,6 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'defendant' => $defendantName,
             'defendant_tg' => $defendantTg,
             'charge' => sanitize($_POST['charge'] ?? ''),
+            'case_type' => sanitize($_POST['case_type'] ?? 'Straf'),
             'incident_date' => $incidentDate,
             'expiration_date' => $expirationDateInput,
             'limitation_id' => $limitationId,
@@ -300,6 +301,7 @@ $prosecutors = array_filter($users, function($user) {
                             <thead>
                                 <tr>
                                     <th>Aktenzeichen</th>
+                                    <th>Typ</th>
                                     <th>Angeklagter</th>
                                     <th>Anklage</th>
                                     <th>Vorfallsdatum</th>
@@ -314,6 +316,13 @@ $prosecutors = array_filter($users, function($user) {
                                 <?php if (count($cases) > 0): ?>
                                     <?php foreach ($cases as $case): ?>
                                         <tr>
+                                            <td>
+                                                <?php 
+                                                $type = $case['case_type'] ?? 'Straf';
+                                                $badgeClass = $type === 'Zivil' ? 'badge-info' : 'badge-danger';
+                                                echo '<span class="badge ' . $badgeClass . '">' . htmlspecialchars($type) . '</span>';
+                                                ?>
+                                            </td>
                                             <td><a href="case_view.php?id=<?php echo $case['id']; ?>"><?php echo htmlspecialchars('#' . substr($case['id'], 0, 8)); ?></a></td>
                                     <td><?php echo htmlspecialchars($case['defendant']); ?></td>
                                     <td><?php echo htmlspecialchars($case['charge']); ?></td>
@@ -396,7 +405,7 @@ $prosecutors = array_filter($users, function($user) {
                                             <input type="hidden" name="case_id" value="<?php echo $case['id']; ?>">
                                             <button type="submit" class="btn btn-sm btn-danger btn-delete">
                                                 <span data-feather="trash-2"></span> Löschen
-                                            </button>
+                                            <10button>
                                         </form>
                                         <?php endif; ?>
                                     </td>
@@ -421,11 +430,19 @@ $prosecutors = array_filter($users, function($user) {
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addCaseModalLabel">Neuen Fall hinzufügen</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
+                <h5 class="modal-title" id="addCaseModalLab</label>
+                        <input type="text" class="form-control" id="custom_id" name="custom_id" placeholder="z.B. A-2026-0001 oder aus Ermittlungsakte">
+                        <small class="form-text text-muted">
+                            Geben Sie das Aktenzeichen aus der Ermittlungsakte ein oder lassen Sie das Feld leer für automatische Generierung.
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="case_type">Aktentyp *</label>
+                        <select class="form-control" id="case_type" name="case_type" required>
+                            <option value="Straf">Strafangelegenheit</option>
+                            <option value="Zivil">Zivilangelegenheit</option>
+                        </select>
+                        <div class="invalid-feedback">Bitte wählen Sie einen Aktentyp.</div
             <form method="post" action="cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
                     <div class="form-group">
