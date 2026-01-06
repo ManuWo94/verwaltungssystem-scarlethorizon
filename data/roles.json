@@ -134,136 +134,163 @@
         "permissions": {
             "users": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "roles": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "cases": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "indictments": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "appeals": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "defendants": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "hearings": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "templates": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "warrants": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "staff": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "trainings": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "equipment": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "notes": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "public_notes": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "calendar": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "files": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "duty_log": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "vacation": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "address_book": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "seized_assets": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "business_licenses": [
                 "view",
+                "create",
+                "edit",
+                "delete"
+            ],
+            "licenses": [
+                "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "todos": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "task_assignments": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "evidence": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "revisions": [
                 "view",
+                "create",
                 "edit",
                 "delete"
             ],
             "justice_references": [
                 "view",
-                "edit",
-                "delete"
-            ],
-            "files": [
-                "view",
+                "create",
                 "edit",
                 "delete"
             ]
