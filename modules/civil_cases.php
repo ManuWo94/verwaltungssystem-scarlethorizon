@@ -212,16 +212,20 @@ $plaintiffs = loadJsonData('plaintiffs.json');
 // Load limitations for dropdown
 $limitations = loadJsonData('limitations.json');
 
-// Load users for prosecutor/judge dropdowns
+// Load users for judge dropdown
 $users = getAllUsers();
 $judges = array_filter($users, function($user) {
-    // Überprüfe sowohl die Hauptrolle als auch zusätzliche Rollen
-    if ($user['role'] === 'Judge') {
+    // Überprüfe sowohl die Hauptrolle als auch zusätzliche Rollen (Englisch und Deutsch)
+    if (in_array($user['role'], ['Judge', 'Richter', 'Judge (Richter)'])) {
         return true;
     }
     // Überprüfe auch die roles-Array, wenn es existiert
     if (isset($user['roles']) && is_array($user['roles'])) {
-        return in_array('Judge', $user['roles']);
+        foreach ($user['roles'] as $role) {
+            if (in_array($role, ['Judge', 'Richter', 'Judge (Richter)'])) {
+                return true;
+            }
+        }
     }
     return false;
 });
