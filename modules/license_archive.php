@@ -5,7 +5,10 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 requireLogin();
-checkModulePermission('licenses', 'view');
+if (!currentUserCan('licenses', 'view')) {
+    header('Location: ' . getBasePath() . 'access_denied.php');
+    exit;
+}
 
 $basePath = getBasePath();
 $licenses = loadJsonData('licenses.json');

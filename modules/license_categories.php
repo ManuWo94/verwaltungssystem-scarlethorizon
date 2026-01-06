@@ -6,7 +6,10 @@ require_once __DIR__ . '/../includes/auth.php';
 
 // Nur Admins
 requireLogin();
-checkPermission('admin');
+if (!currentUserCan('admin', 'view') && $_SESSION['role'] !== 'Administrator') {
+    header('Location: ' . getBasePath() . 'access_denied.php');
+    exit;
+}
 
 $basePath = getBasePath();
 $categories = loadJsonData('license_categories.json');

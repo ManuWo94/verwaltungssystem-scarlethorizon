@@ -6,7 +6,10 @@ require_once __DIR__ . '/../includes/auth.php';
 
 // Berechtigung prüfen
 requireLogin();
-checkModulePermission('licenses', 'view');
+if (!currentUserCan('licenses', 'view')) {
+    header('Location: ' . getBasePath() . 'access_denied.php');
+    exit;
+}
 
 $basePath = getBasePath();
 
