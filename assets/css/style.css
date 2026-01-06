@@ -813,7 +813,7 @@ main {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #ffffff;
+    color: #ffffff !important;
     font-weight: 600;
     background-color: transparent;
     border-left: none;
@@ -828,11 +828,15 @@ main {
 
 .sidebar-section .sidebar-heading:hover {
     background-color: rgba(106, 46, 9, 0.15);
-    color: #ffffff;
+    color: #ffffff !important;
 }
 
 .sidebar-section .sidebar-heading .feather,
 .sidebar-section .sidebar-heading span {
+    color: #ffffff !important;
+}
+
+.sidebar-section .sidebar-heading .flex-grow-1 {
     color: #ffffff !important;
 }
 
