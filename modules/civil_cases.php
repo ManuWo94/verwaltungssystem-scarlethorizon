@@ -380,12 +380,12 @@ $judges = array_filter($users, function($user) {
                                             <span data-feather="eye"></span> Ansehen
                                         </a>
                                         <?php if (currentUserCan('civil_cases', 'edit')): ?>
-                                        <a href="case_edit.php?id=<?php echo $case['id']; ?>" class="btn btn-sm btn-primary">
+                                        <a href="civil_case_edit.php?id=<?php echo $case['id']; ?>" class="btn btn-sm btn-primary">
                                             <span data-feather="edit"></span> Bearbeiten
                                         </a>
                                         <?php endif; ?>
                                         <?php if (currentUserCan('civil_cases', 'delete')): ?>
-                                        <form method="post" action="cases.php" class="d-inline">
+                                        <form method="post" action="civil_cases.php" class="d-inline">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="case_id" value="<?php echo $case['id']; ?>">
                                             <button type="submit" class="btn btn-sm btn-danger btn-delete">
