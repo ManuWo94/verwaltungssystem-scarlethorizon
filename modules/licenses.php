@@ -22,12 +22,16 @@ $activeCategories = array_filter($categories, function($cat) {
 
 // AJAX Handler - VOR dem Header!
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Bei Entwicklung: Fehler in JSON-Response einfangen
-    ob_start();
+    // Error-Reporting für Debugging
+    error_reporting(E_ALL);
+    ini_set('display_errors', 0); // Nicht direkt ausgeben
     
     header('Content-Type: application/json');
     
     $action = $_POST['action'] ?? '';
+    
+    // Debug-Log
+    error_log("License AJAX Request - Action: " . $action);
     
     // Lizenznummer generieren
     if ($action === 'generate_number') {
