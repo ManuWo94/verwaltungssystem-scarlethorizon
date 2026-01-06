@@ -22,6 +22,9 @@ $activeCategories = array_filter($categories, function($cat) {
 
 // AJAX Handler - VOR dem Header!
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Bei Entwicklung: Fehler in JSON-Response einfangen
+    ob_start();
+    
     header('Content-Type: application/json');
     
     $action = $_POST['action'] ?? '';
@@ -136,8 +139,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             echo json_encode(['success' => false, 'message' => 'Fehler beim Löschen']);
         }
+        }
         exit;
     }
+    
+    // Wenn keine Action erkannt wurde
+    echo json_encode(['success' => false, 'message' => 'Unbekannte Aktion: ' . $action]);
+    exit;
 }
 
 // Header nur bei GET-Anfragen laden
@@ -607,21 +615,42 @@ $(document).ready(function() {
         const $btn = $(this).find('button[type="submit"]');
         $btn.prop('disabled', true).html('<i data-feather="loader"></i> Speichert...');
         
-        $.post('', $(this).serialize(), function(response) {
-            $btn.prop('disabled', false).html('<i data-feather="check"></i> Lizenz erstellen');
-            feather.replace();
-            
-            if (response.success) {
-                $('#createLicenseModal').modal('hide');
-                alert('Lizenz erfolgreich erstellt!');
-                location.reload();
-            } else {
-                alert('Fehler: ' + response.message);
+        $.ajax({
+            url: '',
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                $btn.prop('disabled', false).html('<i data-feather="check"></i> Lizenz erstellen');
+                feather.replace();
+                
+                if (response.success) {
+                    $('#createLicenseModal').modal('hide');
+                    alert('Lizenz erfolgreich erstellt!');
+                    location.reload();
+                } else {
+                    alert('Fehler: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                $btn.prop('disabled', false).html('<i data-feather="check"></i> Lizenz erstellen');
+                feather.replace();
+                
+                console.error('AJAX Error:', status, error);
+                console.error('Response:', xhr.responseText);
+                
+                let errorMsg = 'Unbekannter Fehler';
+                if (xhr.responseText) {
+                    try {
+                        const errorData = JSON.parse(xhr.responseText);
+                        errorMsg = errorData.message || errorMsg;
+                    } catch(e) {
+                        // Wenn es kein JSON ist, zeige die ersten 200 Zeichen
+                        errorMsg = xhr.responseText.substring(0, 200);
+                    }
+                }
+                alert('Fehler beim Speichern: ' + errorMsg + '\n\nStatus: ' + xhr.status + '\nBitte Konsole für Details prüfen.');
             }
-        }, 'json').fail(function(xhr) {
-            $btn.prop('disabled', false).html('<i data-feather="check"></i> Lizenz erstellen');
-            feather.replace();
-            alert('Fehler beim Speichern: ' + (xhr.responseText || 'Unbekannter Fehler'));
         });
     });
     
