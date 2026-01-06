@@ -750,6 +750,24 @@ main {
     border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
+/* Benachrichtigungs-Badges in der Sidebar */
+.sidebar .notification-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 10px;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+.sidebar .nav-link {
+    position: relative;
+}
+
+.sidebar .nav-link .badge {
+    float: right;
+    margin-top: 2px;
+}
+
 /* Korrektur für die Module-Seiten: col-md-9 ist der Main-Container in vielen Modulen */
 .col-md-9.ms-sm-auto.col-lg-10.px-md-4 {
     margin-left: 220px !important;

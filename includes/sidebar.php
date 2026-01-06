@@ -1,3 +1,17 @@
+<?php 
+// Benachrichtigungen laden
+require_once __DIR__ . '/notifications.php';
+$unreadCounts = [];
+if (isset($_SESSION['user_id'])) {
+    $unreadCounts = [
+        'public_notes' => countUnreadNotifications($_SESSION['user_id'], 'public_note_comment'),
+        'task_assignments' => countUnreadNotifications($_SESSION['user_id'], 'task'),
+        'cases' => countUnreadNotifications($_SESSION['user_id'], 'case'),
+        'total' => countUnreadNotifications($_SESSION['user_id'])
+    ];
+}
+?>
+
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
     <div class="sidebar-sticky pt-3">
         <!-- Hauptfunktionen -->
@@ -9,6 +23,9 @@
                 <a class="nav-link <?php echo getCurrentPage() == 'dashboard.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>dashboard.php">
                     <span data-feather="home"></span>
                     Übersicht
+                    <?php if (!empty($unreadCounts['total'])): ?>
+                        <span class="badge badge-danger ml-2"><?php echo $unreadCounts['total']; ?></span>
+                    <?php endif; ?>
                 </a>
             </li>
             <li class="nav-item">
@@ -33,6 +50,9 @@
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/public_notes.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/public_notes.php">
                     <span data-feather="message-square"></span>
                     Öffentliche Notizen
+                    <?php if (!empty($unreadCounts['public_notes'])): ?>
+                        <span class="badge badge-info ml-2 notification-badge" data-type="public_notes"><?php echo $unreadCounts['public_notes']; ?></span>
+                    <?php endif; ?>
                 </a>
             </li>
             <li class="nav-item">
@@ -45,6 +65,9 @@
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/task_assignments.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/task_assignments.php">
                     <span data-feather="clipboard"></span>
                     Aufgabenverteilung
+                    <?php if (!empty($unreadCounts['task_assignments'])): ?>
+                        <span class="badge badge-warning ml-2 notification-badge" data-type="task_assignments"><?php echo $unreadCounts['task_assignments']; ?></span>
+                    <?php endif; ?>
                 </a>
             </li>
         </ul>
@@ -58,6 +81,9 @@
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/cases.php">
                     <span data-feather="folder"></span>
                     Fallverwaltung
+                    <?php if (!empty($unreadCounts['cases'])): ?>
+                        <span class="badge badge-primary ml-2 notification-badge" data-type="cases"><?php echo $unreadCounts['cases']; ?></span>
+                    <?php endif; ?>
                 </a>
             </li>
             <li class="nav-item">

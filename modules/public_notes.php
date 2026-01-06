@@ -13,6 +13,7 @@ require_once '../includes/functions.php';
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/permissions.php';
+require_once '../includes/notifications.php';
 
 // Überprüfen, ob der Benutzer angemeldet ist
 if (!isset($_SESSION['user_id'])) {
@@ -167,6 +168,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $comments[] = $comment;
             if (file_put_contents($commentsFile, json_encode($comments, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
+                // Finde die Notiz für Benachrichtigung
+                $note = null;
+                foreach ($publicNotes as $n) {
+                    if ($n['id'] === $note_id) {
+                        $note = $n;
+                        break;
+                    }
+                }
+                
+                if ($note) {
+                    // Lade alle Benutzer die bereits kommentiert haben + Ersteller
+                    $usersFile = '../data/users.json';
+                    $users = getJsonData($usersFile) ?: [];
+                    
+                    // Sammle alle Benutzer die benachrichtigt werden sollen
+                    $notifyUsers = [];
+                    
+                    // Ersteller benachrichtigen (wenn nicht der Kommentierende)
+                    if ($note['user_id'] !== $user_id) {
+                        $notifyUsers[$note['user_id']] = true;
+                    }
+                    
+                    // Alle die bereits kommentiert haben benachrichtigen
+                    foreach ($comments as $c) {
+                        if ($c['note_id'] === $note_id && $c['user_id'] !== $user_id) {
+                            $notifyUsers[$c['user_id']] = true;
+                        }
+                    }
+                    
+                    // Erstelle Benachrichtigungen
+                    $commenterName = $username;
+                    foreach ($users as $u) {
+                        if ($u['id'] === $user_id) {
+                            $commenterName = isset($u['first_name']) && isset($u['last_name']) ?
+                                $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
+                            break;
+                        }
+                    }
+                    
+                    foreach (array_keys($notifyUsers) as $notifyUserId) {
+                        createNotification(
+                            $notifyUserId,
+                            'public_note_comment',
+                            'Neuer Kommentar zu öffentlicher Notiz',
+                            $commenterName . ' hat die Notiz "' . $note['title'] . '" kommentiert.',
+                            'modules/public_notes.php',
+                            $note_id
+                        );
+                    }
+                }
+                
                 $message = 'Kommentar hinzugefügt.';
             } else {
                 $error = 'Fehler beim Speichern des Kommentars.';

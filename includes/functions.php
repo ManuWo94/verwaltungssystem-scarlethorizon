@@ -630,6 +630,49 @@ function getTemplate($templateId) {
 }
 
 /**
+ * Konvertiert einen Zeitstempel in eine "vor X Minuten/Stunden/Tagen" Anzeige
+ * 
+ * @param string $datetime Der Zeitstempel
+ * @return string Die formatierte Zeitangabe
+ */
+function timeAgo($datetime) {
+    $timestamp = strtotime($datetime);
+    $diff = time() - $timestamp;
+    
+    if ($diff < 60) {
+        return 'vor ' . $diff . ' Sekunde' . ($diff != 1 ? 'n' : '');
+    }
+    
+    if ($diff < 3600) {
+        $minutes = floor($diff / 60);
+        return 'vor ' . $minutes . ' Minute' . ($minutes != 1 ? 'n' : '');
+    }
+    
+    if ($diff < 86400) {
+        $hours = floor($diff / 3600);
+        return 'vor ' . $hours . ' Stunde' . ($hours != 1 ? 'n' : '');
+    }
+    
+    if ($diff < 604800) {
+        $days = floor($diff / 86400);
+        return 'vor ' . $days . ' Tag' . ($days != 1 ? 'en' : '');
+    }
+    
+    if ($diff < 2592000) {
+        $weeks = floor($diff / 604800);
+        return 'vor ' . $weeks . ' Woche' . ($weeks != 1 ? 'n' : '');
+    }
+    
+    if ($diff < 31536000) {
+        $months = floor($diff / 2592000);
+        return 'vor ' . $months . ' Monat' . ($months != 1 ? 'en' : '');
+    }
+    
+    $years = floor($diff / 31536000);
+    return 'vor ' . $years . ' Jahr' . ($years != 1 ? 'en' : '');
+}
+
+/**
  * Sanitize input data
  * 
  * @param string $data The input to sanitize
