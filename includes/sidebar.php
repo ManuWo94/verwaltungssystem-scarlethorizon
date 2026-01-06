@@ -89,33 +89,22 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
             <span>Aktenverwaltung</span>
         </h6>
         <ul class="nav flex-column">
-        <!-- Fallverwaltung Dropdown -->
+        <!-- Fallverwaltung - Strafakten -->
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#fallverwaltungSubmenu" aria-expanded="false">
-                    <span data-feather="folder"></span>
-                    Fallverwaltung
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/cases.php">
+                    <span data-feather="alert-triangle"></span>
+                    Strafakten
                     <?php if (!empty($unreadCounts['cases']) && $unreadCounts['cases'] > 0): ?>
                         <span class="badge badge-primary ml-2 notification-badge" data-type="cases"><?php echo $unreadCounts['cases']; ?></span>
                     <?php endif; ?>
-                    <span class="ml-auto" data-feather="chevron-down"></span>
                 </a>
-                <div class="collapse" id="fallverwaltungSubmenu">
-                    <ul class="nav flex-column ml-3">
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo getCurrentPage() == 'modules/cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/cases.php">
-                                <span data-feather="alert-triangle"></span>
-                                Strafakten
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo getCurrentPage() == 'modules/civil_cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/civil_cases.php">
-                                <span data-feather="briefcase"></span>
-                                Zivilakten
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/civil_cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/civil_cases.php">
+                    <span data-feather="briefcase"></span>
+                    Zivilakten
+                </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/defendants.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/defendants.php">
