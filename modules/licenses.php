@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 // Berechtigung prüfen
-requireLogin();
+checkLogin();
 if (!currentUserCan('licenses', 'view')) {
     header('Location: ' . getBasePath() . 'access_denied.php');
     exit;

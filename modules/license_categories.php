@@ -5,7 +5,7 @@ require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 // Nur Admins
-requireLogin();
+checkLogin();
 if (!currentUserCan('admin', 'view') && $_SESSION['role'] !== 'Administrator') {
     header('Location: ' . getBasePath() . 'access_denied.php');
     exit;
