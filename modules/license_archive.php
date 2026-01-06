@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/session_config.php';
 require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 checkLogin();
@@ -10,6 +9,7 @@ if (!currentUserCan('licenses', 'view')) {
     exit;
 }
 
+require_once __DIR__ . '/../includes/header.php';
 $basePath = getBasePath();
 $licenses = loadJsonData('licenses.json');
 

@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/session_config.php';
 require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/header.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 // Nur Admins
@@ -11,6 +10,7 @@ if (!currentUserCan('admin', 'view') && $_SESSION['role'] !== 'Administrator') {
     exit;
 }
 
+require_once __DIR__ . '/../includes/header.php';
 $basePath = getBasePath();
 $categories = loadJsonData('license_categories.json');
 
