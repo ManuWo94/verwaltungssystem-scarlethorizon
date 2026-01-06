@@ -263,7 +263,7 @@ include '../includes/header.php';
                                                                 'Hauptfunktionen' => ['duty_log', 'calendar', 'notes', 'public_notes', 'todos', 'task_assignments'],
                                                                 'Aktenverwaltung' => ['cases', 'defendants', 'indictments', 'revisions', 'files', 'templates', 'warrants', 'appeals', 'hearings', 'verdicts'],
                                                                 'Büroverwaltung' => ['staff', 'trainings', 'vacation', 'evidence', 'seized_assets', 'equipment', 'address_book', 'justice_references', 'business_licenses'],
-                                                                'Lizenzverwaltung' => ['licenses'],
+                                                                'Lizenzverwaltung' => ['licenses', 'license_categories'],
                                                                 'Administration' => ['admin', 'users', 'roles']
                                                             ];
                                                             
