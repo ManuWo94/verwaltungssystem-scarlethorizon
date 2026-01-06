@@ -492,7 +492,7 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                                             <input type="hidden" name="case_id" value="<?php echo $case['id']; ?>">
                                             <button type="submit" class="btn btn-sm btn-danger btn-delete">
                                                 <span data-feather="trash-2"></span> Löschen
-                                            <10button>
+                                            </button>
                                         </form>
                                         <?php endif; ?>
                                     </td>
