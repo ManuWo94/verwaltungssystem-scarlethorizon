@@ -774,14 +774,12 @@ main {
 
 .sidebar .nav-link {
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    /* Nicht flex verwenden - Problem mit Breite */
 }
 
 .sidebar .nav-link .badge {
     margin-left: auto;
-    flex-shrink: 0;
+    float: right;
 }
 
 /* Farben für verschiedene Badge-Typen */

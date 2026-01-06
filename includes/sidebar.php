@@ -264,27 +264,37 @@ document.addEventListener('DOMContentLoaded', function() {
         scrollEl = sticky;
     }
 
-    var saved = sessionStorage.getItem(storageKey);
-    if (saved !== null) {
-        scrollEl.scrollTop = parseInt(saved, 10) || 0;
+    // Sicher auf sessionStorage zugreifen (Tracking Prevention-kompatibel)
+    try {
+        var saved = sessionStorage.getItem(storageKey);
+        if (saved !== null) {
+            scrollEl.scrollTop = parseInt(saved, 10) || 0;
+        }
+
+        var saveScroll = function() {
+            try {
+                sessionStorage.setItem(storageKey, scrollEl.scrollTop);
+            } catch (e) {
+                // SessionStorage nicht verfügbar - ignorieren
+            }
+        };
+
+        scrollEl.addEventListener('scroll', saveScroll);
+        window.addEventListener('beforeunload', saveScroll);
+
+        // Save immediately when a sidebar link is clicked (before navigation unloads)
+        sidebarNav.addEventListener('click', function(ev) {
+            var target = ev.target;
+            if (target.tagName !== 'A') {
+                target = target.closest('a');
+            }
+            if (target && target.matches('a.nav-link')) {
+                saveScroll();
+            }
+        });
+    } catch (e) {
+        // SessionStorage nicht verfügbar - weiterhin funktionieren
+        console.warn('SessionStorage nicht verfügbar:', e);
     }
-
-    var saveScroll = function() {
-        sessionStorage.setItem(storageKey, scrollEl.scrollTop);
-    };
-
-    scrollEl.addEventListener('scroll', saveScroll);
-    window.addEventListener('beforeunload', saveScroll);
-
-    // Save immediately when a sidebar link is clicked (before navigation unloads)
-    sidebarNav.addEventListener('click', function(ev) {
-        var target = ev.target;
-        if (target.tagName !== 'A') {
-            target = target.closest('a');
-        }
-        if (target && target.matches('a.nav-link')) {
-            saveScroll();
-        }
-    });
 });
 </script>
