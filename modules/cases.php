@@ -249,10 +249,13 @@ $prosecutors = array_filter($users, function($user) {
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 cases-page main-content">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">Fallverwaltung</h1>
-                <div>
+                <div class="btn-group">
                     <?php if (currentUserCan('cases', 'create')): ?>
-                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal">
-                        <span data-feather="plus"></span> Neuen Fall hinzufügen
+                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#addCaseModal" data-case-type="Straf">
+                        <span data-feather="alert-triangle"></span> Strafsache anlegen
+                    </button>
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal" data-case-type="Zivil">
+                        <span data-feather="briefcase"></span> Zivilsache anlegen
                     </button>
                     <?php endif; ?>
                 </div>
@@ -265,6 +268,27 @@ $prosecutors = array_filter($users, function($user) {
             <?php if (!empty($error)): ?>
                 <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
+
+            <!-- Tabs für Straf/Zivil -->
+            <ul class="nav nav-tabs mb-3" id="caseTypeTabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">
+                        Alle Fälle <span class="badge badge-secondary"><?php echo count($cases); ?></span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="straf-tab" data-toggle="tab" href="#straf" role="tab">
+                        <span data-feather="alert-triangle"></span> Strafsachen 
+                        <span class="badge badge-danger"><?php echo count(array_filter($cases, function($c) { return ($c['case_type'] ?? 'Straf') === 'Straf'; })); ?></span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="zivil-tab" data-toggle="tab" href="#zivil" role="tab">
+                        <span data-feather="briefcase"></span> Zivilsachen 
+                        <span class="badge badge-primary"><?php echo count(array_filter($cases, function($c) { return ($c['case_type'] ?? 'Straf') === 'Zivil'; })); ?></span>
+                    </a>
+                </li>
+            </ul>
 
             <div class="mb-3">
                 <div class="row align-items-center">
@@ -294,6 +318,42 @@ $prosecutors = array_filter($users, function($user) {
                 </div>
             </div>
 
+            <!-- Tab Content -->
+            <div class="tab-content" id="caseTypeTabContent">
+                <!-- Alle Fälle -->
+                <div class="tab-pane fade show active" id="all" role="tabpanel">
+                    <?php renderCaseTable($cases); ?>
+                </div>
+                
+                <!-- Strafsachen -->
+                <div class="tab-pane fade" id="straf" role="tabpanel">
+                    <?php 
+                    $strafCases = array_filter($cases, function($c) { 
+                        return ($c['case_type'] ?? 'Straf') === 'Straf'; 
+                    });
+                    renderCaseTable($strafCases); 
+                    ?>
+                </div>
+                
+                <!-- Zivilsachen -->
+                <div class="tab-pane fade" id="zivil" role="tabpanel">
+                    <?php 
+                    $zivilCases = array_filter($cases, function($c) { 
+                        return ($c['case_type'] ?? 'Straf') === 'Zivil'; 
+                    });
+                    renderCaseTable($zivilCases); 
+                    ?>
+                </div>
+            </div>
+        </main>
+        </div>
+    </div>
+
+<?php
+// Funktion zum Rendern der Tabelle
+function renderCaseTable($casesToDisplay) {
+    global $statusLabels;
+?>
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -313,8 +373,8 @@ $prosecutors = array_filter($users, function($user) {
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (count($cases) > 0): ?>
-                                    <?php foreach ($cases as $case): ?>
+                                <?php if (count($casesToDisplay) > 0): ?>
+                                    <?php foreach ($casesToDisplay as $case): ?>
                                         <tr>
                                             <td>
                                                 <?php 
@@ -421,8 +481,10 @@ $prosecutors = array_filter($users, function($user) {
             </div>
         </div>
     </div>
-</main>
-        </div>
+<?php
+}
+// Ende der renderCaseTable Funktion
+?>
     </div>
 
 <!-- Add Case Modal -->
@@ -437,20 +499,8 @@ $prosecutors = array_filter($users, function($user) {
             </div>
             <form method="post" action="cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
-                    <!-- Aktentyp Auswahl - Prominent am Anfang -->
-                    <div class="form-group">
-                        <label class="font-weight-bold">Art der Angelegenheit *</label>
-                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
-                            <label class="btn btn-outline-danger active">
-                                <input type="radio" name="case_type" value="Straf" checked> 
-                                <i data-feather="alert-triangle"></i> Strafangelegenheit
-                            </label>
-                            <label class="btn btn-outline-primary">
-                                <input type="radio" name="case_type" value="Zivil"> 
-                                <i data-feather="briefcase"></i> Zivilangelegenheit
-                            </label>
-                        </div>
-                    </div>
+                    <!-- Hidden Aktentyp - wird per JavaScript gesetzt -->
+                    <input type="hidden" name="case_type" id="caseTypeInput" value="Straf">
                     
                     <hr>
                     
@@ -600,6 +650,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof feather !== 'undefined') {
         feather.replace();
     }
+    
+    // Modal-Typ setzen basierend auf Button
+    $('#addCaseModal').on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget);
+        const caseType = button.data('case-type');
+        
+        if (caseType) {
+            $('#caseTypeInput').val(caseType);
+            
+            // Modal-Titel anpassen
+            if (caseType === 'Straf') {
+                $('#addCaseModalLabel').html('<span data-feather="alert-triangle"></span> Neue Strafsache anlegen');
+                $(this).find('.modal-header').removeClass('bg-primary').addClass('bg-danger').css('color', 'white');
+            } else {
+                $('#addCaseModalLabel').html('<span data-feather="briefcase"></span> Neue Zivilsache anlegen');
+                $(this).find('.modal-header').removeClass('bg-danger').addClass('bg-primary').css('color', 'white');
+            }
+            
+            // Icons neu rendern
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
+    });
     
     const defendantsData = <?php echo json_encode($defendants, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 
