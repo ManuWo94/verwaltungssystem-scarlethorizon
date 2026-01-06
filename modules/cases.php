@@ -252,10 +252,10 @@ $prosecutors = array_filter($users, function($user) {
                 <div class="btn-group">
                     <?php if (currentUserCan('cases', 'create')): ?>
                     <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#addCaseModal" data-case-type="Straf">
-                        <span data-feather="alert-triangle"></span> Strafsache anlegen
+                        <span data-feather="alert-triangle"></span> Strafakte anlegen
                     </button>
                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal" data-case-type="Zivil">
-                        <span data-feather="briefcase"></span> Zivilsache anlegen
+                        <span data-feather="briefcase"></span> Zivilakte anlegen
                     </button>
                     <?php endif; ?>
                 </div>
@@ -273,19 +273,19 @@ $prosecutors = array_filter($users, function($user) {
             <ul class="nav nav-tabs mb-3" id="caseTypeTabs" role="tablist">
                 <li class="nav-item">
                     <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">
-                        Alle Fälle <span class="badge badge-secondary"><?php echo count($cases); ?></span>
+                        Alle Akten <span class="badge badge-secondary"><?php echo count($cases); ?></span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" id="straf-tab" data-toggle="tab" href="#straf" role="tab">
-                        <span data-feather="alert-triangle"></span> Strafsachen 
-                        <span class="badge badge-danger"><?php echo count(array_filter($cases, function($c) { return ($c['case_type'] ?? 'Straf') === 'Straf'; })); ?></span>
+                        <span data-feather="alert-triangle"></span> Strafakten 
+                        <span class="badge badge-danger"><?php echo count(array_filter($cases, function($c) { return isset($c['case_type']) && $c['case_type'] === 'Straf'; })); ?></span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" id="zivil-tab" data-toggle="tab" href="#zivil" role="tab">
-                        <span data-feather="briefcase"></span> Zivilsachen 
-                        <span class="badge badge-primary"><?php echo count(array_filter($cases, function($c) { return ($c['case_type'] ?? 'Straf') === 'Zivil'; })); ?></span>
+                        <span data-feather="briefcase"></span> Zivilakten 
+                        <span class="badge badge-primary"><?php echo count(array_filter($cases, function($c) { return isset($c['case_type']) && $c['case_type'] === 'Zivil'; })); ?></span>
                     </a>
                 </li>
             </ul>
@@ -320,26 +320,26 @@ $prosecutors = array_filter($users, function($user) {
 
             <!-- Tab Content -->
             <div class="tab-content" id="caseTypeTabContent">
-                <!-- Alle Fälle -->
+                <!-- Alle Akten -->
                 <div class="tab-pane fade show active" id="all" role="tabpanel">
                     <?php renderCaseTable($cases); ?>
                 </div>
                 
-                <!-- Strafsachen -->
+                <!-- Strafakten -->
                 <div class="tab-pane fade" id="straf" role="tabpanel">
                     <?php 
                     $strafCases = array_filter($cases, function($c) { 
-                        return ($c['case_type'] ?? 'Straf') === 'Straf'; 
+                        return isset($c['case_type']) && $c['case_type'] === 'Straf'; 
                     });
                     renderCaseTable($strafCases); 
                     ?>
                 </div>
                 
-                <!-- Zivilsachen -->
+                <!-- Zivilakten -->
                 <div class="tab-pane fade" id="zivil" role="tabpanel">
                     <?php 
                     $zivilCases = array_filter($cases, function($c) { 
-                        return ($c['case_type'] ?? 'Straf') === 'Zivil'; 
+                        return isset($c['case_type']) && $c['case_type'] === 'Zivil'; 
                     });
                     renderCaseTable($zivilCases); 
                     ?>
@@ -662,10 +662,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Modal-Titel und Labels anpassen
             if (caseType === 'Straf') {
                 // Header
-                $('#addCaseModalLabel').html('<span data-feather="alert-triangle"></span> Neue Strafsache anlegen');
+                $('#addCaseModalLabel').html('<span data-feather="alert-triangle"></span> Neue Strafakte anlegen');
                 $(this).find('.modal-header').removeClass('bg-primary').addClass('bg-danger').css('color', 'white');
                 
-                // Labels für Strafsache
+                // Labels für Strafakte
                 $('#defendantLabel').text('Angeklagter *');
                 $('#defendantHelp').text('Vorhandene Angeklagte können gewählt oder neue eingetragen werden.');
                 $('#defendantError').text('Bitte wählen oder erfassen Sie einen Angeklagten.');
@@ -674,10 +674,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#chargeError').text('Bitte geben Sie die Anklage ein.');
             } else {
                 // Header
-                $('#addCaseModalLabel').html('<span data-feather="briefcase"></span> Neue Zivilsache anlegen');
+                $('#addCaseModalLabel').html('<span data-feather="briefcase"></span> Neue Zivilakte anlegen');
                 $(this).find('.modal-header').removeClass('bg-danger').addClass('bg-primary').css('color', 'white');
                 
-                // Labels für Zivilsache
+                // Labels für Zivilakte
                 $('#defendantLabel').text('Partei *');
                 $('#defendantHelp').text('Vorhandene Parteien können gewählt oder neue eingetragen werden.');
                 $('#defendantError').text('Bitte wählen oder erfassen Sie eine Partei.');
