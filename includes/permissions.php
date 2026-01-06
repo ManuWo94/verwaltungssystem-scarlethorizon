@@ -32,6 +32,7 @@ function getAvailableModules() {
         'seized_assets' => 'Beschlagnahmungen',
         'business_licenses' => 'Gewerbeschein',
         'licenses' => 'Lizenzverwaltung',
+        'license_categories' => 'Lizenzkategorien',
         'todos' => 'Aufgabenliste',
         'task_assignments' => 'Aufgabenverteilung',
         'evidence' => 'Beweismittel',

@@ -264,6 +264,12 @@
                 "edit",
                 "delete"
             ],
+            "license_categories": [
+                "view",
+                "create",
+                "edit",
+                "delete"
+            ],
             "todos": [
                 "view",
                 "create",
