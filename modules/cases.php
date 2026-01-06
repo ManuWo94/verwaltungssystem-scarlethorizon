@@ -512,24 +512,24 @@ function renderCaseTable($casesToDisplay) {
                         </small>
                     </div>
                     <div class="form-group">
-                        <label for="defendant">Angeklagter *</label>
+                        <label for="defendant" id="defendantLabel">Angeklagter *</label>
                         <input list="defendant_list" class="form-control" id="defendant" name="defendant" required placeholder="Name eingeben oder auswählen">
                         <datalist id="defendant_list">
                             <?php foreach ($defendants as $defendant): ?>
                                 <option value="<?php echo htmlspecialchars($defendant['name']); ?>"><?php echo htmlspecialchars($defendant['tg_number'] ?? ''); ?></option>
                             <?php endforeach; ?>
                         </datalist>
-                        <small class="form-text text-muted">Vorhandene Angeklagte können gewählt oder neue eingetragen werden.</small>
-                        <div class="invalid-feedback">Bitte wählen oder erfassen Sie einen Angeklagten.</div>
+                        <small class="form-text text-muted" id="defendantHelp">Vorhandene Angeklagte können gewählt oder neue eingetragen werden.</small>
+                        <div class="invalid-feedback" id="defendantError">Bitte wählen oder erfassen Sie einen Angeklagten.</div>
                     </div>
                     <div class="form-group">
-                        <label for="defendant_tg">TG-Nummer des Angeklagten</label>
+                        <label for="defendant_tg" id="tgLabel">TG-Nummer des Angeklagten</label>
                         <input type="text" class="form-control" id="defendant_tg" name="defendant_tg" placeholder="z.B. TG-1234">
                     </div>
                     <div class="form-group">
-                        <label for="charge">Anklage *</label>
+                        <label for="charge" id="chargeLabel">Anklage *</label>
                         <input type="text" class="form-control" id="charge" name="charge" required>
-                        <div class="invalid-feedback">Bitte geben Sie die Anklage ein.</div>
+                        <div class="invalid-feedback" id="chargeError">Bitte geben Sie die Anklage ein.</div>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
@@ -659,13 +659,31 @@ document.addEventListener('DOMContentLoaded', function() {
         if (caseType) {
             $('#caseTypeInput').val(caseType);
             
-            // Modal-Titel anpassen
+            // Modal-Titel und Labels anpassen
             if (caseType === 'Straf') {
+                // Header
                 $('#addCaseModalLabel').html('<span data-feather="alert-triangle"></span> Neue Strafsache anlegen');
                 $(this).find('.modal-header').removeClass('bg-primary').addClass('bg-danger').css('color', 'white');
+                
+                // Labels für Strafsache
+                $('#defendantLabel').text('Angeklagter *');
+                $('#defendantHelp').text('Vorhandene Angeklagte können gewählt oder neue eingetragen werden.');
+                $('#defendantError').text('Bitte wählen oder erfassen Sie einen Angeklagten.');
+                $('#tgLabel').text('TG-Nummer des Angeklagten');
+                $('#chargeLabel').text('Anklage *');
+                $('#chargeError').text('Bitte geben Sie die Anklage ein.');
             } else {
+                // Header
                 $('#addCaseModalLabel').html('<span data-feather="briefcase"></span> Neue Zivilsache anlegen');
                 $(this).find('.modal-header').removeClass('bg-danger').addClass('bg-primary').css('color', 'white');
+                
+                // Labels für Zivilsache
+                $('#defendantLabel').text('Partei *');
+                $('#defendantHelp').text('Vorhandene Parteien können gewählt oder neue eingetragen werden.');
+                $('#defendantError').text('Bitte wählen oder erfassen Sie eine Partei.');
+                $('#tgLabel').text('TG-Nummer der Partei');
+                $('#chargeLabel').text('Streitgegenstand *');
+                $('#chargeError').text('Bitte geben Sie den Streitgegenstand ein.');
             }
             
             // Icons neu rendern
