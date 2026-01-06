@@ -1,14 +1,26 @@
 <?php 
-// Benachrichtigungen laden
-require_once __DIR__ . '/notifications.php';
-$unreadCounts = [];
-if (isset($_SESSION['user_id'])) {
-    $unreadCounts = [
-        'public_notes' => countUnreadNotifications($_SESSION['user_id'], 'public_note_comment'),
-        'task_assignments' => countUnreadNotifications($_SESSION['user_id'], 'task'),
-        'cases' => countUnreadNotifications($_SESSION['user_id'], 'case'),
-        'total' => countUnreadNotifications($_SESSION['user_id'])
-    ];
+// Benachrichtigungen laden (nur wenn Datei existiert)
+$unreadCounts = [
+    'public_notes' => 0,
+    'task_assignments' => 0,
+    'cases' => 0,
+    'total' => 0
+];
+
+if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) {
+    require_once __DIR__ . '/notifications.php';
+    
+    try {
+        $unreadCounts = [
+            'public_notes' => countUnreadNotifications($_SESSION['user_id'], 'public_note_comment'),
+            'task_assignments' => countUnreadNotifications($_SESSION['user_id'], 'task'),
+            'cases' => countUnreadNotifications($_SESSION['user_id'], 'case'),
+            'total' => countUnreadNotifications($_SESSION['user_id'])
+        ];
+    } catch (Exception $e) {
+        // Fehler beim Laden ignorieren und Standardwerte verwenden
+        error_log("Fehler beim Laden der Benachrichtigungen: " . $e->getMessage());
+    }
 }
 ?>
 
@@ -23,8 +35,8 @@ if (isset($_SESSION['user_id'])) {
                 <a class="nav-link <?php echo getCurrentPage() == 'dashboard.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>dashboard.php">
                     <span data-feather="home"></span>
                     Übersicht
-                    <?php if (!empty($unreadCounts['total'])): ?>
-                        <span class="badge badge-danger ml-2"><?php echo $unreadCounts['total']; ?></span>
+                    <?php if (!empty($unreadCounts['total']) && $unreadCounts['total'] > 0): ?>
+                        <span class="badge badge-danger ml-2 notification-badge"><?php echo $unreadCounts['total']; ?></span>
                     <?php endif; ?>
                 </a>
             </li>
@@ -50,7 +62,7 @@ if (isset($_SESSION['user_id'])) {
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/public_notes.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/public_notes.php">
                     <span data-feather="message-square"></span>
                     Öffentliche Notizen
-                    <?php if (!empty($unreadCounts['public_notes'])): ?>
+                    <?php if (!empty($unreadCounts['public_notes']) && $unreadCounts['public_notes'] > 0): ?>
                         <span class="badge badge-info ml-2 notification-badge" data-type="public_notes"><?php echo $unreadCounts['public_notes']; ?></span>
                     <?php endif; ?>
                 </a>
@@ -65,7 +77,7 @@ if (isset($_SESSION['user_id'])) {
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/task_assignments.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/task_assignments.php">
                     <span data-feather="clipboard"></span>
                     Aufgabenverteilung
-                    <?php if (!empty($unreadCounts['task_assignments'])): ?>
+                    <?php if (!empty($unreadCounts['task_assignments']) && $unreadCounts['task_assignments'] > 0): ?>
                         <span class="badge badge-warning ml-2 notification-badge" data-type="task_assignments"><?php echo $unreadCounts['task_assignments']; ?></span>
                     <?php endif; ?>
                 </a>
@@ -81,7 +93,7 @@ if (isset($_SESSION['user_id'])) {
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/cases.php">
                     <span data-feather="folder"></span>
                     Fallverwaltung
-                    <?php if (!empty($unreadCounts['cases'])): ?>
+                    <?php if (!empty($unreadCounts['cases']) && $unreadCounts['cases'] > 0): ?>
                         <span class="badge badge-primary ml-2 notification-badge" data-type="cases"><?php echo $unreadCounts['cases']; ?></span>
                     <?php endif; ?>
                 </a>
