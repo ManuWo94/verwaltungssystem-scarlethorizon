@@ -218,7 +218,7 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
                     Lizenzarchiv
                 </a>
             </li>
-            <?php if (currentUserCan('admin', 'view') || $_SESSION['role'] === 'Administrator'): ?>
+            <?php if (currentUserCan('license_categories', 'view')): ?>
             <li class="nav-item">
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/license_categories.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/license_categories.php">
                     <span data-feather="settings"></span>
