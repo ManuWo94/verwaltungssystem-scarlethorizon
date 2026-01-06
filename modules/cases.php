@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'defendant' => $defendantName,
             'defendant_tg' => $defendantTg,
             'charge' => sanitize($_POST['charge'] ?? ''),
-            'case_type' => sanitize($_POST['case_type'] ?? 'Straf'),
+            'case_type' => sanitize($_POST['case_type'] ?? ''),
             'incident_date' => $incidentDate,
             'expiration_date' => $expirationDateInput,
             'limitation_id' => $limitationId,
@@ -136,6 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Validate required fields
         if (empty($caseData['defendant']) || empty($caseData['charge']) || empty($caseData['incident_date'])) {
             $error = 'Please fill in all required fields.';
+        } elseif (empty($caseData['case_type']) || !in_array($caseData['case_type'], ['Straf', 'Zivil'])) {
+            $error = 'Fehler: Aktentyp (Straf/Zivil) wurde nicht korrekt übermittelt.';
         } else {
             if (isset($_POST['case_id']) && !empty($_POST['case_id'])) {
                 // Update existing case
@@ -505,7 +507,7 @@ function renderCaseTable($casesToDisplay) {
             <form method="post" action="cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
                     <!-- Hidden Aktentyp - wird per JavaScript gesetzt -->
-                    <input type="hidden" name="case_type" id="caseTypeInput" value="Straf">
+                    <input type="hidden" name="case_type" id="caseTypeInput" value="">
                     
                     <hr>
                     
@@ -696,6 +698,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 feather.replace();
             }
         }
+    });
+    
+    // Modal-Reset beim Schließen
+    $('#addCaseModal').on('hidden.bs.modal', function() {
+        $(this).find('form')[0].reset();
+        $('#caseTypeInput').val('');
+        $(this).find('.modal-header').removeClass('bg-danger bg-primary').css('color', '');
     });
     
     const defendantsData = <?php echo json_encode($defendants, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
