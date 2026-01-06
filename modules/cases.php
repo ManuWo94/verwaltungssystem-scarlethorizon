@@ -138,12 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Please fill in all required fields.';
         } else {
             if (isset($_POST['case_id']) && !empty($_POST['case_id'])) {
-                // Update existing case - case_type vom existierenden Fall übernehmen wenn leer
+                // Update existing case
                 $caseId = $_POST['case_id'];
-                $existingCase = findById('cases.json', $caseId);
-                if ($existingCase && empty($caseData['case_type'])) {
-                    $caseData['case_type'] = $existingCase['case_type'] ?? 'Straf';
-                }
                 
                 if (updateRecord('cases.json', $caseId, $caseData)) {
                     $message = 'Fall wurde erfolgreich aktualisiert.';
@@ -253,13 +249,10 @@ $prosecutors = array_filter($users, function($user) {
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 cases-page main-content">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">Fallverwaltung</h1>
-                <div class="btn-group">
+                <div>
                     <?php if (currentUserCan('cases', 'create')): ?>
-                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#addCaseModal" data-case-type="Straf">
-                        <span data-feather="alert-triangle"></span> Strafakte anlegen
-                    </button>
-                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal" data-case-type="Zivil">
-                        <span data-feather="briefcase"></span> Zivilakte anlegen
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal">
+                        <span data-feather="plus"></span> Neuen Fall hinzufügen
                     </button>
                     <?php endif; ?>
                 </div>
@@ -272,27 +265,6 @@ $prosecutors = array_filter($users, function($user) {
             <?php if (!empty($error)): ?>
                 <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
-
-            <!-- Tabs für Straf/Zivil -->
-            <ul class="nav nav-tabs mb-3" id="caseTypeTabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" id="all-tab" data-toggle="tab" href="#all" role="tab">
-                        Alle Akten <span class="badge badge-secondary"><?php echo count($cases); ?></span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="straf-tab" data-toggle="tab" href="#straf" role="tab">
-                        <span data-feather="alert-triangle"></span> Strafakten 
-                        <span class="badge badge-danger"><?php echo count(array_filter($cases, function($c) { return isset($c['case_type']) && $c['case_type'] === 'Straf'; })); ?></span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="zivil-tab" data-toggle="tab" href="#zivil" role="tab">
-                        <span data-feather="briefcase"></span> Zivilakten 
-                        <span class="badge badge-primary"><?php echo count(array_filter($cases, function($c) { return isset($c['case_type']) && $c['case_type'] === 'Zivil'; })); ?></span>
-                    </a>
-                </li>
-            </ul>
 
             <div class="mb-3">
                 <div class="row align-items-center">
@@ -322,52 +294,6 @@ $prosecutors = array_filter($users, function($user) {
                 </div>
             </div>
 
-            <!-- Tab Content -->
-            <div class="tab-content" id="caseTypeTabContent">
-                <!-- Alle Akten -->
-                <div class="tab-pane fade show active" id="all" role="tabpanel">
-                    <?php renderCaseTable($cases, 'all'); ?>
-                </div>
-                
-                <!-- Strafakten -->
-                <div class="tab-pane fade" id="straf" role="tabpanel">
-                    <?php 
-                    $strafCases = array_filter($cases, function($c) { 
-                        return isset($c['case_type']) && $c['case_type'] === 'Straf'; 
-                    });
-                    renderCaseTable($strafCases, 'criminal'); 
-                    ?>
-                </div>
-                
-                <!-- Zivilakten -->
-                <div class="tab-pane fade" id="zivil" role="tabpanel">
-                    <?php 
-                    $zivilCases = array_filter($cases, function($c) { 
-                        return isset($c['case_type']) && $c['case_type'] === 'Zivil'; 
-                    });
-                    renderCaseTable($zivilCases, 'civil'); 
-                    ?>
-                </div>
-            </div>
-        </main>
-        </div>
-    </div>
-
-<?php
-// Funktion zum Rendern der Tabelle
-function renderCaseTable($casesToDisplay, $showType = 'all') {
-    global $statusLabels;
-    
-    // Spalten je nach Typ definieren
-    $showProsecutor = ($showType !== 'civil'); // Nur bei "all" und "criminal"
-    $typeLabel = 'Angeklagter';
-    $chargeLabel = 'Anklage';
-    
-    if ($showType === 'civil') {
-        $typeLabel = 'Partei';
-        $chargeLabel = 'Streitgegenstand';
-    }
-?>
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -375,40 +301,29 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                             <thead>
                                 <tr>
                                     <th>Aktenzeichen</th>
-                                    <?php if ($showType === 'all'): ?>
                                     <th>Typ</th>
-                                    <?php endif; ?>
-                                    <th><?php echo htmlspecialchars($typeLabel); ?></th>
-                                    <th><?php echo htmlspecialchars($chargeLabel); ?></th>
+                                    <th>Angeklagter</th>
+                                    <th>Anklage</th>
                                     <th>Vorfallsdatum</th>
                                     <th>Verjährungsdatum</th>
                                     <th>Bezirk</th>
-                                    <?php if ($showProsecutor): ?>
                                     <th>Staatsanwalt</th>
-                                    <?php endif; ?>
                                     <th>Status</th>
                                     <th>Aktionen</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if (count($casesToDisplay) > 0): ?>
-                                    <?php foreach ($casesToDisplay as $case): ?>
+                                <?php if (count($cases) > 0): ?>
+                                    <?php foreach ($cases as $case): ?>
                                         <tr>
-                                            <td><a href="case_view.php?id=<?php echo $case['id']; ?>"><?php echo htmlspecialchars('#' . substr($case['id'], 0, 8)); ?></a></td>
-                                            <?php if ($showType === 'all'): ?>
                                             <td>
                                                 <?php 
-                                                $type = $case['case_type'] ?? 'Unbekannt';
-                                                $badgeClass = 'badge-secondary';
-                                                if ($type === 'Zivil') {
-                                                    $badgeClass = 'badge-primary';
-                                                } elseif ($type === 'Straf') {
-                                                    $badgeClass = 'badge-danger';
-                                                }
+                                                $type = $case['case_type'] ?? 'Straf';
+                                                $badgeClass = $type === 'Zivil' ? 'badge-info' : 'badge-danger';
                                                 echo '<span class="badge ' . $badgeClass . '">' . htmlspecialchars($type) . '</span>';
                                                 ?>
                                             </td>
-                                            <?php endif; ?>
+                                            <td><a href="case_view.php?id=<?php echo $case['id']; ?>"><?php echo htmlspecialchars('#' . substr($case['id'], 0, 8)); ?></a></td>
                                     <td><?php echo htmlspecialchars($case['defendant']); ?></td>
                                     <td><?php echo htmlspecialchars($case['charge']); ?></td>
                                     <td><?php echo isset($case['incident_date']) ? htmlspecialchars(formatDate($case['incident_date'])) : 'Nicht angegeben'; ?></td>
@@ -431,9 +346,7 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                                         ?>
                                     </td>
                                     <td><?php echo isset($case['district']) ? htmlspecialchars($case['district']) : 'Nicht angegeben'; ?></td>
-                                    <?php if ($showProsecutor): ?>
                                     <td><?php echo isset($case['prosecutor']) ? htmlspecialchars($case['prosecutor']) : 'Nicht zugewiesen'; ?></td>
-                                    <?php endif; ?>
                                     <td>
                                         <?php 
                                             $statusClass = 'secondary';
@@ -492,7 +405,7 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                                             <input type="hidden" name="case_id" value="<?php echo $case['id']; ?>">
                                             <button type="submit" class="btn btn-sm btn-danger btn-delete">
                                                 <span data-feather="trash-2"></span> Löschen
-                                            </button>
+                                            <10button>
                                         </form>
                                         <?php endif; ?>
                                     </td>
@@ -508,10 +421,8 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
             </div>
         </div>
     </div>
-<?php
-}
-// Ende der renderCaseTable Funktion
-?>
+</main>
+        </div>
     </div>
 
 <!-- Add Case Modal -->
@@ -526,8 +437,20 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
             </div>
             <form method="post" action="cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
-                    <!-- Hidden Aktentyp - wird per JavaScript gesetzt -->
-                    <input type="hidden" name="case_type" id="caseTypeInput" value="Straf">
+                    <!-- Aktentyp Auswahl - Prominent am Anfang -->
+                    <div class="form-group">
+                        <label class="font-weight-bold">Art der Angelegenheit *</label>
+                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
+                            <label class="btn btn-outline-danger active">
+                                <input type="radio" name="case_type" value="Straf" checked> 
+                                <i data-feather="alert-triangle"></i> Strafangelegenheit
+                            </label>
+                            <label class="btn btn-outline-primary">
+                                <input type="radio" name="case_type" value="Zivil"> 
+                                <i data-feather="briefcase"></i> Zivilangelegenheit
+                            </label>
+                        </div>
+                    </div>
                     
                     <hr>
                     
@@ -539,24 +462,24 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                         </small>
                     </div>
                     <div class="form-group">
-                        <label for="defendant" id="defendantLabel">Angeklagter *</label>
+                        <label for="defendant">Angeklagter *</label>
                         <input list="defendant_list" class="form-control" id="defendant" name="defendant" required placeholder="Name eingeben oder auswählen">
                         <datalist id="defendant_list">
                             <?php foreach ($defendants as $defendant): ?>
                                 <option value="<?php echo htmlspecialchars($defendant['name']); ?>"><?php echo htmlspecialchars($defendant['tg_number'] ?? ''); ?></option>
                             <?php endforeach; ?>
                         </datalist>
-                        <small class="form-text text-muted" id="defendantHelp">Vorhandene Angeklagte können gewählt oder neue eingetragen werden.</small>
-                        <div class="invalid-feedback" id="defendantError">Bitte wählen oder erfassen Sie einen Angeklagten.</div>
+                        <small class="form-text text-muted">Vorhandene Angeklagte können gewählt oder neue eingetragen werden.</small>
+                        <div class="invalid-feedback">Bitte wählen oder erfassen Sie einen Angeklagten.</div>
                     </div>
                     <div class="form-group">
-                        <label for="defendant_tg" id="tgLabel">TG-Nummer des Angeklagten</label>
+                        <label for="defendant_tg">TG-Nummer des Angeklagten</label>
                         <input type="text" class="form-control" id="defendant_tg" name="defendant_tg" placeholder="z.B. TG-1234">
                     </div>
                     <div class="form-group">
-                        <label for="charge" id="chargeLabel">Streitgegenstand *</label>
+                        <label for="charge">Anklage *</label>
                         <input type="text" class="form-control" id="charge" name="charge" required>
-                        <div class="invalid-feedback" id="chargeError">Bitte geben Sie den Streitgegenstand ein.</div>
+                        <div class="invalid-feedback">Bitte geben Sie die Anklage ein.</div>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
@@ -587,11 +510,10 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6" id="bailAmountGroup">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label for="bail_amount">Kaution</label>
                                 <input type="text" class="form-control" id="bail_amount" name="bail_amount">
-                                <small class="form-text text-muted">Nur bei Strafakten relevant</small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -605,7 +527,7 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6" id="prosecutorGroup">
+                        <div class="col-md-6">
                             <div class="form-group">
                                 <label for="prosecutor">Staatsanwalt</label>
                                 <select class="form-control" id="prosecutor" name="prosecutor">
@@ -616,7 +538,6 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <small class="form-text text-muted">Nur bei Strafakten relevant</small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -679,71 +600,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof feather !== 'undefined') {
         feather.replace();
     }
-    
-    // Modal-Typ setzen basierend auf Button
-    $('#addCaseModal').on('show.bs.modal', function(event) {
-        const button = $(event.relatedTarget);
-        const caseType = button.data('case-type');
-        
-        if (caseType) {
-            $('#caseTypeInput').val(caseType);
-            
-            // Modal-Titel und Labels anpassen
-            if (caseType === 'Straf') {
-                // Header
-                $('#addCaseModalLabel').html('<span data-feather="alert-triangle"></span> Neue Strafakte anlegen');
-                $(this).find('.modal-header').removeClass('bg-primary').addClass('bg-danger').css('color', 'white');
-                
-                // Labels für Strafakte
-                $('#defendantLabel').text('Angeklagter *');
-                $('#defendantHelp').text('Vorhandene Angeklagte können gewählt oder neue eingetragen werden.');
-                $('#defendantError').text('Bitte wählen oder erfassen Sie einen Angeklagten.');
-                $('#tgLabel').text('TG-Nummer des Angeklagten');
-                $('#chargeLabel').text('Anklage *');
-                $('#chargeError').text('Bitte geben Sie die Anklage ein.');
-                
-                // Strafakten-spezifische Felder einblenden
-                $('#prosecutorGroup').show();
-                $('#bailAmountGroup').show();
-            } else {
-                // Header
-                $('#addCaseModalLabel').html('<span data-feather="briefcase"></span> Neue Zivilakte anlegen');
-                $(this).find('.modal-header').removeClass('bg-danger').addClass('bg-primary').css('color', 'white');
-                
-                // Labels für Zivilakte
-                $('#defendantLabel').text('Partei *');
-                $('#defendantHelp').text('Vorhandene Parteien können gewählt oder neue eingetragen werden.');
-                $('#defendantError').text('Bitte wählen oder erfassen Sie eine Partei.');
-                $('#tgLabel').text('TG-Nummer der Partei');
-                $('#chargeLabel').text('Streitgegenstand *');
-                $('#chargeError').text('Bitte geben Sie den Streitgegenstand ein.');
-                
-                // Strafakten-spezifische Felder ausblenden
-                $('#prosecutorGroup').hide();
-                $('#bailAmountGroup').hide();
-                
-                // Werte zurücksetzen
-                $('#prosecutor').val('');
-                $('#bail_amount').val('');
-            }
-            
-            // Icons neu rendern
-            if (typeof feather !== 'undefined') {
-                feather.replace();
-            }
-        }
-    });
-    
-    // Modal-Reset beim Schließen
-    $('#addCaseModal').on('hidden.bs.modal', function() {
-        $(this).find('form')[0].reset();
-        $('#caseTypeInput').val('');
-        $(this).find('.modal-header').removeClass('bg-danger bg-primary').css('color', '');
-        
-        // Felder wieder einblenden (Standard)
-        $('#prosecutorGroup').show();
-        $('#bailAmountGroup').show();
-    });
     
     const defendantsData = <?php echo json_encode($defendants, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 

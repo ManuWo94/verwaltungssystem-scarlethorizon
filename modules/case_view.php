@@ -272,7 +272,6 @@ include '../includes/header.php';
                                         <th>Bezirk</th>
                                         <td><?php echo htmlspecialchars($case['district'] ?? ''); ?></td>
                                     </tr>
-                                    <?php if (($case['case_type'] ?? 'Straf') === 'Straf'): ?>
                                     <tr>
                                         <th>Kaution</th>
                                         <td><?php echo htmlspecialchars($case['bail_amount'] ?? ''); ?></td>
@@ -281,7 +280,6 @@ include '../includes/header.php';
                                         <th>Staatsanwalt</th>
                                         <td><?php echo htmlspecialchars($case['prosecutor'] ?? ''); ?></td>
                                     </tr>
-                                    <?php endif; ?>
                                     <tr>
                                         <th>Richter</th>
                                         <td><?php echo htmlspecialchars($case['judge'] ?? ''); ?></td>
