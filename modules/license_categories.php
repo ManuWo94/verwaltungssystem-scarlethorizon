@@ -350,17 +350,69 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                     
                     <div class="form-group">
-                        <label for="categoryTemplate">Textvorlage *</label>
-                        <textarea class="form-control" name="template" id="categoryTemplate" rows="10" required></textarea>
-                        <small class="form-text text-muted">Verwenden Sie Platzhalter wie {LICENSE_NUMBER}, {HOLDER_NAME}, etc.</small>
+                        <label>Textvorlage *</label>
+                        
+                        <!-- Platzhalter Bausteine -->
+                        <div class="card mb-2">
+                            <div class="card-header bg-light py-2">
+                                <small class="text-muted font-weight-bold">Verfügbare Platzhalter (klicken oder ziehen)</small>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="d-flex flex-wrap" style="gap: 6px;" id="templatePlaceholders">
+                                    <button type="button" class="btn btn-sm btn-outline-primary placeholder-btn" data-placeholder="{LICENSE_NUMBER}">Lizenznummer</button>
+                                    <button type="button" class="btn btn-sm btn-outline-info placeholder-btn" data-placeholder="{START_DATE}">Startdatum</button>
+                                    <button type="button" class="btn btn-sm btn-outline-info placeholder-btn" data-placeholder="{END_DATE}">Enddatum</button>
+                                    <button type="button" class="btn btn-sm btn-outline-info placeholder-btn" data-placeholder="{ISSUE_DATE}">Ausstellungsdatum</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success placeholder-btn" data-placeholder="{ISSUER_NAME}">Ersteller Name</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success placeholder-btn" data-placeholder="{ISSUER_ROLE}">Ersteller Rolle</button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning placeholder-btn" id="customFieldPlaceholder" disabled>
+                                        <small>Eigene Felder unten definieren →</small>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <textarea class="form-control" name="template" id="categoryTemplate" rows="10" required placeholder="Klicken Sie auf Platzhalter oben, um sie hier einzufügen..."></textarea>
+                        <small class="form-text text-muted">Klicken Sie auf die Buttons oben, um Platzhalter einzufügen.</small>
                     </div>
                     
                     <div class="form-group">
                         <label>Felder definieren</label>
-                        <div id="fieldsContainer"></div>
-                        <button type="button" class="btn btn-sm btn-secondary" id="addField">
-                            <i data-feather="plus"></i> Feld hinzufügen
-                        </button>
+                        <p class="text-muted small mb-2">Ziehen Sie Feldtypen in den Builder, um eigene Felder zu erstellen:</p>
+                        
+                        <!-- Feld-Bausteine -->
+                        <div class="card mb-2">
+                            <div class="card-header bg-light py-2">
+                                <small class="text-muted font-weight-bold">Feldtypen (ziehen Sie diese in die Drop-Zone)</small>
+                            </div>
+                            <div class="card-body p-2">
+                                <div class="d-flex flex-wrap" style="gap: 6px;">
+                                    <span class="badge badge-primary field-type-block" draggable="true" data-type="text" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                        📝 Textfeld
+                                    </span>
+                                    <span class="badge badge-info field-type-block" draggable="true" data-type="date" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                        📅 Datum
+                                    </span>
+                                    <span class="badge badge-success field-type-block" draggable="true" data-type="number" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                        🔢 Nummer
+                                    </span>
+                                    <span class="badge badge-warning field-type-block" draggable="true" data-type="select" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                        📋 Auswahl
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Felder Drop Zone -->
+                        <div class="border rounded p-3" id="fieldsDropZone" style="min-height: 100px; background: #f8f9fa; border: 2px dashed #dee2e6 !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">Ziehen Sie Feldtypen hierher...</small>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="clearFields" title="Alle Felder löschen">
+                                    <i data-feather="trash-2"></i> Zurücksetzen
+                                </button>
+                            </div>
+                            <div id="fieldsContainer"></div>
+                        </div>
                     </div>
                     
                     <input type="hidden" name="fields" id="fieldsJson">
@@ -451,7 +503,101 @@ $(document).ready(function() {
         updateSchemaPreview();
     });
     
-    // === ENDE DRAG & DROP ===
+    // === ENDE DRAG & DROP SCHEMA ===
+    
+    // === PLATZHALTER EINFÜGEN ===
+    
+    // Platzhalter-Button Click
+    $(document).on('click', '.placeholder-btn', function() {
+        const placeholder = $(this).data('placeholder');
+        const textarea = $('#categoryTemplate')[0];
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        
+        // Platzhalter an Cursor-Position einfügen
+        const before = text.substring(0, start);
+        const after = text.substring(end, text.length);
+        textarea.value = before + placeholder + after;
+        
+        // Cursor nach Platzhalter setzen
+        textarea.selectionStart = textarea.selectionEnd = start + placeholder.length;
+        textarea.focus();
+    });
+    
+    // === FELDER DRAG & DROP ===
+    
+    let fieldIdCounter = 0;
+    
+    // Drag Start auf Feld-Bausteinen
+    $(document).on('dragstart', '.field-type-block', function(e) {
+        e.originalEvent.dataTransfer.effectAllowed = 'copy';
+        e.originalEvent.dataTransfer.setData('text/plain', $(this).data('type'));
+    });
+    
+    // Drop Zone Events für Felder
+    $('#fieldsDropZone').on('dragover', function(e) {
+        e.preventDefault();
+        e.originalEvent.dataTransfer.dropEffect = 'copy';
+        $(this).addClass('border-primary');
+    });
+    
+    $('#fieldsDropZone').on('dragleave', function(e) {
+        $(this).removeClass('border-primary');
+    });
+    
+    $('#fieldsDropZone').on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('border-primary');
+        
+        const fieldType = e.originalEvent.dataTransfer.getData('text/plain');
+        addField(fieldType);
+    });
+    
+    // Feld hinzufügen
+    function addField(type = 'text') {
+        const field = {
+            name: '',
+            label: '',
+            type: type,
+            required: false,
+            options: []
+        };
+        fields.push(field);
+        renderFields();
+        updateCustomFieldPlaceholders();
+    }
+    
+    // Alle Felder löschen
+    $(document).on('click', '#clearFields', function(e) {
+        e.preventDefault();
+        if (confirm('Wirklich alle Felder löschen?')) {
+            fields = [];
+            renderFields();
+            updateCustomFieldPlaceholders();
+        }
+    });
+    
+    // Eigene Feld-Platzhalter aktualisieren
+    function updateCustomFieldPlaceholders() {
+        const container = $('#templatePlaceholders');
+        // Entferne alte eigene Felder
+        container.find('.custom-field-placeholder').remove();
+        
+        // Füge neue hinzu
+        fields.forEach(field => {
+            if (field.name) {
+                const btn = $('<button type="button" class="btn btn-sm btn-outline-secondary placeholder-btn custom-field-placeholder"></button>')
+                    .attr('data-placeholder', '{' + field.name + '}')
+                    .text(field.label || field.name);
+                container.append(btn);
+            }
+        });
+        
+        feather.replace();
+    }
+    
+    // === ENDE FELDER DRAG & DROP ===
     
     // "Neue Kategorie" Button - öffnet das categoryModal direkt
     $(document).on('click', '[data-target="#createCategoryModal"]', function(e) {
@@ -462,18 +608,31 @@ $(document).ready(function() {
     // Felder rendern
     function renderFields() {
         let html = '';
+        
+        if (fields.length === 0) {
+            html = '<div class="text-center text-muted py-3"><small>Ziehen Sie Feldtypen von oben hierher, um Felder zu erstellen...</small></div>';
+        }
+        
         fields.forEach((field, index) => {
-            html += '<div class="card mb-2">';
-            html += '<div class="card-body">';
-            html += '<div class="row">';
+            // Icon je nach Typ
+            let icon = '📝';
+            if (field.type === 'date') icon = '📅';
+            if (field.type === 'number') icon = '🔢';
+            if (field.type === 'select') icon = '📋';
+            
+            html += '<div class="card mb-2 border-left-primary" style="border-left: 4px solid #007bff !important;">';
+            html += '<div class="card-body p-2">';
+            html += '<div class="row align-items-center">';
+            html += '<div class="col-auto"><span style="font-size: 20px;">' + icon + '</span></div>';
             html += '<div class="col-md-3">';
-            html += '<input type="text" class="form-control form-control-sm" placeholder="Feldname (z.B. HOLDER_NAME)" value="' + field.name + '" data-index="' + index + '" data-prop="name">';
+            html += '<input type="text" class="form-control form-control-sm" placeholder="Feldname (z.B. HOLDER_NAME)" value="' + (field.name || '') + '" data-index="' + index + '" data-prop="name">';
+            html += '<small class="text-muted">Platzhalter: {' + (field.name || '...') + '}</small>';
             html += '</div>';
             html += '<div class="col-md-3">';
-            html += '<input type="text" class="form-control form-control-sm" placeholder="Label (z.B. Inhabername)" value="' + field.label + '" data-index="' + index + '" data-prop="label">';
+            html += '<input type="text" class="form-control form-control-sm" placeholder="Label (z.B. Inhabername)" value="' + (field.label || '') + '" data-index="' + index + '" data-prop="label">';
             html += '</div>';
             html += '<div class="col-md-2">';
-            html += '<select class="form-control form-control-sm" data-index="' + index + '" data-prop="type">';
+            html += '<select class="form-control form-control-sm" data-index="' + index + '" data-prop="type" disabled>';
             html += '<option value="text"' + (field.type === 'text' ? ' selected' : '') + '>Text</option>';
             html += '<option value="date"' + (field.type === 'date' ? ' selected' : '') + '>Datum</option>';
             html += '<option value="number"' + (field.type === 'number' ? ' selected' : '') + '>Nummer</option>';
@@ -483,18 +642,18 @@ $(document).ready(function() {
             html += '<div class="col-md-2">';
             html += '<div class="custom-control custom-checkbox">';
             html += '<input type="checkbox" class="custom-control-input" id="req_' + index + '" data-index="' + index + '" data-prop="required"' + (field.required ? ' checked' : '') + '>';
-            html += '<label class="custom-control-label" for="req_' + index + '">Pflichtfeld</label>';
+            html += '<label class="custom-control-label" for="req_' + index + '">Pflicht</label>';
             html += '</div>';
             html += '</div>';
-            html += '<div class="col-md-2 text-right">';
-            html += '<button type="button" class="btn btn-sm btn-danger remove-field" data-index="' + index + '"><i data-feather="trash-2"></i></button>';
+            html += '<div class="col-auto">';
+            html += '<button type="button" class="btn btn-sm btn-outline-danger remove-field" data-index="' + index + '" title="Feld löschen"><i data-feather="x"></i></button>';
             html += '</div>';
             html += '</div>';
             
             if (field.type === 'select') {
                 html += '<div class="row mt-2">';
                 html += '<div class="col-md-12">';
-                html += '<input type="text" class="form-control form-control-sm" placeholder="Optionen (kommagetrennt)" value="' + (field.options ? field.options.join(', ') : '') + '" data-index="' + index + '" data-prop="options">';
+                html += '<input type="text" class="form-control form-control-sm" placeholder="Optionen (kommagetrennt, z.B.: Option1, Option2, Option3)" value="' + (field.options ? field.options.join(', ') : '') + '" data-index="' + index + '" data-prop="options">';
                 html += '</div>';
                 html += '</div>';
             }
@@ -536,6 +695,11 @@ $(document).ready(function() {
         } else {
             fields[index][prop] = $(this).val();
         }
+        
+        // Platzhalter aktualisieren wenn Name sich ändert
+        if (prop === 'name' || prop === 'label') {
+            updateCustomFieldPlaceholders();
+        }
     });
     
     // Modal zurücksetzen beim Öffnen
@@ -548,6 +712,7 @@ $(document).ready(function() {
             $('#categoryModalTitle').text('Kategorie erstellen');
             fields = [];
             renderFields();
+            updateCustomFieldPlaceholders();
             
             // Schema Builder zurücksetzen
             schemaElements = [];
@@ -575,6 +740,7 @@ $(document).ready(function() {
         
         fields = category.fields || [];
         renderFields();
+        updateCustomFieldPlaceholders();
         
         $('#categoryModal').modal('show');
     });
