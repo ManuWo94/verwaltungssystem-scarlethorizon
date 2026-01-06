@@ -22,6 +22,22 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
         error_log("Fehler beim Laden der Benachrichtigungen: " . $e->getMessage());
     }
 }
+
+// Bestimme welcher Sidebar-Bereich aufgeklappt sein soll
+$currentPage = getCurrentPage();
+$hauptPages = ['modules/duty_log.php', 'modules/calendar.php', 'modules/notes.php', 'modules/public_notes.php', 'modules/todos.php', 'modules/task_assignments.php'];
+$aktenPages = ['modules/cases.php', 'modules/civil_cases.php', 'modules/defendants.php', 'modules/indictments.php', 'modules/revisions.php', 'modules/files.php', 'modules/templates.php', 'modules/warrants.php'];
+$bueroPages = ['modules/staff.php', 'modules/trainings.php', 'modules/vacation.php', 'modules/evidence.php', 'modules/equipment.php', 'modules/address_book.php', 'modules/justice_references.php', 'modules/business_licenses_new.php'];
+$lizenzPages = ['modules/licenses.php', 'modules/license_archive.php', 'modules/license_categories.php'];
+$adminPages = ['admin/index.php', 'admin/users.php', 'admin/roles.php', 'admin/database.php', 'admin/delete_cases_by_timeframe.php', 'admin/limitations.php', 'admin/themes.php'];
+$hilfePages = ['modules/help.php', 'modules/help_admin.php'];
+
+$openHaupt = in_array($currentPage, $hauptPages);
+$openAkten = in_array($currentPage, $aktenPages);
+$openBuero = in_array($currentPage, $bueroPages);
+$openLizenz = in_array($currentPage, $lizenzPages);
+$openAdmin = in_array($currentPage, $adminPages);
+$openHilfe = in_array($currentPage, $hilfePages);
 ?>
 
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
@@ -41,12 +57,12 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
 
         <!-- Hauptfunktionen - Collapsible -->
         <div class="sidebar-section">
-            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 collapsed" data-toggle="collapse" href="#hauptMenu" role="button">
+            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 <?php echo $openHaupt ? '' : 'collapsed'; ?>" data-toggle="collapse" href="#hauptMenu" role="button">
                 <span data-feather="zap" class="mr-2"></span>
                 <span class="flex-grow-1">Hauptfunktionen</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse" id="hauptMenu">
+            <div class="collapse <?php echo $openHaupt ? 'show' : ''; ?>" id="hauptMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/duty_log.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/duty_log.php">
@@ -96,12 +112,12 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
         
         <!-- Aktenverwaltung - Collapsible -->
         <div class="sidebar-section">
-            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 collapsed" data-toggle="collapse" href="#aktenMenu" role="button">
+            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 <?php echo $openAkten ? '' : 'collapsed'; ?>" data-toggle="collapse" href="#aktenMenu" role="button">
                 <span data-feather="folder" class="mr-2"></span>
                 <span class="flex-grow-1">Aktenverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse show" id="aktenMenu">
+            <div class="collapse <?php echo $openAkten ? 'show' : ''; ?>" id="aktenMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/cases.php">
@@ -160,12 +176,12 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
         
         <!-- Büroverwaltung - Collapsible -->
         <div class="sidebar-section">
-            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 collapsed" data-toggle="collapse" href="#bueroMenu" role="button">
+            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 <?php echo $openBuero ? '' : 'collapsed'; ?>" data-toggle="collapse" href="#bueroMenu" role="button">
                 <span data-feather="grid" class="mr-2"></span>
                 <span class="flex-grow-1">Büroverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse" id="bueroMenu">
+            <div class="collapse <?php echo $openBuero ? 'show' : ''; ?>" id="bueroMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/staff.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/staff.php">
@@ -221,12 +237,12 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
         
         <!-- Lizenzverwaltung - Collapsible -->
         <div class="sidebar-section">
-            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 collapsed" data-toggle="collapse" href="#lizenzMenu" role="button">
+            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 <?php echo $openLizenz ? '' : 'collapsed'; ?>" data-toggle="collapse" href="#lizenzMenu" role="button">
                 <span data-feather="award" class="mr-2"></span>
                 <span class="flex-grow-1">Lizenzverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse" id="lizenzMenu">
+            <div class="collapse <?php echo $openLizenz ? 'show' : ''; ?>" id="lizenzMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/licenses.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/licenses.php">
@@ -255,12 +271,12 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
         <?php if (currentUserCan('admin', 'view') || $_SESSION['role'] === 'Administrator'): ?>
         <!-- Administration - Collapsible -->
         <div class="sidebar-section">
-            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 collapsed" data-toggle="collapse" href="#adminMenu" role="button">
+            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 <?php echo $openAdmin ? '' : 'collapsed'; ?>" data-toggle="collapse" href="#adminMenu" role="button">
                 <span data-feather="settings" class="mr-2"></span>
                 <span class="flex-grow-1">Administration</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse" id="adminMenu">
+            <div class="collapse <?php echo $openAdmin ? 'show' : ''; ?>" id="adminMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'admin/index.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>admin/index.php">
@@ -317,12 +333,12 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
 
         <!-- Hilfe - Collapsible -->
         <div class="sidebar-section">
-            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 collapsed" data-toggle="collapse" href="#hilfeMenu" role="button">
+            <a class="sidebar-heading d-flex align-items-center px-3 mb-1 <?php echo $openHilfe ? '' : 'collapsed'; ?>" data-toggle="collapse" href="#hilfeMenu" role="button">
                 <span data-feather="help-circle" class="mr-2"></span>
                 <span class="flex-grow-1">Hilfe</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse" id="hilfeMenu">
+            <div class="collapse <?php echo $openHilfe ? 'show' : ''; ?>" id="hilfeMenu">
                 <ul class="nav flex-column mb-4">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/help.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/help.php">
