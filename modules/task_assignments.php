@@ -139,8 +139,8 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
             if ($task['id'] === $taskId) {
                 $taskFound = true;
                 
-                // Prüfe, ob der Benutzer die Aufgabe bearbeiten darf
-                $canEdit = ($task['assigned_to'] === $user_id || $canAssignTasks);
+                // Prüfe, ob der Benutzer die Aufgabe bearbeiten darf (Zugewiesener, Ersteller oder Berechtigter)
+                $canEdit = ($task['assigned_to'] === $user_id || $task['created_by'] === $user_id || $canAssignTasks);
                 
                 if (!$canEdit) {
                     echo json_encode([
@@ -1748,8 +1748,9 @@ $(document).ready(function() {
     
     // Erledigt-Status umschalten
     $('.task-checkbox').on('change', function() {
-        const taskId = $(this).closest('.task-item').data('task-id');
-        const isChecked = $(this).prop('checked');
+        const checkbox = $(this);
+        const taskId = checkbox.closest('.task-item').data('task-id');
+        const isChecked = checkbox.prop('checked');
         
         $.ajax({
             url: 'task_assignments.php',
@@ -1780,13 +1781,13 @@ $(document).ready(function() {
                 } else {
                     alert('Fehler: ' + response.message);
                     // Checkbox zurücksetzen
-                    $(this).prop('checked', !isChecked);
+                    checkbox.prop('checked', !isChecked);
                 }
             },
             error: function() {
                 alert('Fehler bei der Kommunikation mit dem Server.');
                 // Checkbox zurücksetzen
-                $(this).prop('checked', !isChecked);
+                checkbox.prop('checked', !isChecked);
             }
         });
     });
