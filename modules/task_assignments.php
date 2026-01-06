@@ -888,8 +888,8 @@ include_once '../includes/header.php';
                             <span class="input-group-text"><i class="fas fa-filter"></i></span>
                         </div>
                         <select id="filterStatus" class="form-control">
-                            <option value="all">Alle Aufgaben</option>
-                            <option value="open" selected>Offene Aufgaben</option>
+                            <option value="all" selected>Alle Aufgaben</option>
+                            <option value="open">Offene Aufgaben</option>
                             <option value="completed">Erledigte Aufgaben</option>
                         </select>
                     </div>
