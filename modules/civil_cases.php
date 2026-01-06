@@ -420,7 +420,7 @@ $judges = array_filter($users, function($user) {
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="post" action="cases.php" class="needs-validation" novalidate>
+            <form method="post" action="civil_cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="custom_id">Aktenzeichen (optional)</label>
