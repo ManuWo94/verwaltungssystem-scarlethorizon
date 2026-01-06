@@ -258,14 +258,13 @@ include '../includes/header.php';
                                                             // which merges system defaults and may override stored permissions
                                                             $currentPerms = isset($role['permissions']) && is_array($role['permissions']) ? $role['permissions'] : [];
                                                             
-                                                            // Kategorisiere Module
+                                                            // Kategorisiere Module (entsprechend der Sidebar-Struktur)
                                                             $categories = [
-                                                                'Verwaltung' => ['admin', 'users', 'roles', 'business_licenses'],
-                                                                'Fälle & Anklagen' => ['cases', 'indictments', 'appeals', 'defendants', 'hearings', 'warrants', 'verdicts'],
-                                                                'Personal & Schulung' => ['staff', 'trainings', 'equipment', 'vacation'],
-                                                                'Dokumentation & Dateien' => ['templates', 'files', 'notes', 'public_notes', 'revisions'],
-                                                                'Zeitverwaltung' => ['calendar', 'duty_log', 'task_assignments', 'todos'],
-                                                                'Weitere' => ['address_book', 'evidence', 'seized_assets', 'justice_references']
+                                                                'Hauptfunktionen' => ['duty_log', 'calendar', 'notes', 'public_notes', 'todos', 'task_assignments'],
+                                                                'Aktenverwaltung' => ['cases', 'defendants', 'indictments', 'revisions', 'files', 'templates', 'warrants', 'appeals', 'hearings', 'verdicts'],
+                                                                'Büroverwaltung' => ['staff', 'trainings', 'vacation', 'evidence', 'seized_assets', 'equipment', 'address_book', 'justice_references', 'business_licenses'],
+                                                                'Lizenzverwaltung' => ['licenses'],
+                                                                'Administration' => ['admin', 'users', 'roles']
                                                             ];
                                                             
                                                             foreach ($categories as $categoryName => $categoryModules): ?>
