@@ -590,71 +590,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$canAssignTasks) {
             $error = 'Sie haben keine Berechtigung, Aufgaben zuzuweisen.';
         } 
-        elseif (empty($_POST['title']) || empty($_POST['assigned_to'])) {
-            $error = 'Bitte geben Sie einen Titel und einen Empfänger für die Aufgabe an.';
+        elseif (empty($_POST['title'])) {
+            $error = 'Bitte geben Sie einen Titel für die Aufgabe an.';
         } else {
-            $assignedTo = sanitize($_POST['assigned_to']);
             $assignmentType = isset($_POST['assignment_type']) ? sanitize($_POST['assignment_type']) : 'user';
-            $categoryId = isset($_POST['category_id']) ? sanitize($_POST['category_id']) : '';
-            $dueDate = !empty($_POST['due_date']) ? sanitize($_POST['due_date']) : null;
-            $priority = isset($_POST['priority']) ? intval($_POST['priority']) : 2; // 1=niedrig, 2=normal, 3=hoch
             
-            // Prüfe, ob Benutzer oder Rolle existiert
-            $assigneeExists = false;
-            $assignedToName = '';
-            
+            // Bei Rollenzuweisung kommt der Wert aus assigned_to_role, sonst aus assigned_to
             if ($assignmentType === 'role') {
-                // Prüfe, ob die Rolle existiert
-                foreach ($allRoles as $roleData) {
-                    if ($roleData['id'] === $assignedTo || $roleData['name'] === $assignedTo) {
-                        $assigneeExists = true;
-                        $assignedToName = $roleData['name'] . ' (Rolle)';
-                        $assignedTo = $roleData['id']; // Stelle sicher, dass wir die ID verwenden
-                        break;
-                    }
-                }
-                
-                if (!$assigneeExists) {
-                    $error = 'Die ausgewählte Rolle existiert nicht.';
-                }
+                $assignedTo = !empty($_POST['assigned_to_role']) ? sanitize($_POST['assigned_to_role']) : sanitize($_POST['assigned_to']);
             } else {
-                // Prüfe, ob der Benutzer existiert
-                foreach ($users as $u) {
-                    if ($u['id'] === $assignedTo) {
-                        $assigneeExists = true;
-                        $assignedToName = isset($u['first_name']) && isset($u['last_name']) ? 
-                                        $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
-                        break;
-                    }
-                }
-                
-                if (!$assigneeExists) {
-                    $error = 'Der ausgewählte Benutzer existiert nicht.';
-                }
+                $assignedTo = sanitize($_POST['assigned_to']);
             }
             
-            if ($assigneeExists) {
-                // Überprüfe, ob die Kategorie existiert
-                $categoryExists = false;
-                $categoryName = '';
-                $categoryColor = '#999999'; // Standardfarbe
+            // Validierung: Empfänger muss angegeben sein
+            if (empty($assignedTo)) {
+                $error = 'Bitte geben Sie einen Empfänger für die Aufgabe an.';
+            } else {
+                $categoryId = isset($_POST['category_id']) ? sanitize($_POST['category_id']) : '';
+                $dueDate = !empty($_POST['due_date']) ? sanitize($_POST['due_date']) : null;
+                $priority = isset($_POST['priority']) ? intval($_POST['priority']) : 2; // 1=niedrig, 2=normal, 3=hoch
                 
-                if (!empty($categoryId)) {
-                    foreach ($categories as $category) {
-                        if ($category['id'] === $categoryId) {
-                            $categoryExists = true;
-                            $categoryName = $category['name'];
-                            $categoryColor = $category['color'];
+                // Prüfe, ob Benutzer oder Rolle existiert
+                $assigneeExists = false;
+                $assignedToName = '';
+                
+                if ($assignmentType === 'role') {
+                    // Prüfe, ob die Rolle existiert
+                    foreach ($allRoles as $roleData) {
+                        if ($roleData['id'] === $assignedTo || $roleData['name'] === $assignedTo) {
+                            $assigneeExists = true;
+                            $assignedToName = $roleData['name'] . ' (Rolle)';
+                            $assignedTo = $roleData['id']; // Stelle sicher, dass wir die ID verwenden
                             break;
                         }
                     }
                     
-                    if (!$categoryExists) {
-                        $error = 'Die ausgewählte Kategorie existiert nicht.';
+                    if (!$assigneeExists) {
+                        $error = 'Die ausgewählte Rolle existiert nicht.';
+                    }
+                } else {
+                    // Prüfe, ob der Benutzer existiert
+                    foreach ($users as $u) {
+                        if ($u['id'] === $assignedTo) {
+                            $assigneeExists = true;
+                            $assignedToName = isset($u['first_name']) && isset($u['last_name']) ? 
+                                            $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
+                            break;
+                        }
+                    }
+                    
+                    if (!$assigneeExists) {
+                        $error = 'Der ausgewählte Benutzer existiert nicht.';
                     }
                 }
                 
-                if (empty($error)) {
+                if ($assigneeExists) {
+                    // Überprüfe, ob die Kategorie existiert
+                    $categoryExists = false;
+                    $categoryName = '';
+                    $categoryColor = '#999999'; // Standardfarbe
+                    
+                    if (!empty($categoryId)) {
+                        foreach ($categories as $category) {
+                            if ($category['id'] === $categoryId) {
+                                $categoryExists = true;
+                                $categoryName = $category['name'];
+                                $categoryColor = $category['color'];
+                                break;
+                            }
+                        }
+                        
+                        if (!$categoryExists) {
+                            $error = 'Die ausgewählte Kategorie existiert nicht.';
+                        }
+                    }
+                    
+                    if (empty($error)) {
                     $taskData = [
                         'id' => generateUniqueId(),
                         'title' => sanitize($_POST['title']),
@@ -741,6 +752,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     } else {
                         $error = 'Fehler beim Speichern der Aufgabe.';
+                    }
                     }
                 }
             }
