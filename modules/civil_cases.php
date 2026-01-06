@@ -245,11 +245,13 @@ $prosecutors = array_filter($users, function($user) {
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 cases-page main-content">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Zivilakten</h1>
+                <h1 class="h2">
+                    <span data-feather="briefcase" class="text-primary"></span> Zivilakten
+                </h1>
                 <div>
                     <?php if (currentUserCan('cases', 'create')): ?>
                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal">
-                        <span data-feather="plus"></span> Neuen Fall hinzufügen
+                        <span data-feather="briefcase"></span> Neue Zivilakte anlegen
                     </button>
                     <?php endif; ?>
                 </div>
@@ -298,12 +300,13 @@ $prosecutors = array_filter($users, function($user) {
                             <thead>
                                 <tr>
                                     <th>Aktenzeichen</th>
-                                    <th>Typ</th>
                                     <th>Kläger</th>
                                     <th>Streitgegenstand</th>
-                                    <th>Vorfallsdatum</th>
+                                    <th>Streitwert</th>
+                                    <th>Eingereicht am</th>
                                     <th>Verjährungsdatum</th>
                                     <th>Bezirk</th>
+                                    <th>Richter</th>
                                     <th>Status</th>
                                     <th>Aktionen</th>
                                 </tr>
@@ -312,16 +315,10 @@ $prosecutors = array_filter($users, function($user) {
                                 <?php if (count($cases) > 0): ?>
                                     <?php foreach ($cases as $case): ?>
                                         <tr>
-                                            <td>
-                                                <?php 
-                                                $type = $case['case_type'] ?? 'Straf';
-                                                $badgeClass = $type === 'Zivil' ? 'badge-info' : 'badge-danger';
-                                                echo '<span class="badge ' . $badgeClass . '">' . htmlspecialchars($type) . '</span>';
-                                                ?>
-                                            </td>
                                             <td><a href="civil_case_view.php?id=<?php echo $case['id']; ?>"><?php echo htmlspecialchars('#' . substr($case['id'], 0, 8)); ?></a></td>
                                     <td><?php echo htmlspecialchars($case['plaintiff']); ?></td>
                                     <td><?php echo htmlspecialchars($case['dispute_subject']); ?></td>
+                                    <td><?php echo isset($case['dispute_value']) ? '$' . number_format($case['dispute_value'], 2) : 'Nicht angegeben'; ?></td>
                                     <td><?php echo isset($case['incident_date']) ? htmlspecialchars(formatDate($case['incident_date'])) : 'Nicht angegeben'; ?></td>
                                     <td>
                                         <?php 
@@ -342,6 +339,7 @@ $prosecutors = array_filter($users, function($user) {
                                         ?>
                                     </td>
                                     <td><?php echo isset($case['district']) ? htmlspecialchars($case['district']) : 'Nicht angegeben'; ?></td>
+                                    <td><?php echo isset($case['judge']) ? htmlspecialchars($case['judge']) : 'Nicht zugewiesen'; ?></td>
                                     <td>
                                         <?php 
                                             $statusClass = 'secondary';
@@ -424,27 +422,18 @@ $prosecutors = array_filter($users, function($user) {
 <div class="modal fade" id="addCaseModal" tabindex="-1" aria-labelledby="addCaseModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addCaseModalLabel">Neue Akte anlegen</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Schließen">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="addCaseModalLabel">
+                    <span data-feather="briefcase"></span> Neue Zivilakte anlegen
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Schließen">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="post" action="civil_civil_cases.php" class="needs-validation" novalidate>
+            <form method="post" action="civil_cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
-                    <!-- Aktentyp Auswahl - Prominent am Anfang -->
-                    <div class="form-group">
-                        <label class="font-weight-bold">Art der Angelegenheit *</label>
-                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
-                            <label class="btn btn-outline-danger active">
-                                <input type="radio" name="case_type" value="Straf" checked> 
-                                <i data-feather="alert-triangle"></i> Strafangelegenheit
-                            </label>
-                            <label class="btn btn-outline-primary">
-                                <input type="radio" name="case_type" value="Zivil"> 
-                                <i data-feather="briefcase"></i> Zivilangelegenheit
-                            </label>
-                        </div>
+                    <div class="alert alert-info">
+                        <strong><span data-feather="info"></span> Zivilakte:</strong> Kläger vs. Beklagter, kein Staatsanwalt
                     </div>
                     
                     <hr>
