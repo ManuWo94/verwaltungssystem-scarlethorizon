@@ -447,10 +447,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $taskId = sanitize($_POST['task_id']);
         $taskFound = false;
         
-        if (!$canAssignTasks) {
-            $error = 'Sie haben keine Berechtigung, Aufgaben zu bearbeiten.';
-        } 
-        elseif (empty($_POST['title']) || empty($_POST['assigned_to'])) {
+        // Erlaubt: Berechtigte Rollen ODER Ersteller ODER aktuell Zugewiesener
+        $userCanEdit = $canAssignTasks;
+
+        if (empty($_POST['title']) || empty($_POST['assigned_to'])) {
             $error = 'Bitte geben Sie einen Titel und einen Benutzer für die Aufgabe an.';
         } else {
             $assignedTo = sanitize($_POST['assigned_to']);
@@ -498,6 +498,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     foreach ($tasks as $key => $task) {
                         if ($task['id'] === $taskId) {
                             $taskFound = true;
+                            // Prüfe Berechtigung gegen aktuelle Aufgabe
+                            $userCanEdit = $userCanEdit || $task['created_by'] === $user_id || $task['assigned_to'] === $user_id;
+                            if (!$userCanEdit) {
+                                $error = 'Sie haben keine Berechtigung, diese Aufgabe zu bearbeiten.';
+                                break;
+                            }
                             
                             // Aktualisiere die Aufgabe
                             $tasks[$key]['title'] = sanitize($_POST['title']);
@@ -1046,15 +1052,21 @@ include_once '../includes/header.php';
                                                 </small>
                                             </td>
                                             <td>
+                                                <?php 
+                                                    $userCanEditTask = $canAssignTasks || $task['assigned_to'] === $user_id || $task['created_by'] === $user_id;
+                                                ?>
                                                 <div class="btn-group">
                                                     <button class="btn btn-sm btn-outline-primary view-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Details anzeigen">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                     
-                                                    <?php if ($canAssignTasks): ?>
-                                                        <button class="btn btn-sm btn-outline-secondary edit-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Bearbeiten">
+                                                    <?php if ($userCanEditTask): ?>
+                                                        <button class="btn btn-sm btn-outline-secondary edit-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Bearbeiten / Weiterleiten">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
+                                                    <?php endif; ?>
+                                                    
+                                                    <?php if ($canAssignTasks): ?>
                                                         <button class="btn btn-sm btn-outline-danger delete-task-btn" 
                                                                 data-task-id="<?php echo htmlspecialchars($task['id']); ?>" 
                                                                 data-task-title="<?php echo htmlspecialchars($task['title']); ?>"
@@ -2064,8 +2076,7 @@ $(document).ready(function() {
         });
     }
     
-    <?php if ($canAssignTasks): ?>
-    // Aufgabe bearbeiten
+    // Aufgabe bearbeiten / weiterleiten (für Berechtigte, Ersteller oder Zugewiesene)
     $('.edit-task-btn').on('click', function(e) {
         e.preventDefault();
         const taskId = $(this).data('task-id');
@@ -2157,7 +2168,6 @@ $(document).ready(function() {
     $('#createCategoryModal, #editCategoryModal, #deleteCategoryModal').on('hidden.bs.modal', function() {
         $('#manageCategoriesModal').modal('show');
     });
-    <?php endif; ?>
     
     // Hilfsfunktionen
     function formatDate(dateString) {
