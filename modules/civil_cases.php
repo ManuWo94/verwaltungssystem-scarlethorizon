@@ -6,7 +6,7 @@ require_once '../includes/auth.php';
 require_once '../includes/permissions.php';
 
 // Check if user is logged in and has permission to view cases
-checkPermissionOrDie('cases', 'view');
+checkPermissionOrDie('civil_cases', 'view');
 
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
@@ -14,9 +14,9 @@ $role = $_SESSION['role'];
 $message = '';
 $error = '';
 
-// Helper: find or create plaintiff/plaintiff by name/tg
+// Helper: find or create plaintiff by name/tg
 function findOrCreateParty($name, $tgNumber, $userId) {
-    $plaintiffs = loadJsonData('plaintiffs.json');
+    $plaintiffs = loadJsonData('parties.json');
     $normalizedName = strtolower(trim($name));
     $matchId = null;
 
@@ -28,7 +28,7 @@ function findOrCreateParty($name, $tgNumber, $userId) {
             // optional: backfill TG if missing
             if (empty($plaintiff['tg_number']) && !empty($tgNumber)) {
                 $plaintiff['tg_number'] = $tgNumber;
-                updateRecord('plaintiffs.json', $matchId, $plaintiff);
+                updateRecord('parties.json', $matchId, $plaintiff);
             }
             break;
         }
@@ -43,7 +43,7 @@ function findOrCreateParty($name, $tgNumber, $userId) {
             'created_by' => $userId,
             'date_created' => date('Y-m-d H:i:s')
         ];
-        insertRecord('plaintiffs.json', $newPlaintiff);
+        insertRecord('parties.json', $newPlaintiff);
         $matchId = $newPlaintiff['id'];
     }
 
@@ -51,11 +51,11 @@ function findOrCreateParty($name, $tgNumber, $userId) {
 }
 
 // Helper: append history entry for plaintiff
-function appendPlaintiffHistory($plaintiffId, $entry) {
+function appendPartyHistory($plaintiffId, $entry) {
     if (!$plaintiffId) {
         return;
     }
-    $plaintiff = findById('plaintiffs.json', $plaintiffId);
+    $plaintiff = findById('parties.json', $plaintiffId);
     if (!$plaintiff) {
         return;
     }
@@ -63,7 +63,7 @@ function appendPlaintiffHistory($plaintiffId, $entry) {
         $plaintiff['history'] = [];
     }
     array_unshift($plaintiff['history'], $entry);
-    updateRecord('plaintiffs.json', $plaintiffId, $plaintiff);
+    updateRecord('parties.json', $plaintiffId, $plaintiff);
 }
 
 // Handle case actions
@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($action === 'delete' && isset($_POST['case_id'])) {
             // Check delete permission
-            checkPermissionOrDie('cases', 'delete');
+            checkPermissionOrDie('civil_cases', 'delete');
             
             $caseId = $_POST['case_id'];
             
@@ -86,9 +86,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         // Check create/edit permission
         if (isset($_POST['case_id']) && !empty($_POST['case_id'])) {
-            checkPermissionOrDie('cases', 'edit');
+            checkPermissionOrDie('civil_cases', 'edit');
         } else {
-            checkPermissionOrDie('cases', 'create');
+            checkPermissionOrDie('civil_cases', 'create');
         }
         
         // Handle case creation/edit
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Resolve plaintiff id (create if needed)
         $plaintiffId = null;
         if (!empty($plaintiffName)) {
-            $plaintiffId = findOrCreatePlaintiff($plaintiffName, $plaintiffTg, $user_id);
+            $plaintiffId = findOrCreateParty($plaintiffName, $plaintiffTg, $user_id);
         }
 
         $caseData = [
@@ -167,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (insertRecord('civil_cases.json', $caseData)) {
                         $message = 'Fall wurde erfolgreich erstellt.';
                         // history entry for plaintiff
-                        appendPlaintiffHistory($plaintiffId, [
+                        appendPartyHistory($plaintiffId, [
                             'case_id' => $caseData['id'],
                             'type' => 'dispute_subject',
                             'dispute_subject' => $caseData['dispute_subject'],
@@ -207,7 +207,7 @@ usort($cases, function($a, $b) {
 });
 
 // Load plaintiffs for dropdown
-$plaintiffs = loadJsonData('plaintiffs.json');
+$plaintiffs = loadJsonData('parties.json');
 
 // Load limitations for dropdown
 $limitations = loadJsonData('limitations.json');
@@ -229,16 +229,6 @@ $judges = array_filter($users, function($user) {
     }
     return false;
 });
-$prosecutors = array_filter($users, function($user) {
-    // Überprüfe sowohl die Hauptrolle als auch zusätzliche Rollen
-    if ($user['role'] === 'Prosecutor') {
-        return true;
-    }
-    // Überprüfe auch die roles-Array, wenn es existiert
-    if (isset($user['roles']) && is_array($user['roles'])) {
-    }
-    return false;
-});
 ?>
 
 <?php include '../includes/header.php'; ?>
@@ -249,13 +239,11 @@ $prosecutors = array_filter($users, function($user) {
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 cases-page main-content">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">
-                    <span data-feather="briefcase" class="text-primary"></span> Zivilakten
-                </h1>
+                <h1 class="h2"><span data-feather="briefcase" class="text-primary"></span> Zivilakten</h1>
                 <div>
-                    <?php if (currentUserCan('cases', 'create')): ?>
+                    <?php if (currentUserCan('civil_cases', 'create')): ?>
                     <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal">
-                        <span data-feather="briefcase"></span> Neue Zivilakte anlegen
+                        <span data-feather="plus"></span> Neue Zivilakte anlegen
                     </button>
                     <?php endif; ?>
                 </div>
@@ -272,7 +260,7 @@ $prosecutors = array_filter($users, function($user) {
             <div class="mb-3">
                 <div class="row align-items-center">
                     <div class="col-md-6">
-                        <form class="form-inline" id="status-filter-form" method="get" action="civil_cases.php">
+                        <form class="form-inline" id="status-filter-form" method="get" action="cases.php">
                             <label class="mr-2" for="status-filter">Status-Filter:</label>
                             <select class="form-control mr-2" id="status-filter" name="status" onchange="document.getElementById('status-filter-form').submit();">
                                 <option value="" <?php echo empty($statusFilter) ? 'selected' : ''; ?>>Alle Fälle</option>
@@ -307,7 +295,7 @@ $prosecutors = array_filter($users, function($user) {
                                     <th>Kläger</th>
                                     <th>Streitgegenstand</th>
                                     <th>Streitwert</th>
-                                    <th>Eingereicht am</th>
+                                    <th>Vorfallsdatum</th>
                                     <th>Verjährungsdatum</th>
                                     <th>Bezirk</th>
                                     <th>Richter</th>
@@ -322,7 +310,7 @@ $prosecutors = array_filter($users, function($user) {
                                             <td><a href="civil_case_view.php?id=<?php echo $case['id']; ?>"><?php echo htmlspecialchars('#' . substr($case['id'], 0, 8)); ?></a></td>
                                     <td><?php echo htmlspecialchars($case['plaintiff']); ?></td>
                                     <td><?php echo htmlspecialchars($case['dispute_subject']); ?></td>
-                                    <td><?php echo isset($case['dispute_value']) ? '$' . number_format($case['dispute_value'], 2) : 'Nicht angegeben'; ?></td>
+                                    <td><?php echo isset($case['dispute_value']) && !empty($case['dispute_value']) ? '$' . number_format((float)$case['dispute_value'], 2) : 'Nicht angegeben'; ?></td>
                                     <td><?php echo isset($case['incident_date']) ? htmlspecialchars(formatDate($case['incident_date'])) : 'Nicht angegeben'; ?></td>
                                     <td>
                                         <?php 
@@ -391,13 +379,13 @@ $prosecutors = array_filter($users, function($user) {
                                         <a href="civil_case_view.php?id=<?php echo $case['id']; ?>" class="btn btn-sm btn-info">
                                             <span data-feather="eye"></span> Ansehen
                                         </a>
-                                        <?php if (currentUserCan('cases', 'edit')): ?>
-                                        <a href="civil_case_edit.php?id=<?php echo $case['id']; ?>" class="btn btn-sm btn-primary">
+                                        <?php if (currentUserCan('civil_cases', 'edit')): ?>
+                                        <a href="case_edit.php?id=<?php echo $case['id']; ?>" class="btn btn-sm btn-primary">
                                             <span data-feather="edit"></span> Bearbeiten
                                         </a>
                                         <?php endif; ?>
-                                        <?php if (currentUserCan('cases', 'delete')): ?>
-                                        <form method="post" action="civil_cases.php" class="d-inline">
+                                        <?php if (currentUserCan('civil_cases', 'delete')): ?>
+                                        <form method="post" action="cases.php" class="d-inline">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="case_id" value="<?php echo $case['id']; ?>">
                                             <button type="submit" class="btn btn-sm btn-danger btn-delete">
@@ -426,22 +414,14 @@ $prosecutors = array_filter($users, function($user) {
 <div class="modal fade" id="addCaseModal" tabindex="-1" aria-labelledby="addCaseModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="addCaseModalLabel">
-                    <span data-feather="briefcase"></span> Neue Zivilakte anlegen
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Schließen">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addCaseModalLabel">Neue Akte anlegen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Schließen">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="post" action="civil_cases.php" class="needs-validation" novalidate>
+            <form method="post" action="cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
-                    <div class="alert alert-info">
-                        <strong><span data-feather="info"></span> Zivilakte:</strong> Kläger vs. Beklagter, kein Staatsanwalt
-                    </div>
-                    
-                    <hr>
-                    
                     <div class="form-group">
                         <label for="custom_id">Aktenzeichen (optional)</label>
                         <input type="text" class="form-control" id="custom_id" name="custom_id" placeholder="z.B. A-2026-0001 oder aus Ermittlungsakte">
@@ -457,17 +437,17 @@ $prosecutors = array_filter($users, function($user) {
                                 <option value="<?php echo htmlspecialchars($plaintiff['name']); ?>"><?php echo htmlspecialchars($plaintiff['tg_number'] ?? ''); ?></option>
                             <?php endforeach; ?>
                         </datalist>
-                        <small class="form-text text-muted">Vorhandene Parteien können gewählt oder neue eingetragen werden.</small>
-                        <div class="invalid-feedback">Bitte wählen oder erfassen Sie einen Parteienn.</div>
+                        <small class="form-text text-muted">Vorhandene Kläger können gewählt oder neue eingetragen werden.</small>
+                        <div class="invalid-feedback">Bitte wählen oder erfassen Sie einen Kläger.</div>
                     </div>
                     <div class="form-group">
-                        <label for="plaintiff_tg">TG-Nummer des Parteienn</label>
+                        <label for="plaintiff_tg">TG-Nummer des Klägers</label>
                         <input type="text" class="form-control" id="plaintiff_tg" name="plaintiff_tg" placeholder="z.B. TG-1234">
                     </div>
                     <div class="form-group">
                         <label for="dispute_subject">Streitgegenstand *</label>
                         <input type="text" class="form-control" id="dispute_subject" name="dispute_subject" required>
-                        <div class="invalid-feedback">Bitte geben Sie die Streitgegenstand ein.</div>
+                        <div class="invalid-feedback">Bitte geben Sie den Streitgegenstand ein.</div>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
@@ -501,7 +481,7 @@ $prosecutors = array_filter($users, function($user) {
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label for="dispute_value">Streitwert</label>
-                                <input type="text" class="form-control" id="dispute_value" name="dispute_value">
+                                <input type="number" step="0.01" class="form-control" id="dispute_value" name="dispute_value" placeholder="$0.00">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -515,10 +495,7 @@ $prosecutors = array_filter($users, function($user) {
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <div class="form-group">
                                 <label for="judge">Richter</label>
                                 <select class="form-control" id="judge" name="judge">
