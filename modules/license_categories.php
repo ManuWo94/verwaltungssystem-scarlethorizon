@@ -22,51 +22,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Kategorie erstellen
     if ($action === 'create') {
-        $newCategory = [
-            'id' => 'cat_' . uniqid(),
-            'name' => $_POST['name'] ?? '',
-            'active' => true,
-            'number_schema' => $_POST['number_schema'] ?? '',
-            'default_duration_days' => intval($_POST['default_duration_days'] ?? 365),
-            'notification_enabled' => isset($_POST['notification_enabled']),
-            'notification_days_before' => intval($_POST['notification_days_before'] ?? 7),
-            'template' => $_POST['template'] ?? '',
-            'fields' => json_decode($_POST['fields'] ?? '[]', true),
-            'created_at' => date('Y-m-d H:i:s'),
-            'created_by' => $_SESSION['username']
-        ];
-        
-        $categories[] = $newCategory;
-        
-        if (saveJsonData('license_categories.json', $categories)) {
-            echo json_encode(['success' => true, 'message' => 'Kategorie erstellt']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Speicherfehler']);
+        try {
+            $fieldsData = json_decode($_POST['fields'] ?? '[]', true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                echo json_encode(['success' => false, 'message' => 'Ungültige Felddaten: ' . json_last_error_msg()]);
+                exit;
+            }
+            
+            $newCategory = [
+                'id' => 'cat_' . uniqid(),
+                'name' => $_POST['name'] ?? '',
+                'active' => true,
+                'number_schema' => $_POST['number_schema'] ?? '',
+                'default_duration_days' => intval($_POST['default_duration_days'] ?? 365),
+                'notification_enabled' => isset($_POST['notification_enabled']),
+                'notification_days_before' => intval($_POST['notification_days_before'] ?? 7),
+                'template' => $_POST['template'] ?? '',
+                'fields' => $fieldsData,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => $_SESSION['username']
+            ];
+            
+            $categories[] = $newCategory;
+            
+            if (saveJsonData('license_categories.json', $categories)) {
+                echo json_encode(['success' => true, 'message' => 'Kategorie erstellt']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Fehler beim Speichern der Datei']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Fehler: ' . $e->getMessage()]);
         }
         exit;
     }
     
     // Kategorie bearbeiten
     if ($action === 'update') {
-        $categoryId = $_POST['category_id'] ?? '';
-        
-        foreach ($categories as &$cat) {
-            if ($cat['id'] === $categoryId) {
-                $cat['name'] = $_POST['name'] ?? $cat['name'];
-                $cat['number_schema'] = $_POST['number_schema'] ?? $cat['number_schema'];
-                $cat['default_duration_days'] = intval($_POST['default_duration_days'] ?? $cat['default_duration_days']);
-                $cat['notification_enabled'] = isset($_POST['notification_enabled']);
-                $cat['notification_days_before'] = intval($_POST['notification_days_before'] ?? $cat['notification_days_before']);
-                $cat['template'] = $_POST['template'] ?? $cat['template'];
-                $cat['fields'] = json_decode($_POST['fields'] ?? '[]', true);
-                break;
+        try {
+            $categoryId = $_POST['category_id'] ?? '';
+            $fieldsData = json_decode($_POST['fields'] ?? '[]', true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                echo json_encode(['success' => false, 'message' => 'Ungültige Felddaten: ' . json_last_error_msg()]);
+                exit;
             }
-        }
-        
-        if (saveJsonData('license_categories.json', $categories)) {
-            echo json_encode(['success' => true, 'message' => 'Kategorie aktualisiert']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Speicherfehler']);
+            
+            foreach ($categories as &$cat) {
+                if ($cat['id'] === $categoryId) {
+                    $cat['name'] = $_POST['name'] ?? $cat['name'];
+                    $cat['number_schema'] = $_POST['number_schema'] ?? $cat['number_schema'];
+                    $cat['default_duration_days'] = intval($_POST['default_duration_days'] ?? $cat['default_duration_days']);
+                    $cat['notification_enabled'] = isset($_POST['notification_enabled']);
+                    $cat['notification_days_before'] = intval($_POST['notification_days_before'] ?? $cat['notification_days_before']);
+                    $cat['template'] = $_POST['template'] ?? $cat['template'];
+                    $cat['fields'] = $fieldsData;
+                    break;
+                }
+            }
+            
+            if (saveJsonData('license_categories.json', $categories)) {
+                echo json_encode(['success' => true, 'message' => 'Kategorie aktualisiert']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Fehler beim Speichern der Datei']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Fehler: ' . $e->getMessage()]);
         }
         exit;
     }

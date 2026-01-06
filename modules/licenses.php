@@ -50,68 +50,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Lizenz erstellen
     if ($action === 'create') {
-        checkModulePermission('licenses', 'create');
-        
-        $categoryId = $_POST['category_id'] ?? '';
-        $category = null;
-        
-        foreach ($categories as $cat) {
-            if ($cat['id'] === $categoryId) {
-                $category = $cat;
-                break;
+        try {
+            checkModulePermission('licenses', 'create');
+            
+            $categoryId = $_POST['category_id'] ?? '';
+            $category = null;
+            
+            foreach ($categories as $cat) {
+                if ($cat['id'] === $categoryId) {
+                    $category = $cat;
+                    break;
+                }
             }
-        }
-        
-        if (!$category) {
-            echo json_encode(['success' => false, 'message' => 'Kategorie nicht gefunden']);
-            exit;
-        }
-        
-        $licenseNumber = generateLicenseNumber($category, $licenses);
-        $startDate = $_POST['start_date'] ?? date('Y-m-d');
-        $durationDays = intval($_POST['duration_days'] ?? $category['default_duration_days']);
-        $endDate = date('Y-m-d', strtotime($startDate . ' + ' . $durationDays . ' days'));
-        $notificationEnabled = isset($_POST['notification_enabled']) && $_POST['notification_enabled'] === 'true';
-        $notificationDays = intval($_POST['notification_days'] ?? $category['notification_days_before']);
-        
-        // Felder sammeln
-        $fields = [];
-        foreach ($category['fields'] as $field) {
-            $fieldName = $field['name'];
-            $fields[$fieldName] = $_POST['field_' . $fieldName] ?? '';
-        }
-        
-        // Lizenztext generieren
-        $licenseText = generateLicenseText($category, $licenseNumber, $fields, $startDate, $endDate);
-        
-        // Neue Lizenz erstellen
-        $newLicense = [
-            'id' => uniqid('lic_', true),
-            'category_id' => $categoryId,
-            'category_name' => $category['name'],
-            'license_number' => $licenseNumber,
-            'tg_number' => $_POST['tg_number'] ?? '',
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-            'duration_days' => $durationDays,
-            'status' => 'active',
-            'notification_enabled' => $notificationEnabled,
-            'notification_days_before' => $notificationDays,
-            'notification_sent' => false,
-            'fields' => $fields,
-            'license_text' => $licenseText,
-            'created_at' => date('Y-m-d H:i:s'),
-            'created_by' => $_SESSION['user_id'],
-            'created_by_name' => $_SESSION['username'],
-            'renewed_from' => $_POST['renewed_from'] ?? null
-        ];
-        
-        $licenses[] = $newLicense;
-        
-        if (saveJsonData('licenses.json', $licenses)) {
-            echo json_encode(['success' => true, 'message' => 'Lizenz erfolgreich erstellt', 'license' => $newLicense]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Fehler beim Speichern']);
+            
+            if (!$category) {
+                echo json_encode(['success' => false, 'message' => 'Kategorie nicht gefunden']);
+                exit;
+            }
+            
+            $licenseNumber = generateLicenseNumber($category, $licenses);
+            $startDate = $_POST['start_date'] ?? date('Y-m-d');
+            $durationDays = intval($_POST['duration_days'] ?? $category['default_duration_days']);
+            $endDate = date('Y-m-d', strtotime($startDate . ' + ' . $durationDays . ' days'));
+            $notificationEnabled = isset($_POST['notification_enabled']) && $_POST['notification_enabled'] === 'true';
+            $notificationDays = intval($_POST['notification_days'] ?? $category['notification_days_before']);
+            
+            // Felder sammeln
+            $fields = [];
+            if (isset($category['fields']) && is_array($category['fields'])) {
+                foreach ($category['fields'] as $field) {
+                    $fieldName = $field['name'];
+                    $fields[$fieldName] = $_POST['field_' . $fieldName] ?? '';
+                }
+            }
+            
+            // Lizenztext generieren
+            $licenseText = generateLicenseText($category, $licenseNumber, $fields, $startDate, $endDate);
+            
+            // Neue Lizenz erstellen
+            $newLicense = [
+                'id' => uniqid('lic_', true),
+                'category_id' => $categoryId,
+                'category_name' => $category['name'],
+                'license_number' => $licenseNumber,
+                'tg_number' => $_POST['tg_number'] ?? '',
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'duration_days' => $durationDays,
+                'status' => 'active',
+                'notification_enabled' => $notificationEnabled,
+                'notification_days_before' => $notificationDays,
+                'notification_sent' => false,
+                'fields' => $fields,
+                'license_text' => $licenseText,
+                'created_at' => date('Y-m-d H:i:s'),
+                'created_by' => $_SESSION['user_id'],
+                'created_by_name' => $_SESSION['username'],
+                'renewed_from' => $_POST['renewed_from'] ?? null
+            ];
+            
+            $licenses[] = $newLicense;
+            
+            if (saveJsonData('licenses.json', $licenses)) {
+                echo json_encode(['success' => true, 'message' => 'Lizenz erfolgreich erstellt', 'license' => $newLicense]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Fehler beim Speichern der Datei']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Fehler: ' . $e->getMessage()]);
         }
         exit;
     }
