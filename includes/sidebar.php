@@ -263,6 +263,12 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
             </li>
             <?php endif; ?>
             <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'admin/limitations.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>admin/limitations.php">
+                    <span data-feather="clock"></span>
+                    Verjährungsfristen
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link <?php echo getCurrentPage() == 'admin/themes.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>admin/themes.php">
                     <span data-feather="eye"></span>
                     Farbpaletten
