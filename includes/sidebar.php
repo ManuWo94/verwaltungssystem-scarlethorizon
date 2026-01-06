@@ -191,7 +191,33 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
                     Gewerbeschein
                 </a>
             </li>
-
+        </ul>
+        
+        <!-- Lizenzverwaltung -->
+        <h6 class="sidebar-heading d-flex align-items-center px-3 mt-3 mb-2 text-muted">
+            <span>Lizenzverwaltung</span>
+        </h6>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/licenses.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/licenses.php">
+                    <span data-feather="award"></span>
+                    Lizenzen
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/license_archive.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/license_archive.php">
+                    <span data-feather="archive"></span>
+                    Lizenzarchiv
+                </a>
+            </li>
+            <?php if (currentUserCan('admin', 'view') || $_SESSION['role'] === 'Administrator'): ?>
+            <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/license_categories.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/license_categories.php">
+                    <span data-feather="settings"></span>
+                    Kategorien
+                </a>
+            </li>
+            <?php endif; ?>
         </ul>
 
         <?php if (currentUserCan('admin', 'view') || $_SESSION['role'] === 'Administrator'): ?>

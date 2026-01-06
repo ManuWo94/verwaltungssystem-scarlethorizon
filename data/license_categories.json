@@ -1,0 +1,57 @@
+[
+    {
+        "id": "cat_business",
+        "name": "Business License",
+        "active": true,
+        "number_schema": "BL-{YEAR}-{NUM:4}",
+        "default_duration_days": 365,
+        "notification_enabled": true,
+        "notification_days_before": 7,
+        "template": "BUSINESS LICENSE\n\nLicense Number: {LICENSE_NUMBER}\nIssued to: {HOLDER_NAME}\nBusiness Type: {BUSINESS_TYPE}\nAddress: {ADDRESS}\n\nValid from: {START_DATE}\nValid until: {END_DATE}\n\nThis license authorizes the holder to operate a business within the jurisdiction.\n\nIssued by: {ISSUER_NAME}, {ISSUER_ROLE}\nDate: {ISSUE_DATE}",
+        "fields": [
+            {"name": "HOLDER_NAME", "label": "Inhabername", "type": "text", "required": true},
+            {"name": "BUSINESS_TYPE", "label": "Geschäftstyp", "type": "text", "required": true},
+            {"name": "ADDRESS", "label": "Adresse", "type": "text", "required": true}
+        ],
+        "created_at": "2026-01-06 17:00:00",
+        "created_by": "System"
+    },
+    {
+        "id": "cat_weapon",
+        "name": "Weapon License",
+        "active": true,
+        "number_schema": "WL-{YEAR}-{NUM:4}",
+        "default_duration_days": 730,
+        "notification_enabled": true,
+        "notification_days_before": 14,
+        "template": "WEAPON CARRY LICENSE\n\nLicense Number: {LICENSE_NUMBER}\nIssued to: {HOLDER_NAME}\nDate of Birth: {DOB}\nAddress: {ADDRESS}\n\nWeapon Type: {WEAPON_TYPE}\nSerial Number: {SERIAL_NUMBER}\n\nValid from: {START_DATE}\nValid until: {END_DATE}\n\nThe holder is authorized to carry the specified weapon within legal boundaries.\n\nIssued by: {ISSUER_NAME}, {ISSUER_ROLE}\nDate: {ISSUE_DATE}",
+        "fields": [
+            {"name": "HOLDER_NAME", "label": "Inhabername", "type": "text", "required": true},
+            {"name": "DOB", "label": "Geburtsdatum", "type": "date", "required": true},
+            {"name": "ADDRESS", "label": "Adresse", "type": "text", "required": true},
+            {"name": "WEAPON_TYPE", "label": "Waffentyp", "type": "text", "required": true},
+            {"name": "SERIAL_NUMBER", "label": "Seriennummer", "type": "text", "required": false}
+        ],
+        "created_at": "2026-01-06 17:00:00",
+        "created_by": "System"
+    },
+    {
+        "id": "cat_driver",
+        "name": "Driver's License",
+        "active": true,
+        "number_schema": "DL-{YEAR}-{NUM:5}",
+        "default_duration_days": 1825,
+        "notification_enabled": true,
+        "notification_days_before": 30,
+        "template": "DRIVER'S LICENSE\n\nLicense Number: {LICENSE_NUMBER}\nIssued to: {HOLDER_NAME}\nDate of Birth: {DOB}\nAddress: {ADDRESS}\n\nVehicle Class: {VEHICLE_CLASS}\nRestrictions: {RESTRICTIONS}\n\nValid from: {START_DATE}\nValid until: {END_DATE}\n\nThe holder is authorized to operate vehicles of the specified class.\n\nIssued by: {ISSUER_NAME}, {ISSUER_ROLE}\nDate: {ISSUE_DATE}",
+        "fields": [
+            {"name": "HOLDER_NAME", "label": "Inhabername", "type": "text", "required": true},
+            {"name": "DOB", "label": "Geburtsdatum", "type": "date", "required": true},
+            {"name": "ADDRESS", "label": "Adresse", "type": "text", "required": true},
+            {"name": "VEHICLE_CLASS", "label": "Fahrzeugklasse", "type": "select", "options": ["Class A - Motorcycle", "Class B - Automobile", "Class C - Truck", "Class D - Commercial"], "required": true},
+            {"name": "RESTRICTIONS", "label": "Einschränkungen", "type": "text", "required": false}
+        ],
+        "created_at": "2026-01-06 17:00:00",
+        "created_by": "System"
+    }
+]
