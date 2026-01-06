@@ -525,7 +525,7 @@ $prosecutors = array_filter($users, function($user) {
                                     <option value="">Richter auswählen</option>
                                     <?php foreach ($judges as $judge): ?>
                                         <option value="<?php echo htmlspecialchars($judge['username']); ?>">
-                                            <?php echo htmlspecialchars($judge['username']); ?>
+                                            <?php echo htmlspecialchars(isset($judge['full_name']) && !empty($judge['full_name']) ? $judge['full_name'] : $judge['username']); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>

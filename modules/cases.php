@@ -122,7 +122,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'defendant' => $defendantName,
             'defendant_tg' => $defendantTg,
             'charge' => sanitize($_POST['charge'] ?? ''),
-            'case_type' => sanitize($_POST['case_type'] ?? 'Straf'),
             'incident_date' => $incidentDate,
             'expiration_date' => $expirationDateInput,
             'limitation_id' => $limitationId,
@@ -248,11 +247,11 @@ $prosecutors = array_filter($users, function($user) {
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 cases-page main-content">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Fallverwaltung</h1>
+                <h1 class="h2"><span data-feather="alert-triangle" class="text-danger"></span> Strafakten</h1>
                 <div>
                     <?php if (currentUserCan('cases', 'create')): ?>
-                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal">
-                        <span data-feather="plus"></span> Neuen Fall hinzufügen
+                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#addCaseModal">
+                        <span data-feather="plus"></span> Neue Strafakte anlegen
                     </button>
                     <?php endif; ?>
                 </div>
@@ -301,7 +300,6 @@ $prosecutors = array_filter($users, function($user) {
                             <thead>
                                 <tr>
                                     <th>Aktenzeichen</th>
-                                    <th>Typ</th>
                                     <th>Angeklagter</th>
                                     <th>Anklage</th>
                                     <th>Vorfallsdatum</th>
@@ -316,13 +314,6 @@ $prosecutors = array_filter($users, function($user) {
                                 <?php if (count($cases) > 0): ?>
                                     <?php foreach ($cases as $case): ?>
                                         <tr>
-                                            <td>
-                                                <?php 
-                                                $type = $case['case_type'] ?? 'Straf';
-                                                $badgeClass = $type === 'Zivil' ? 'badge-info' : 'badge-danger';
-                                                echo '<span class="badge ' . $badgeClass . '">' . htmlspecialchars($type) . '</span>';
-                                                ?>
-                                            </td>
                                             <td><a href="case_view.php?id=<?php echo $case['id']; ?>"><?php echo htmlspecialchars('#' . substr($case['id'], 0, 8)); ?></a></td>
                                     <td><?php echo htmlspecialchars($case['defendant']); ?></td>
                                     <td><?php echo htmlspecialchars($case['charge']); ?></td>
@@ -437,23 +428,6 @@ $prosecutors = array_filter($users, function($user) {
             </div>
             <form method="post" action="cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
-                    <!-- Aktentyp Auswahl - Prominent am Anfang -->
-                    <div class="form-group">
-                        <label class="font-weight-bold">Art der Angelegenheit *</label>
-                        <div class="btn-group btn-group-toggle w-100" data-toggle="buttons">
-                            <label class="btn btn-outline-danger active">
-                                <input type="radio" name="case_type" value="Straf" checked> 
-                                <i data-feather="alert-triangle"></i> Strafangelegenheit
-                            </label>
-                            <label class="btn btn-outline-primary">
-                                <input type="radio" name="case_type" value="Zivil"> 
-                                <i data-feather="briefcase"></i> Zivilangelegenheit
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <hr>
-                    
                     <div class="form-group">
                         <label for="custom_id">Aktenzeichen (optional)</label>
                         <input type="text" class="form-control" id="custom_id" name="custom_id" placeholder="z.B. A-2026-0001 oder aus Ermittlungsakte">
