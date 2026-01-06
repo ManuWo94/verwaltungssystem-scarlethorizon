@@ -813,7 +813,7 @@ main {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: rgba(232, 226, 216, 0.7);
+    color: #ffffff;
     font-weight: 600;
     background-color: transparent;
     border-left: none;
@@ -828,7 +828,7 @@ main {
 
 .sidebar-section .sidebar-heading:hover {
     background-color: rgba(106, 46, 9, 0.15);
-    color: rgba(232, 226, 216, 0.9);
+    color: #ffffff;
 }
 
 .sidebar-section .sidebar-heading .toggle-icon {
