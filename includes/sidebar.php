@@ -270,6 +270,27 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
             </li>
         </ul>
         <?php endif; ?>
+
+        <!-- Hilfe & Support -->
+        <h6 class="sidebar-heading d-flex align-items-center px-3 mt-4 mb-2 text-muted">
+            <span>Hilfe & Support</span>
+        </h6>
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/help.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/help.php">
+                    <span data-feather="book-open"></span>
+                    Hilfe & Anleitungen
+                </a>
+            </li>
+            <?php if (currentUserCan('admin', 'view') || $_SESSION['role'] === 'Administrator'): ?>
+            <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/help_admin.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/help_admin.php">
+                    <span data-feather="edit"></span>
+                    Hilfe bearbeiten
+                </a>
+            </li>
+            <?php endif; ?>
+        </ul>
     </div>
 </nav>
 

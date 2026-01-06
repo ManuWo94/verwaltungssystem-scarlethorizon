@@ -1,0 +1,44 @@
+[
+    {
+        "id": "cat_getting_started",
+        "name": "Erste Schritte",
+        "icon": "play-circle",
+        "order": 1,
+        "description": "Grundlegende Funktionen und Einstieg"
+    },
+    {
+        "id": "cat_cases",
+        "name": "Aktenverwaltung",
+        "icon": "folder",
+        "order": 2,
+        "description": "Fälle, Angeklagte, Klageschriften"
+    },
+    {
+        "id": "cat_licenses",
+        "name": "Lizenzverwaltung",
+        "icon": "award",
+        "order": 3,
+        "description": "Lizenzen erstellen, verwalten und archivieren"
+    },
+    {
+        "id": "cat_tasks",
+        "name": "Aufgaben & Organisation",
+        "icon": "check-square",
+        "order": 4,
+        "description": "Aufgaben, Kalender, Notizen"
+    },
+    {
+        "id": "cat_office",
+        "name": "Büroverwaltung",
+        "icon": "briefcase",
+        "order": 5,
+        "description": "Personal, Ausrüstung, Beschlagnahmungen"
+    },
+    {
+        "id": "cat_admin",
+        "name": "Administration",
+        "icon": "settings",
+        "order": 6,
+        "description": "Systemverwaltung, Benutzer, Rollen"
+    }
+]
