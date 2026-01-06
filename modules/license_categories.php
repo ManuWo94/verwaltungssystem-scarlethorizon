@@ -11,11 +11,10 @@ if (!currentUserCan('admin', 'view') && $_SESSION['role'] !== 'Administrator') {
     exit;
 }
 
-require_once __DIR__ . '/../includes/header.php';
 $basePath = getBasePath();
 $categories = loadJsonData('license_categories.json');
 
-// AJAX Handler
+// AJAX Handler - VOR dem Header!
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     
@@ -111,6 +110,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Header nur laden wenn es kein AJAX-Request war
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container-fluid">
