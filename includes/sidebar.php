@@ -30,6 +30,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link <?php echo getCurrentPage() == 'modules/public_notes.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/public_notes.php">
+                    <span data-feather="message-square"></span>
+                    Öffentliche Notizen
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link <?php echo getCurrentPage() == 'modules/todos.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/todos.php">
                     <span data-feather="check-square"></span>
                     Aufgabenliste

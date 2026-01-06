@@ -23,6 +23,7 @@ function getAvailableModules() {
         'trainings' => 'Schulungen',
         'equipment' => 'Ausrüstung',
         'notes' => 'Notizen',
+        'public_notes' => 'Öffentliche Notizen',
         'calendar' => 'Kalender',
         'files' => 'Dateien',
         'duty_log' => 'Dienstprotokoll',

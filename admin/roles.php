@@ -263,7 +263,7 @@ include '../includes/header.php';
                                                                 'Verwaltung' => ['admin', 'users', 'roles', 'business_licenses'],
                                                                 'Fälle & Anklagen' => ['cases', 'indictments', 'appeals', 'defendants', 'hearings', 'warrants', 'verdicts'],
                                                                 'Personal & Schulung' => ['staff', 'trainings', 'equipment', 'vacation'],
-                                                                'Dokumentation & Dateien' => ['templates', 'files', 'notes', 'revisions'],
+                                                                'Dokumentation & Dateien' => ['templates', 'files', 'notes', 'public_notes', 'revisions'],
                                                                 'Zeitverwaltung' => ['calendar', 'duty_log', 'task_assignments', 'todos'],
                                                                 'Weitere' => ['address_book', 'evidence', 'seized_assets', 'justice_references']
                                                             ];

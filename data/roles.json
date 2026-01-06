@@ -74,6 +74,12 @@
                 "edit",
                 "delete"
             ],
+            "public_notes": [
+                "view",
+                "create",
+                "edit",
+                "delete"
+            ],
             "calendar": [
                 "view",
                 "edit",
@@ -167,6 +173,10 @@
             ],
             "notes": [
                 "view"
+            ],
+            "public_notes": [
+                "view",
+                "create"
             ],
             "calendar": [
                 "view"

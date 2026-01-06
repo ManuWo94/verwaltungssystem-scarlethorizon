@@ -484,16 +484,17 @@ function checkPermissionOrDie($module, $action = 'view') {
     }
     
     if (!hasPermission($_SESSION['user_id'], $module, $action)) {
-        // Determine the base URL
+        // Show modal with permission denied message, then redirect
         $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
-        $redirectUrl = '';
+        $basePath = (strpos($scriptDir, '/modules') !== false || strpos($scriptDir, '/admin') !== false) ? '../' : '';
         
-        // If we're in a module directory, go up one level
-        if (strpos($scriptDir, '/modules') !== false || strpos($scriptDir, '/admin') !== false) {
-            $redirectUrl = '../access_denied.php';
-        } else {
-            $redirectUrl = 'access_denied.php';
-        }
+        // Create a temporary session flag to show modal
+        $_SESSION['permission_denied'] = true;
+        $_SESSION['permission_denied_module'] = $module;
+        $_SESSION['permission_denied_action'] = $action;
+        
+        // Determine the base URL
+        $redirectUrl = $basePath . 'dashboard.php';
         
         header('Location: ' . $redirectUrl);
         exit;

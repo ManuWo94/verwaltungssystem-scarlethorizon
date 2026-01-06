@@ -124,3 +124,44 @@ if ($displayRole === 'Vorsitzender Richter') {
             </li>
         </ul>
     </nav>
+    
+    <!-- Permission Denied Modal (wird angezeigt, wenn Benutzer zu viel Zugriff versucht) -->
+    <?php if (isset($_SESSION['permission_denied']) && $_SESSION['permission_denied']): ?>
+        <div class="modal fade" id="permissionDeniedModal" tabindex="-1" role="dialog" aria-labelledby="permissionDeniedLabel" aria-hidden="false" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="permissionDeniedLabel">
+                            <i class="fa fa-lock mr-2"></i> Zugriff verweigert
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Du hast keine Berechtigung, auf diese Funktion zuzugreifen.</strong></p>
+                        <p>
+                            Erforderliche Berechtigung: <strong><?php echo htmlspecialchars($_SESSION['permission_denied_action'] ?? 'view'); ?></strong> 
+                            auf Modul <strong><?php echo htmlspecialchars($_SESSION['permission_denied_module'] ?? 'unknown'); ?></strong>
+                        </p>
+                        <p class="text-muted">Wenn du glaubst, dass dies ein Fehler ist, kontaktiere einen Administrator.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="<?php echo getBasePath(); ?>dashboard.php" class="btn btn-primary">Zurück zum Dashboard</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            // Zeige das Modal an und räume die Session auf
+            document.addEventListener('DOMContentLoaded', function() {
+                var permissionModal = new (typeof $ !== 'undefined' ? $.fn.modal : function() {})();
+                if (typeof $ !== 'undefined') {
+                    $('#permissionDeniedModal').modal('show');
+                }
+            });
+        </script>
+        <?php 
+        // Räume die Session auf
+        unset($_SESSION['permission_denied']);
+        unset($_SESSION['permission_denied_module']);
+        unset($_SESSION['permission_denied_action']);
+        ?>
+    <?php endif; ?>
