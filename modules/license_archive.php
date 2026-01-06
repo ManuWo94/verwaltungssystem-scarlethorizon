@@ -113,7 +113,7 @@ usort($archivedLicenses, function($a, $b) {
 
 <div class="container-fluid">
     <div class="row">
-        <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+        <?php include '../includes/sidebar.php'; ?>
         
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -124,7 +124,7 @@ usort($archivedLicenses, function($a, $b) {
                     <a href="<?php echo $basePath; ?>modules/licenses.php" class="btn btn-sm btn-outline-secondary mr-2">
                         <i data-feather="arrow-left"></i> Zurück zu Lizenzen
                     </a>
-                    <?php if (hasModulePermission('licenses', 'delete')): ?>
+                    <?php if (currentUserCan('licenses', 'delete')): ?>
                     <button class="btn btn-sm btn-danger" data-toggle="modal" data-target="#bulkDeleteModal">
                         <i data-feather="trash-2"></i> Sammellöschung
                     </button>
@@ -180,7 +180,7 @@ usort($archivedLicenses, function($a, $b) {
                                 <button type="button" class="btn btn-secondary" id="resetFilter">Zurücksetzen</button>
                             </form>
                         </div>
-                        <?php if (hasModulePermission('licenses', 'delete')): ?>
+                        <?php if (currentUserCan('licenses', 'delete')): ?>
                         <div class="col-md-6 text-right">
                             <button class="btn btn-warning" id="selectAll">
                                 <i data-feather="check-square"></i> Alle auswählen
@@ -204,7 +204,7 @@ usort($archivedLicenses, function($a, $b) {
                         <table class="table table-hover mb-0" id="archiveTable">
                             <thead>
                                 <tr>
-                                    <?php if (hasModulePermission('licenses', 'delete')): ?>
+                                    <?php if (currentUserCan('licenses', 'delete')): ?>
                                     <th width="40">
                                         <input type="checkbox" id="selectAllCheckbox">
                                     </th>
@@ -221,7 +221,7 @@ usort($archivedLicenses, function($a, $b) {
                             <tbody>
                                 <?php if (empty($archivedLicenses)): ?>
                                 <tr>
-                                    <td colspan="<?php echo hasModulePermission('licenses', 'delete') ? '8' : '7'; ?>" class="text-center text-muted py-4">
+                                    <td colspan="<?php echo currentUserCan('licenses', 'delete') ? '8' : '7'; ?>" class="text-center text-muted py-4">
                                         Keine archivierten Lizenzen vorhanden
                                     </td>
                                 </tr>
@@ -233,7 +233,7 @@ usort($archivedLicenses, function($a, $b) {
                                 ?>
                                 <tr data-license-id="<?php echo htmlspecialchars($license['id']); ?>"
                                     data-holder="<?php echo htmlspecialchars($holderName); ?>">
-                                    <?php if (hasModulePermission('licenses', 'delete')): ?>
+                                    <?php if (currentUserCan('licenses', 'delete')): ?>
                                     <td>
                                         <input type="checkbox" class="license-checkbox" 
                                                value="<?php echo htmlspecialchars($license['id']); ?>">
@@ -260,14 +260,14 @@ usort($archivedLicenses, function($a, $b) {
                                                 data-license='<?php echo json_encode($license, JSON_HEX_APOS | JSON_HEX_QUOT); ?>'>
                                             <i data-feather="eye"></i>
                                         </button>
-                                        <?php if (hasModulePermission('licenses', 'create')): ?>
+                                        <?php if (currentUserCan('licenses', 'create')): ?>
                                         <button class="btn btn-sm btn-success restore-license" 
                                                 data-license-id="<?php echo htmlspecialchars($license['id']); ?>"
                                                 data-license-number="<?php echo htmlspecialchars($license['license_number']); ?>">
                                             <i data-feather="rotate-ccw"></i>
                                         </button>
                                         <?php endif; ?>
-                                        <?php if (hasModulePermission('licenses', 'delete')): ?>
+                                        <?php if (currentUserCan('licenses', 'delete')): ?>
                                         <button class="btn btn-sm btn-danger delete-license" 
                                                 data-license-id="<?php echo htmlspecialchars($license['id']); ?>"
                                                 data-license-number="<?php echo htmlspecialchars($license['license_number']); ?>">

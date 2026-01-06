@@ -208,7 +208,7 @@ usort($activeLicenses, function($a, $b) {
 
 <div class="container-fluid">
     <div class="row">
-        <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+        <?php include '../includes/sidebar.php'; ?>
         
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -219,7 +219,7 @@ usort($activeLicenses, function($a, $b) {
                     <a href="<?php echo $basePath; ?>modules/license_archive.php" class="btn btn-sm btn-outline-secondary mr-2">
                         <i data-feather="archive"></i> Archiv
                     </a>
-                    <?php if (hasModulePermission('licenses', 'create')): ?>
+                    <?php if (currentUserCan('licenses', 'create')): ?>
                     <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#createLicenseModal">
                         <i data-feather="plus"></i> Neue Lizenz
                     </button>
@@ -366,13 +366,13 @@ usort($activeLicenses, function($a, $b) {
                                                 data-license='<?php echo json_encode($license, JSON_HEX_APOS | JSON_HEX_QUOT); ?>'>
                                             <i data-feather="eye"></i>
                                         </button>
-                                        <?php if (hasModulePermission('licenses', 'create')): ?>
+                                        <?php if (currentUserCan('licenses', 'create')): ?>
                                         <button class="btn btn-sm btn-success renew-license" 
                                                 data-license='<?php echo json_encode($license, JSON_HEX_APOS | JSON_HEX_QUOT); ?>'>
                                             <i data-feather="refresh-cw"></i>
                                         </button>
                                         <?php endif; ?>
-                                        <?php if (hasModulePermission('licenses', 'delete')): ?>
+                                        <?php if (currentUserCan('licenses', 'delete')): ?>
                                         <button class="btn btn-sm btn-danger delete-license" 
                                                 data-license-id="<?php echo htmlspecialchars($license['id']); ?>"
                                                 data-license-number="<?php echo htmlspecialchars($license['license_number']); ?>">
