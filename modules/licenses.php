@@ -76,21 +76,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             
-            $licenseNumber = generateLicenseNumber($category, $licenses);
+            // Felder sammeln (VOR generateLicenseNumber, damit Inhabername verfügbar ist)
+            $fields = [];
+            $holderName = '';
+            if (isset($category['fields']) && is_array($category['fields'])) {
+                foreach ($category['fields'] as $field) {
+                    $fieldName = $field['name'];
+                    $fieldValue = $_POST['field_' . $fieldName] ?? '';
+                    $fields[$fieldName] = $fieldValue;
+                    
+                    // Inhabername für INITIALEN merken
+                    if ($fieldName === 'HOLDER_NAME' || strtolower($field['label']) === 'inhabername') {
+                        $holderName = $fieldValue;
+                    }
+                }
+            }
+            
+            $licenseNumber = generateLicenseNumber($category, $licenses, $holderName);
             $startDate = $_POST['start_date'] ?? date('Y-m-d');
             $durationDays = intval($_POST['duration_days'] ?? $category['default_duration_days']);
             $endDate = date('Y-m-d', strtotime($startDate . ' + ' . $durationDays . ' days'));
             $notificationEnabled = isset($_POST['notification_enabled']) && $_POST['notification_enabled'] === 'true';
             $notificationDays = intval($_POST['notification_days'] ?? $category['notification_days_before']);
-            
-            // Felder sammeln
-            $fields = [];
-            if (isset($category['fields']) && is_array($category['fields'])) {
-                foreach ($category['fields'] as $field) {
-                    $fieldName = $field['name'];
-                    $fields[$fieldName] = $_POST['field_' . $fieldName] ?? '';
-                }
-            }
             
             // Lizenztext generieren
             $licenseText = generateLicenseText($category, $licenseNumber, $fields, $startDate, $endDate);
@@ -157,9 +164,10 @@ require_once __DIR__ . '/../includes/header.php';
 $basePath = getBasePath();
 
 // Hilfsfunktion: Lizenznummer generieren
-function generateLicenseNumber($category, $licenses) {
+function generateLicenseNumber($category, $licenses, $holderName = '') {
     $schema = $category['number_schema'];
     $year = date('Y');
+    $month = date('m');
     
     // Zähler für diese Kategorie ermitteln
     $categoryLicenses = array_filter($licenses, function($lic) use ($category) {
@@ -170,6 +178,15 @@ function generateLicenseNumber($category, $licenses) {
     
     // Platzhalter ersetzen
     $number = str_replace('{YEAR}', $year, $schema);
+    $number = str_replace('{MONTH}', $month, $number);
+    
+    // {INITIALS} - Initialen aus Inhabername
+    if (strpos($number, '{INITIALS}') !== false && !empty($holderName)) {
+        $initials = extractInitials($holderName);
+        $number = str_replace('{INITIALS}', $initials, $number);
+    } elseif (strpos($number, '{INITIALS}') !== false) {
+        $number = str_replace('{INITIALS}', 'XX', $number);
+    }
     
     // {NUM:X} - Nummer mit X Stellen
     if (preg_match('/{NUM:(\d+)}/', $number, $matches)) {
@@ -179,6 +196,28 @@ function generateLicenseNumber($category, $licenses) {
     }
     
     return $number;
+}
+
+// Hilfsfunktion: Initialen aus Namen extrahieren
+function extractInitials($name) {
+    $name = trim($name);
+    if (empty($name)) return 'XX';
+    
+    // Entferne Sonderzeichen und mehrfache Leerzeichen
+    $name = preg_replace('/[^a-zA-ZäöüÄÖÜß\s]/', '', $name);
+    $name = preg_replace('/\s+/', ' ', $name);
+    
+    // Worte aufteilen
+    $words = explode(' ', $name);
+    $initials = '';
+    
+    foreach ($words as $word) {
+        if (!empty($word)) {
+            $initials .= strtoupper(substr($word, 0, 1));
+        }
+    }
+    
+    return !empty($initials) ? $initials : 'XX';
 }
 
 // Hilfsfunktion: Lizenztext generieren

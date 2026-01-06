@@ -1,0 +1,71 @@
+===========================================
+SOFORT-DEPLOYMENT FÜR PLESK-SERVER
+===========================================
+
+PROBLEM: Dein Live-Server hat noch die ALTE, fehlerhafte licenses.php
+LÖSUNG: Datei manuell hochladen
+
+===========================================
+METHODE 1: PLESK FILE MANAGER (EINFACHST)
+===========================================
+
+1. Öffne in einem neuen Browser-Tab:
+   https://5-9-96-43.plesk.page:8443
+   (oder deine Plesk-Login-URL)
+
+2. Logge dich ein
+
+3. Klicke auf "Dateien" → "Dateimanager"
+
+4. Navigiere zu: httpdocs/modules/
+
+5. Finde die Datei "licenses.php"
+
+6. Klicke rechts auf "licenses.php" → "Löschen" (alte Version entfernen)
+
+7. Klicke auf "Hochladen" Button
+
+8. Wähle diese Datei aus:
+   /workspaces/verwaltungssystem-scarlethorizon/modules/licenses.php
+
+9. Warte bis Upload fertig ist
+
+10. Teste: https://magical-chatelet.5-9-96-43.plesk.page/modules/licenses.php
+
+===========================================
+METHODE 2: DOWNLOAD + MANUELLER UPLOAD
+===========================================
+
+1. In VS Code:
+   - Rechtsklick auf "modules/licenses.php"
+   - "Download..." wählen
+   - Datei auf deinem PC speichern
+
+2. In Plesk File Manager:
+   - Alte licenses.php löschen
+   - Neue Datei hochladen
+
+===========================================
+NACH DEM UPLOAD TESTEN
+===========================================
+
+1. Öffne: https://magical-chatelet.5-9-96-43.plesk.page/modules/licenses.php
+
+2. Drücke: Strg+Shift+R (Hard Refresh)
+
+3. Öffne Browser-Konsole (F12)
+
+4. Klicke "Neue Lizenz" → Kategorie wählen → Formular ausfüllen → Speichern
+
+5. Prüfe Konsole: Sollte KEIN 500-Fehler mehr sein!
+
+===========================================
+WAS WURDE GEFIXT
+===========================================
+
+✅ db.php Include hinzugefügt (Zeile 3)
+✅ Syntax-Fehler (doppelte Klammer) behoben
+✅ TG-Nummer Feld hinzugefügt
+✅ Modal-Closing nach Speichern repariert
+✅ Verbessertes Error-Handling
+

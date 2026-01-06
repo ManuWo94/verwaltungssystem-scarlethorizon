@@ -265,27 +265,37 @@ require_once __DIR__ . '/../includes/header.php';
                                 <label>Nummern-Schema *</label>
                                 <input type="hidden" name="number_schema" id="numberSchema" required>
                                 
+                                <!-- PREFIX Eingabe -->
+                                <div class="form-group mb-2">
+                                    <label for="schemaPrefix" class="small text-muted">Präfix (z.B. "LIC", "WL", "BL")</label>
+                                    <input type="text" class="form-control form-control-sm" id="schemaPrefix" placeholder="z.B. LIC" maxlength="10">
+                                    <small class="text-muted">Wird als PREFIX-Baustein im Schema verwendet</small>
+                                </div>
+                                
                                 <!-- Drag & Drop Builder -->
                                 <div class="card">
-                                    <div class="card-header bg-light">
-                                        <small class="text-muted">Bausteine (ziehen Sie die Elemente in die Drop-Zone)</small>
+                                    <div class="card-header bg-light py-2">
+                                        <small class="text-muted font-weight-bold">Bausteine (ziehen Sie die Elemente in die Drop-Zone)</small>
                                     </div>
                                     <div class="card-body p-2">
                                         <div class="d-flex flex-wrap gap-2" id="schemaBlocks" style="gap: 8px;">
-                                            <span class="badge badge-primary schema-block" draggable="true" data-value="PREFIX" style="cursor: move; padding: 8px 12px; font-size: 13px;">
-                                                PREFIX
-                                            </span>
+                                            <button type="button" class="btn btn-sm btn-primary schema-block-btn" data-value="PREFIX" style="cursor: move; font-size: 13px;">
+                                                📝 PREFIX
+                                            </button>
                                             <span class="badge badge-info schema-block" draggable="true" data-value="{YEAR}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
-                                                JAHR
-                                            </span>
-                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:3}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
-                                                NUMMER (3)
-                                            </span>
-                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:4}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
-                                                NUMMER (4)
+                                                📅 JAHR
                                             </span>
                                             <span class="badge badge-warning schema-block" draggable="true" data-value="{MONTH}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
-                                                MONAT
+                                                📆 MONAT
+                                            </span>
+                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:3}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                🔢 NR (3)
+                                            </span>
+                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:4}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                🔢 NR (4)
+                                            </span>
+                                            <span class="badge badge-danger schema-block" draggable="true" data-value="{INITIALS}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                                👤 INITIALEN
                                             </span>
                                             <span class="badge badge-secondary schema-block" draggable="true" data-value="-" style="cursor: move; padding: 8px 12px; font-size: 13px;">
                                                 -
@@ -297,6 +307,7 @@ require_once __DIR__ . '/../includes/header.php';
                                                 _
                                             </span>
                                         </div>
+                                        <small class="text-muted d-block mt-2">💡 Tipp: INITIALEN nimmt Anfangsbuchstaben aus dem Feld "Inhabername"</small>
                                     </div>
                                 </div>
                                 
@@ -378,12 +389,52 @@ require_once __DIR__ . '/../includes/header.php';
                     
                     <div class="form-group">
                         <label>Felder definieren</label>
-                        <p class="text-muted small mb-2">Ziehen Sie Feldtypen in den Builder, um eigene Felder zu erstellen:</p>
+                        <p class="text-muted small mb-2">Häufig verwendete Felder schnell hinzufügen:</p>
+                        
+                        <!-- Quick-Add Standard-Felder -->
+                        <div class="card mb-2 bg-light">
+                            <div class="card-body p-2">
+                                <div class="d-flex flex-wrap" style="gap: 4px;">
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"HOLDER_NAME","label":"Inhabername","type":"text","required":true}'>
+                                        + Inhabername
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"TG_NUMBER","label":"TG-Nummer","type":"text","required":true}'>
+                                        + TG-Nummer
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"BUSINESS_TYPE","label":"Geschäftstyp","type":"select","required":true,"options":["Bar","Restaurant","Club","Geschäft","Sonstiges"]}'>
+                                        + Geschäftstyp
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"BUSINESS_NAME","label":"Gewerbename","type":"text","required":true}'>
+                                        + Gewerbename
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"WEAPON_NAME","label":"Waffenname","type":"text","required":true}'>
+                                        + Waffenname
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"SERIAL_NUMBER","label":"Seriennummer","type":"text","required":true}'>
+                                        + Seriennummer
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"SUBSTANCE","label":"Substanz","type":"text","required":true}'>
+                                        + Substanz
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"ISSUE_DATE","label":"Ausstellungsdatum","type":"date","required":true}'>
+                                        + Ausstellungsdatum
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"DURATION","label":"Frist (Tage)","type":"number","required":true}'>
+                                        + Frist
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary quick-field-btn" data-field='{"name":"CUSTOM","label":"Benutzerdefiniert","type":"text","required":false}'>
+                                        + Eigenes Textfeld
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-muted small mb-2">Oder ziehen Sie Feldtypen in die Drop-Zone:</p>
                         
                         <!-- Feld-Bausteine -->
                         <div class="card mb-2">
                             <div class="card-header bg-light py-2">
-                                <small class="text-muted font-weight-bold">Feldtypen (ziehen Sie diese in die Drop-Zone)</small>
+                                <small class="text-muted font-weight-bold">Feldtypen (ziehen für benutzerdefinierte Felder)</small>
                             </div>
                             <div class="card-body p-2">
                                 <div class="d-flex flex-wrap" style="gap: 6px;">
@@ -433,12 +484,52 @@ $(document).ready(function() {
     let fields = [];
     let schemaElements = [];
     
+    // === QUICK-ADD FIELD BUTTONS ===
+    
+    $(document).on('click', '.quick-field-btn', function(e) {
+        e.preventDefault();
+        const fieldData = $(this).data('field');
+        
+        if (fieldData.name === 'CUSTOM') {
+            // Benutzerdefiniertes Feld - Prompt für Namen
+            const fieldName = prompt('Geben Sie einen Feldnamen ein (z.B. CUSTOM_FIELD):');
+            if (!fieldName) return;
+            
+            const fieldLabel = prompt('Geben Sie einen Anzeigetext ein:');
+            if (!fieldLabel) return;
+            
+            addField('text', fieldName, fieldLabel, false, null);
+        } else {
+            // Vordefiniertes Feld direkt hinzufügen
+            addField(
+                fieldData.type,
+                fieldData.name,
+                fieldData.label,
+                fieldData.required || false,
+                fieldData.options || null
+            );
+        }
+    });
+    
     // === DRAG & DROP SCHEMA BUILDER ===
     
     // Drag Start auf Bausteinen
     $(document).on('dragstart', '.schema-block', function(e) {
         e.originalEvent.dataTransfer.effectAllowed = 'copy';
         e.originalEvent.dataTransfer.setData('text/plain', $(this).data('value'));
+    });
+    
+    // PREFIX Button Click
+    $(document).on('click', '.schema-block[data-value="PREFIX"]', function(e) {
+        e.preventDefault();
+        const prefixValue = $('#schemaPrefix').val().trim();
+        if (!prefixValue) {
+            alert('Bitte geben Sie einen Präfix-Wert ein (z.B. "LIC" oder "WL")');
+            $('#schemaPrefix').focus();
+            return;
+        }
+        schemaElements.push(prefixValue);
+        updateSchemaPreview();
     });
     
     // Drop Zone Events
@@ -555,14 +646,16 @@ $(document).ready(function() {
     });
     
     // Feld hinzufügen
-    function addField(type = 'text') {
+    function addField(type = 'text', name = '', label = '', required = false, options = null) {
         const field = {
-            name: '',
-            label: '',
+            id: ++fieldIdCounter,
+            name: name || 'FIELD_' + fieldIdCounter,
+            label: label || 'Neues Feld',
             type: type,
-            required: false,
-            options: []
+            required: required,
+            options: options || (type === 'select' ? ['Option 1', 'Option 2'] : [])
         };
+        
         fields.push(field);
         renderFields();
         updateCustomFieldPlaceholders();
