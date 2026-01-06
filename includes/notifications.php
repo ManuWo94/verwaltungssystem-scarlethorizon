@@ -72,26 +72,35 @@ function createNotification($userId, $type, $title, $message, $link = '', $relat
 function getUserNotifications($userId, $unreadOnly = false, $limit = 50) {
     global $notificationsFile;
     
-    $notifications = getJsonData($notificationsFile);
-    if ($notifications === false) {
-        return [];
-    }
-    
-    $userNotifications = [];
-    foreach ($notifications as $notification) {
-        if ($notification['user_id'] === $userId) {
-            if ($unreadOnly && $notification['is_read']) {
+    try {
+        $notifications = getJsonData($notificationsFile);
+        if ($notifications === false || !is_array($notifications)) {
+            return [];
+        }
+        
+        $userNotifications = [];
+        foreach ($notifications as $notification) {
+            if (!isset($notification['user_id']) || !isset($notification['is_read'])) {
                 continue;
             }
-            $userNotifications[] = $notification;
             
-            if (count($userNotifications) >= $limit) {
-                break;
+            if ($notification['user_id'] === $userId) {
+                if ($unreadOnly && $notification['is_read']) {
+                    continue;
+                }
+                $userNotifications[] = $notification;
+                
+                if (count($userNotifications) >= $limit) {
+                    break;
+                }
             }
         }
+        
+        return $userNotifications;
+    } catch (Exception $e) {
+        error_log("Fehler bei getUserNotifications: " . $e->getMessage());
+        return [];
     }
-    
-    return $userNotifications;
 }
 
 /**
@@ -104,21 +113,30 @@ function getUserNotifications($userId, $unreadOnly = false, $limit = 50) {
 function countUnreadNotifications($userId, $type = null) {
     global $notificationsFile;
     
-    $notifications = getJsonData($notificationsFile);
-    if ($notifications === false) {
-        return 0;
-    }
-    
-    $count = 0;
-    foreach ($notifications as $notification) {
-        if ($notification['user_id'] === $userId && !$notification['is_read']) {
-            if ($type === null || $notification['type'] === $type) {
-                $count++;
+    try {
+        $notifications = getJsonData($notificationsFile);
+        if ($notifications === false || !is_array($notifications)) {
+            return 0;
+        }
+        
+        $count = 0;
+        foreach ($notifications as $notification) {
+            if (!isset($notification['user_id']) || !isset($notification['is_read'])) {
+                continue;
+            }
+            
+            if ($notification['user_id'] === $userId && !$notification['is_read']) {
+                if ($type === null || (isset($notification['type']) && $notification['type'] === $type)) {
+                    $count++;
+                }
             }
         }
+        
+        return $count;
+    } catch (Exception $e) {
+        error_log("Fehler bei countUnreadNotifications: " . $e->getMessage());
+        return 0;
     }
-    
-    return $count;
 }
 
 /**

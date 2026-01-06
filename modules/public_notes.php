@@ -197,25 +197,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                     
-                    // Erstelle Benachrichtigungen
-                    $commenterName = $username;
-                    foreach ($users as $u) {
-                        if ($u['id'] === $user_id) {
-                            $commenterName = isset($u['first_name']) && isset($u['last_name']) ?
-                                $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
-                            break;
+                    // Erstelle Benachrichtigungen (Non-blocking)
+                    try {
+                        $commenterName = $username;
+                        foreach ($users as $u) {
+                            if ($u['id'] === $user_id) {
+                                $commenterName = isset($u['first_name']) && isset($u['last_name']) ?
+                                    $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
+                                break;
+                            }
                         }
-                    }
-                    
-                    foreach (array_keys($notifyUsers) as $notifyUserId) {
-                        createNotification(
-                            $notifyUserId,
-                            'public_note_comment',
-                            'Neuer Kommentar zu öffentlicher Notiz',
-                            $commenterName . ' hat die Notiz "' . $note['title'] . '" kommentiert.',
-                            'modules/public_notes.php',
-                            $note_id
-                        );
+                        
+                        foreach (array_keys($notifyUsers) as $notifyUserId) {
+                            @createNotification(
+                                $notifyUserId,
+                                'public_note_comment',
+                                'Neuer Kommentar zu öffentlicher Notiz',
+                                $commenterName . ' hat die Notiz "' . $note['title'] . '" kommentiert.',
+                                'modules/public_notes.php',
+                                $note_id
+                            );
+                        }
+                    } catch (Exception $e) {
+                        error_log('Fehler beim Erstellen von Notiz-Benachrichtigungen: ' . $e->getMessage());
                     }
                 }
                 

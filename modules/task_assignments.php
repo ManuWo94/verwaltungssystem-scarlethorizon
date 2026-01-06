@@ -319,28 +319,33 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                     
                     $commentObj['created_by_name'] = $commentatorName;
                     
-                    // Benachrichtigung erstellen für den Zugewiesenen (wenn nicht der Kommentierende)
-                    if ($task['assigned_to'] !== $user_id) {
-                        createNotification(
-                            $task['assigned_to'],
-                            'task',
-                            'Neuer Kommentar zu Ihrer Aufgabe',
-                            $commentatorName . ' hat einen Kommentar zu "' . $task['title'] . '" hinzugefügt.',
-                            'modules/task_assignments.php',
-                            $task['id']
-                        );
-                    }
-                    
-                    // Benachrichtigung auch für den Ersteller (wenn nicht Kommentierende oder Zugewiesener)
-                    if ($task['created_by'] !== $user_id && $task['created_by'] !== $task['assigned_to']) {
-                        createNotification(
-                            $task['created_by'],
-                            'task',
-                            'Neuer Kommentar zu Ihrer erstellten Aufgabe',
-                            $commentatorName . ' hat einen Kommentar zu "' . $task['title'] . '" hinzugefügt.',
-                            'modules/task_assignments.php',
-                            $task['id']
-                        );
+                    // Benachrichtigungen erstellen (Non-blocking)
+                    try {
+                        // Benachrichtigung für den Zugewiesenen (wenn nicht der Kommentierende)
+                        if ($task['assigned_to'] !== $user_id) {
+                            @createNotification(
+                                $task['assigned_to'],
+                                'task',
+                                'Neuer Kommentar zu Ihrer Aufgabe',
+                                $commentatorName . ' hat einen Kommentar zu "' . $task['title'] . '" hinzugefügt.',
+                                'modules/task_assignments.php',
+                                $task['id']
+                            );
+                        }
+                        
+                        // Benachrichtigung auch für den Ersteller (wenn nicht Kommentierende oder Zugewiesener)
+                        if ($task['created_by'] !== $user_id && $task['created_by'] !== $task['assigned_to']) {
+                            @createNotification(
+                                $task['created_by'],
+                                'task',
+                                'Neuer Kommentar zu Ihrer erstellten Aufgabe',
+                                $commentatorName . ' hat einen Kommentar zu "' . $task['title'] . '" hinzugefügt.',
+                                'modules/task_assignments.php',
+                                $task['id']
+                            );
+                        }
+                    } catch (Exception $e) {
+                        error_log('Fehler beim Erstellen von Benachrichtigungen: ' . $e->getMessage());
                     }
                     
                     echo json_encode([
@@ -458,18 +463,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     array_unshift($tasks, $taskData);
                     
                     if (saveJsonData($tasksFile, $tasks)) {
-                        // Benachrichtigung für den Zugewiesenen erstellen
-                        $creatorName = isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? 
-                            $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $username;
-                        
-                        createNotification(
-                            $assignedTo,
-                            'task',
-                            'Neue Aufgabe zugewiesen',
-                            $creatorName . ' hat Ihnen die Aufgabe "' . $taskData['title'] . '" zugewiesen.',
-                            'modules/task_assignments.php',
-                            $taskData['id']
-                        );
+                        // Benachrichtigung für den Zugewiesenen erstellen (Non-blocking)
+                        try {
+                            $creatorName = isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? 
+                                $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $username;
+                            
+                            @createNotification(
+                                $assignedTo,
+                                'task',
+                                'Neue Aufgabe zugewiesen',
+                                $creatorName . ' hat Ihnen die Aufgabe "' . $taskData['title'] . '" zugewiesen.',
+                                'modules/task_assignments.php',
+                                $taskData['id']
+                            );
+                        } catch (Exception $e) {
+                            error_log('Fehler beim Erstellen der Benachrichtigung: ' . $e->getMessage());
+                        }
                         
                         $message = 'Aufgabe wurde erfolgreich erstellt und ' . $assignedToName . ' zugewiesen.';
                     } else {
@@ -549,18 +558,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $tasks[$key]['comments'][] = $commentObj;
 
                     if (saveJsonData($tasksFile, $tasks)) {
-                        // Benachrichtigung für den neuen Empfänger erstellen
-                        $forwarderName = isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? 
-                            $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $username;
-                        
-                        createNotification(
-                            $forwardTo,
-                            'task',
-                            'Aufgabe weitergeleitet',
-                            $forwarderName . ' hat Ihnen die Aufgabe "' . $newTitle . '" weitergeleitet.',
-                            'modules/task_assignments.php',
-                            $taskId
-                        );
+                        // Benachrichtigung für den neuen Empfänger erstellen (Non-blocking)
+                        try {
+                            $forwarderName = isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? 
+                                $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $username;
+                            
+                            @createNotification(
+                                $forwardTo,
+                                'task',
+                                'Aufgabe weitergeleitet',
+                                $forwarderName . ' hat Ihnen die Aufgabe "' . $newTitle . '" weitergeleitet.',
+                                'modules/task_assignments.php',
+                                $taskId
+                            );
+                        } catch (Exception $e) {
+                            error_log('Fehler beim Erstellen der Weiterleitungs-Benachrichtigung: ' . $e->getMessage());
+                        }
                         
                         $message = 'Aufgabe wurde weitergeleitet.';
                     } else {
