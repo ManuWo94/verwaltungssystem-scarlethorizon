@@ -121,13 +121,6 @@ foreach ($users as $user) {
     }
 }
 
-// Lade Rollen für die Rollenzuweisung
-$rolesFile = '../data/roles.json';
-$allRoles = getJsonData($rolesFile);
-if ($allRoles === false) {
-    $allRoles = [];
-}
-
 // Sortiere Benutzer nach Rolle und Namen
 usort($activeUsers, function($a, $b) {
     if ($a['role'] === $b['role']) {
@@ -143,160 +136,8 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
     // Action kann entweder aus POST oder GET kommen
     $action = isset($_POST['action']) ? $_POST['action'] : (isset($_GET['action']) ? $_GET['action'] : '');
     
-    // Aufgabe beanspruchen (Claim)
-    if ($action === 'claim_task') {
-        $taskId = isset($_POST['task_id']) ? sanitize($_POST['task_id']) : '';
-        $taskFound = false;
-        
-        foreach ($tasks as $key => $task) {
-            if ($task['id'] === $taskId) {
-                $taskFound = true;
-                
-                // Prüfe, ob die Aufgabe einer Rolle zugewiesen ist
-                if (empty($task['assignment_type']) || $task['assignment_type'] !== 'role') {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Diese Aufgabe kann nicht beansprucht werden (keine Rollenzuweisung).'
-                    ]);
-                    exit;
-                }
-                
-                // Prüfe, ob bereits jemand die Aufgabe beansprucht hat
-                if (!empty($task['claimed_by'])) {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Diese Aufgabe wurde bereits beansprucht.'
-                    ]);
-                    exit;
-                }
-                
-                // Prüfe, ob der Benutzer die zugewiesene Rolle hat
-                $userHasRole = false;
-                $assignedRoleId = $task['assigned_to'];
-                
-                // Prüfe in den Rollen des Benutzers
-                if (in_array($assignedRoleId, array_map(function($r) { return $r; }, $roles)) || 
-                    (isset($_SESSION['role_id']) && $_SESSION['role_id'] === $assignedRoleId)) {
-                    $userHasRole = true;
-                } else {
-                    // Fallback: Prüfe auch Rollennamen
-                    foreach ($allRoles as $roleData) {
-                        if (($roleData['id'] === $assignedRoleId || $roleData['name'] === $task['assigned_to']) &&
-                            (in_array($roleData['name'], $roles) || $role === $roleData['name'])) {
-                            $userHasRole = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!$userHasRole) {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Sie haben nicht die erforderliche Rolle für diese Aufgabe.'
-                    ]);
-                    exit;
-                }
-                
-                // Beanspruche die Aufgabe
-                $tasks[$key]['claimed_by'] = $user_id;
-                $tasks[$key]['claimed_at'] = date('Y-m-d H:i:s');
-                $tasks[$key]['updated_at'] = date('Y-m-d H:i:s');
-                $tasks[$key]['updated_by'] = $user_id;
-                
-                if (saveJsonData($tasksFile, $tasks)) {
-                    // Hole Benutzername
-                    $claimedByName = $username;
-                    foreach ($users as $u) {
-                        if ($u['id'] === $user_id) {
-                            $claimedByName = isset($u['first_name']) && isset($u['last_name']) ? 
-                                          $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
-                            break;
-                        }
-                    }
-                    
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Aufgabe wurde erfolgreich beansprucht.',
-                        'task' => $tasks[$key],
-                        'claimed_by_name' => $claimedByName
-                    ]);
-                } else {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Fehler beim Speichern.'
-                    ]);
-                }
-                
-                break;
-            }
-        }
-        
-        if (!$taskFound) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Aufgabe nicht gefunden.'
-            ]);
-        }
-        
-        exit;
-    }
-    
-    // Aufgabe freigeben (Unclaim)
-    elseif ($action === 'unclaim_task') {
-        $taskId = isset($_POST['task_id']) ? sanitize($_POST['task_id']) : '';
-        $taskFound = false;
-        
-        foreach ($tasks as $key => $task) {
-            if ($task['id'] === $taskId) {
-                $taskFound = true;
-                
-                // Prüfe, ob der Benutzer die Aufgabe beansprucht hat
-                if (empty($task['claimed_by']) || $task['claimed_by'] !== $user_id) {
-                    // Admins können Aufgaben freigeben
-                    if (!$canAssignTasks) {
-                        echo json_encode([
-                            'success' => false,
-                            'message' => 'Sie haben diese Aufgabe nicht beansprucht.'
-                        ]);
-                        exit;
-                    }
-                }
-                
-                // Gebe die Aufgabe frei
-                $tasks[$key]['claimed_by'] = null;
-                $tasks[$key]['claimed_at'] = null;
-                $tasks[$key]['updated_at'] = date('Y-m-d H:i:s');
-                $tasks[$key]['updated_by'] = $user_id;
-                
-                if (saveJsonData($tasksFile, $tasks)) {
-                    echo json_encode([
-                        'success' => true,
-                        'message' => 'Aufgabe wurde erfolgreich freigegeben.',
-                        'task' => $tasks[$key]
-                    ]);
-                } else {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Fehler beim Speichern.'
-                    ]);
-                }
-                
-                break;
-            }
-        }
-        
-        if (!$taskFound) {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Aufgabe nicht gefunden.'
-            ]);
-        }
-        
-        exit;
-    }
-    
     // Aufgabe als erledigt markieren
-    elseif ($action === 'toggle_task_status') {
+    if ($action === 'toggle_task_status') {
         $taskId = isset($_POST['task_id']) ? sanitize($_POST['task_id']) : '';
         $taskFound = false;
         
@@ -304,26 +145,13 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
             if ($task['id'] === $taskId) {
                 $taskFound = true;
                 
-                // Prüfe, ob der Benutzer die Aufgabe bearbeiten darf
-                $canEdit = false;
-                
-                // Bei Rollenaufgaben: Nur wer die Aufgabe beansprucht hat, kann sie abhaken
-                if (!empty($task['assignment_type']) && $task['assignment_type'] === 'role') {
-                    if (!empty($task['claimed_by']) && $task['claimed_by'] === $user_id) {
-                        $canEdit = true;
-                    } elseif ($canAssignTasks || $task['created_by'] === $user_id) {
-                        // Admins und Ersteller können auch abhaken
-                        $canEdit = true;
-                    }
-                } else {
-                    // Bei Benutzerzuweisung: Zugewiesener, Ersteller oder Berechtigter
-                    $canEdit = ($task['assigned_to'] === $user_id || $task['created_by'] === $user_id || $canAssignTasks);
-                }
+                // Prüfe, ob der Benutzer die Aufgabe bearbeiten darf (Zugewiesener, Ersteller oder Berechtigter)
+                $canEdit = ($task['assigned_to'] === $user_id || $task['created_by'] === $user_id || $canAssignTasks);
                 
                 if (!$canEdit) {
                     echo json_encode([
                         'success' => false,
-                        'message' => 'Sie haben keine Berechtigung, diese Aufgabe abzuhaken. Bei Rollenaufgaben müssen Sie die Aufgabe zuerst beanspruchen.'
+                        'message' => 'Sie haben keine Berechtigung, diese Aufgabe zu bearbeiten.'
                     ]);
                     exit;
                 }
@@ -370,9 +198,8 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
             if ($task['id'] === $taskId) {
                 $taskFound = true;
                 
-                // GEÄNDERT: Alle Benutzer können Aufgaben sehen (für Kommentare)
                 // Prüfe, ob der Benutzer die Aufgabe sehen darf
-                $canView = true; // Jeder kann alle Aufgaben sehen
+                $canView = ($task['assigned_to'] === $user_id || $task['created_by'] === $user_id || $canAssignTasks);
                 
                 if (!$canView) {
                     echo json_encode([
@@ -393,40 +220,16 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                 }
                 $task['created_by_name'] = $createdByName;
                 
-                // Füge Namen des Zugewiesenen hinzu (Benutzer oder Rolle)
+                // Füge Namen des Zugewiesenen hinzu
                 $assignedToName = "Unbekannt";
-                if (!empty($task['assignment_type']) && $task['assignment_type'] === 'role') {
-                    // Finde Rollennamen
-                    foreach ($allRoles as $roleData) {
-                        if ($roleData['id'] === $task['assigned_to'] || $roleData['name'] === $task['assigned_to']) {
-                            $assignedToName = $roleData['name'] . ' (Rolle)';
-                            break;
-                        }
-                    }
-                } else {
-                    // Finde Benutzernamen
-                    foreach ($users as $u) {
-                        if ($u['id'] === $task['assigned_to']) {
-                            $assignedToName = isset($u['first_name']) && isset($u['last_name']) ? 
-                                          $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
-                            break;
-                        }
+                foreach ($users as $u) {
+                    if ($u['id'] === $task['assigned_to']) {
+                        $assignedToName = isset($u['first_name']) && isset($u['last_name']) ? 
+                                      $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
+                        break;
                     }
                 }
                 $task['assigned_to_name'] = $assignedToName;
-                
-                // Füge Namen des Beanspruchenden hinzu (falls Rollenzuweisung)
-                if (!empty($task['claimed_by'])) {
-                    $claimedByName = "Unbekannt";
-                    foreach ($users as $u) {
-                        if ($u['id'] === $task['claimed_by']) {
-                            $claimedByName = isset($u['first_name']) && isset($u['last_name']) ? 
-                                          $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
-                            break;
-                        }
-                    }
-                    $task['claimed_by_name'] = $claimedByName;
-                }
                 
                 // Füge Kategorieinformationen hinzu, falls vorhanden
                 if (!empty($task['category_id'])) {
@@ -475,8 +278,8 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
             if ($task['id'] === $taskId) {
                 $taskFound = true;
                 
-                // GEÄNDERT: Alle können kommentieren
-                $canComment = true;
+                // Prüfe, ob der Benutzer die Aufgabe kommentieren darf
+                $canComment = ($task['assigned_to'] === $user_id || $task['created_by'] === $user_id || $canAssignTasks);
                 
                 if (!$canComment) {
                     echo json_encode([
@@ -591,49 +394,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Sie haben keine Berechtigung, Aufgaben zuzuweisen.';
         } 
         elseif (empty($_POST['title']) || empty($_POST['assigned_to'])) {
-            $error = 'Bitte geben Sie einen Titel und einen Empfänger für die Aufgabe an.';
+            $error = 'Bitte geben Sie einen Titel und einen Benutzer für die Aufgabe an.';
         } else {
             $assignedTo = sanitize($_POST['assigned_to']);
-            $assignmentType = isset($_POST['assignment_type']) ? sanitize($_POST['assignment_type']) : 'user';
             $categoryId = isset($_POST['category_id']) ? sanitize($_POST['category_id']) : '';
             $dueDate = !empty($_POST['due_date']) ? sanitize($_POST['due_date']) : null;
             $priority = isset($_POST['priority']) ? intval($_POST['priority']) : 2; // 1=niedrig, 2=normal, 3=hoch
             
-            // Prüfe, ob Benutzer oder Rolle existiert
-            $assigneeExists = false;
+            // Prüfe, ob der Benutzer existiert
+            $userExists = false;
             $assignedToName = '';
             
-            if ($assignmentType === 'role') {
-                // Prüfe, ob die Rolle existiert
-                foreach ($allRoles as $roleData) {
-                    if ($roleData['id'] === $assignedTo || $roleData['name'] === $assignedTo) {
-                        $assigneeExists = true;
-                        $assignedToName = $roleData['name'] . ' (Rolle)';
-                        $assignedTo = $roleData['id']; // Stelle sicher, dass wir die ID verwenden
-                        break;
-                    }
-                }
-                
-                if (!$assigneeExists) {
-                    $error = 'Die ausgewählte Rolle existiert nicht.';
-                }
-            } else {
-                // Prüfe, ob der Benutzer existiert
-                foreach ($users as $u) {
-                    if ($u['id'] === $assignedTo) {
-                        $assigneeExists = true;
-                        $assignedToName = isset($u['first_name']) && isset($u['last_name']) ? 
-                                        $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
-                        break;
-                    }
-                }
-                
-                if (!$assigneeExists) {
-                    $error = 'Der ausgewählte Benutzer existiert nicht.';
+            foreach ($users as $u) {
+                if ($u['id'] === $assignedTo) {
+                    $userExists = true;
+                    $assignedToName = isset($u['first_name']) && isset($u['last_name']) ? 
+                                    $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
+                    break;
                 }
             }
             
-            if ($assigneeExists) {
+            if (!$userExists) {
+                $error = 'Der ausgewählte Benutzer existiert nicht.';
+            } else {
                 // Überprüfe, ob die Kategorie existiert
                 $categoryExists = false;
                 $categoryName = '';
@@ -663,11 +446,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'category_name' => $categoryName,
                         'category_color' => $categoryColor,
                         'priority' => $priority,
-                        'assignment_type' => $assignmentType, // 'user' oder 'role'
                         'assigned_to' => $assignedTo,
                         'assigned_to_name' => $assignedToName,
-                        'claimed_by' => null, // Nur für Rollenaufgaben relevant
-                        'claimed_at' => null,
                         'due_date' => $dueDate,
                         'completed' => false,
                         'completed_at' => null,
@@ -683,62 +463,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     array_unshift($tasks, $taskData);
                     
                     if (saveJsonData($tasksFile, $tasks)) {
-                        // Bei Rollenzuweisung: Benachrichtige alle Benutzer mit dieser Rolle
-                        if ($assignmentType === 'role') {
-                            try {
-                                $creatorName = isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? 
-                                    $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $username;
-                                
-                                foreach ($users as $u) {
-                                    // Prüfe, ob der Benutzer die Rolle hat
-                                    $userHasRole = false;
-                                    if (isset($u['roles']) && is_array($u['roles'])) {
-                                        foreach ($allRoles as $roleData) {
-                                            if (($roleData['id'] === $assignedTo || $roleData['name'] === $assignedTo) &&
-                                                (in_array($roleData['name'], $u['roles']) || 
-                                                 (isset($u['role']) && $u['role'] === $roleData['name']))) {
-                                                $userHasRole = true;
-                                                break;
-                                            }
-                                        }
-                                    } elseif (isset($u['role_id']) && $u['role_id'] === $assignedTo) {
-                                        $userHasRole = true;
-                                    }
-                                    
-                                    if ($userHasRole && $u['id'] !== $user_id) {
-                                        @createNotification(
-                                            $u['id'],
-                                            'task',
-                                            'Neue Rollenaufgabe verfügbar',
-                                            $creatorName . ' hat eine neue Aufgabe "' . $taskData['title'] . '" für Ihre Rolle erstellt. Sie können diese Aufgabe beanspruchen.',
-                                            'modules/task_assignments.php?task_id=' . $taskData['id'],
-                                            $taskData['id']
-                                        );
-                                    }
-                                }
-                            } catch (Exception $e) {
-                                error_log('Fehler beim Erstellen der Benachrichtigungen: ' . $e->getMessage());
-                            }
-                            $message = 'Aufgabe wurde erfolgreich erstellt und der Rolle ' . str_replace(' (Rolle)', '', $assignedToName) . ' zugewiesen.';
-                        } else {
-                            // Benachrichtigung für den Zugewiesenen erstellen (Non-blocking)
-                            try {
-                                $creatorName = isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? 
-                                    $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $username;
-                                
-                                @createNotification(
-                                    $assignedTo,
-                                    'task',
-                                    'Neue Aufgabe zugewiesen',
-                                    $creatorName . ' hat Ihnen die Aufgabe "' . $taskData['title'] . '" zugewiesen.',
-                                    'modules/task_assignments.php?task_id=' . $taskData['id'],
-                                    $taskData['id']
-                                );
-                            } catch (Exception $e) {
-                                error_log('Fehler beim Erstellen der Benachrichtigung: ' . $e->getMessage());
-                            }
-                            $message = 'Aufgabe wurde erfolgreich erstellt und ' . $assignedToName . ' zugewiesen.';
+                        // Benachrichtigung für den Zugewiesenen erstellen (Non-blocking)
+                        try {
+                            $creatorName = isset($_SESSION['first_name']) && isset($_SESSION['last_name']) ? 
+                                $_SESSION['first_name'] . ' ' . $_SESSION['last_name'] : $username;
+                            
+                            @createNotification(
+                                $assignedTo,
+                                'task',
+                                'Neue Aufgabe zugewiesen',
+                                $creatorName . ' hat Ihnen die Aufgabe "' . $taskData['title'] . '" zugewiesen.',
+                                'modules/task_assignments.php?task_id=' . $taskData['id'],
+                                $taskData['id']
+                            );
+                        } catch (Exception $e) {
+                            error_log('Fehler beim Erstellen der Benachrichtigung: ' . $e->getMessage());
                         }
+                        
+                        $message = 'Aufgabe wurde erfolgreich erstellt und ' . $assignedToName . ' zugewiesen.';
                     } else {
                         $error = 'Fehler beim Speichern der Aufgabe.';
                     }
@@ -946,33 +688,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $taskId = sanitize($_POST['task_id']);
         $taskFound = false;
         
-        foreach ($tasks as $key => $task) {
-            if ($task['id'] === $taskId) {
-                $taskFound = true;
-                
-                // Nur Ersteller oder Admins können löschen
-                $canDelete = ($task['created_by'] === $user_id || $canAssignTasks);
-                
-                if (!$canDelete) {
-                    $error = 'Nur der Ersteller oder ein Administrator kann diese Aufgabe löschen.';
+        if (!$canAssignTasks) {
+            $error = 'Sie haben keine Berechtigung, Aufgaben zu löschen.';
+        } else {
+            foreach ($tasks as $key => $task) {
+                if ($task['id'] === $taskId) {
+                    $taskFound = true;
+                    
+                    // Lösche die Aufgabe
+                    array_splice($tasks, $key, 1);
+                    
+                    if (saveJsonData($tasksFile, $tasks)) {
+                        $message = 'Aufgabe wurde erfolgreich gelöscht.';
+                    } else {
+                        $error = 'Fehler beim Löschen der Aufgabe.';
+                    }
+                    
                     break;
                 }
-                
-                // Lösche die Aufgabe
-                array_splice($tasks, $key, 1);
-                
-                if (saveJsonData($tasksFile, $tasks)) {
-                    $message = 'Aufgabe wurde erfolgreich gelöscht.';
-                } else {
-                    $error = 'Fehler beim Löschen der Aufgabe.';
-                }
-                
-                break;
             }
-        }
-        
-        if (!$taskFound) {
-            $error = 'Die zu löschende Aufgabe wurde nicht gefunden.';
+            
+            if (!$taskFound) {
+                $error = 'Die zu löschende Aufgabe wurde nicht gefunden.';
+            }
         }
     }
     
@@ -1130,38 +868,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Bestimme die sichtbaren Aufgaben für den Benutzer
 $visibleTasks = [];
 foreach ($tasks as $task) {
-    // GEÄNDERT: Alle Benutzer können alle Aufgaben sehen (für Kommentare und Transparenz)
-    // Bei Rollenaufgaben: Zeige nur Aufgaben der eigenen Rollen oder wenn man Admin/Ersteller ist
-    $canSee = false;
-    
-    // Admins und Ersteller sehen immer
-    if ($canAssignTasks || $task['created_by'] === $user_id) {
-        $canSee = true;
-    }
-    // Aufgaben, die direkt zugewiesen sind
-    elseif (empty($task['assignment_type']) || $task['assignment_type'] === 'user') {
-        if ($task['assigned_to'] === $user_id) {
-            $canSee = true;
-        }
-    }
-    // Rollenaufgaben: Zeige, wenn Benutzer die Rolle hat
-    elseif ($task['assignment_type'] === 'role') {
-        $assignedRoleId = $task['assigned_to'];
-        foreach ($allRoles as $roleData) {
-            if (($roleData['id'] === $assignedRoleId || $roleData['name'] === $assignedRoleId) &&
-                (in_array($roleData['name'], $roles) || $role === $roleData['name'])) {
-                $canSee = true;
-                break;
-            }
-        }
-    }
-    
-    // Auch Aufgaben sichtbar machen, die man beansprucht hat
-    if (!empty($task['claimed_by']) && $task['claimed_by'] === $user_id) {
-        $canSee = true;
-    }
-    
-    if ($canSee) {
+    // System Administrator und Chief Justice sehen alles
+    // Manager können alle Aufgaben sehen
+    // Andere Benutzer sehen nur Aufgaben, die ihnen zugewiesen wurden oder die sie erstellt haben
+    if (in_array('System Administrator', $roles) || in_array('Chief Justice', $roles) || $role === 'System Administrator' || $canAssignTasks || $task['assigned_to'] === $user_id || $task['created_by'] === $user_id) {
         $visibleTasks[] = $task;
     }
 }
@@ -1454,38 +1164,8 @@ include_once '../includes/header.php';
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?php 
-                                                // Zeige Rollenzuweisung oder Benutzerzuweisung
-                                                echo htmlspecialchars($task['assigned_to_name']); 
-                                                
-                                                // Zeige Beanspruchung bei Rollenaufgaben
-                                                if (!empty($task['assignment_type']) && $task['assignment_type'] === 'role'): 
-                                                    if (!empty($task['claimed_by'])): 
-                                                        // Finde Namen des Beanspruchenden
-                                                        $claimedByName = 'Unbekannt';
-                                                        foreach ($users as $u) {
-                                                            if ($u['id'] === $task['claimed_by']) {
-                                                                $claimedByName = isset($u['first_name']) && isset($u['last_name']) ? 
-                                                                             $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
-                                                                break;
-                                                            }
-                                                        }
-                                                ?>
-                                                        <br><small class="text-success">
-                                                            <i class="fas fa-user-check"></i> Beansprucht von: <?php echo htmlspecialchars($claimedByName); ?>
-                                                            <?php if ($task['claimed_by'] === $user_id): ?>
-                                                                (Sie)
-                                                            <?php endif; ?>
-                                                        </small>
-                                                    <?php else: ?>
-                                                        <br><small class="text-warning">
-                                                            <i class="fas fa-clock"></i> Noch nicht beansprucht
-                                                        </small>
-                                                    <?php endif; 
-                                                endif;
-                                                
-                                                // Zeige "Sie" bei direkter Zuweisung
-                                                if ((empty($task['assignment_type']) || $task['assignment_type'] === 'user') && $task['assigned_to'] === $user_id): ?>
+                                                <?php echo htmlspecialchars($task['assigned_to_name']); ?>
+                                                <?php if ($task['assigned_to'] === $user_id): ?>
                                                     <span class="badge badge-secondary">Sie</span>
                                                 <?php endif; ?>
                                             </td>
@@ -1521,48 +1201,11 @@ include_once '../includes/header.php';
                                             <td>
                                                 <?php 
                                                     $userCanEditTask = $canAssignTasks || $task['assigned_to'] === $user_id || $task['created_by'] === $user_id;
-                                                    $userCanDeleteTask = $canAssignTasks || $task['created_by'] === $user_id;
-                                                    
-                                                    // Prüfe Claim-Berechtigung für Rollenaufgaben
-                                                    $canClaim = false;
-                                                    $canUnclaim = false;
-                                                    
-                                                    if (!empty($task['assignment_type']) && $task['assignment_type'] === 'role') {
-                                                        // Prüfe, ob Benutzer die Rolle hat
-                                                        $assignedRoleId = $task['assigned_to'];
-                                                        foreach ($allRoles as $roleData) {
-                                                            if (($roleData['id'] === $assignedRoleId || $roleData['name'] === $assignedRoleId) &&
-                                                                (in_array($roleData['name'], $roles) || $role === $roleData['name'])) {
-                                                                if (empty($task['claimed_by'])) {
-                                                                    $canClaim = true;
-                                                                } elseif ($task['claimed_by'] === $user_id || $canAssignTasks) {
-                                                                    $canUnclaim = true;
-                                                                }
-                                                                break;
-                                                            }
-                                                        }
-                                                    }
                                                 ?>
                                                 <div class="btn-group">
                                                     <button class="btn btn-sm btn-outline-primary view-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Details anzeigen">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
-                                                    
-                                                    <?php if ($canClaim): ?>
-                                                        <button class="btn btn-sm btn-success claim-task-btn" 
-                                                                data-task-id="<?php echo htmlspecialchars($task['id']); ?>" 
-                                                                title="Aufgabe beanspruchen">
-                                                            <i class="fas fa-hand-paper"></i>
-                                                        </button>
-                                                    <?php endif; ?>
-                                                    
-                                                    <?php if ($canUnclaim): ?>
-                                                        <button class="btn btn-sm btn-warning unclaim-task-btn" 
-                                                                data-task-id="<?php echo htmlspecialchars($task['id']); ?>" 
-                                                                title="Beanspruchung aufheben">
-                                                            <i class="fas fa-undo"></i>
-                                                        </button>
-                                                    <?php endif; ?>
                                                     
                                                     <?php if ($userCanEditTask): ?>
                                                         <button class="btn btn-sm btn-outline-info forward-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" data-task-title="<?php echo htmlspecialchars($task['title']); ?>" title="Weiterleiten">
@@ -1573,7 +1216,7 @@ include_once '../includes/header.php';
                                                         </button>
                                                     <?php endif; ?>
                                                     
-                                                    <?php if ($userCanDeleteTask): ?>
+                                                    <?php if ($canAssignTasks): ?>
                                                         <button class="btn btn-sm btn-outline-danger delete-task-btn" 
                                                                 data-task-id="<?php echo htmlspecialchars($task['id']); ?>" 
                                                                 data-task-title="<?php echo htmlspecialchars($task['title']); ?>"
@@ -1718,24 +1361,8 @@ include_once '../includes/header.php';
                     </div>
                     
                     <div class="form-group">
-                        <label>Zuweisungstyp *</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="assignment_type" id="assignment_type_user" value="user" checked>
-                            <label class="form-check-label" for="assignment_type_user">
-                                Benutzer zuweisen
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="assignment_type" id="assignment_type_role" value="role">
-                            <label class="form-check-label" for="assignment_type_role">
-                                Rolle zuweisen (alle Benutzer mit dieser Rolle können die Aufgabe beanspruchen)
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group" id="user_assignment_group">
-                        <label for="assigned_to">Benutzer auswählen *</label>
-                        <select class="form-control" id="assigned_to" name="assigned_to">
+                        <label for="assigned_to">Zuweisen an *</label>
+                        <select class="form-control" id="assigned_to" name="assigned_to" required>
                             <option value="">-- Bitte auswählen --</option>
                             <?php foreach ($activeUsers as $u): ?>
                                 <option value="<?php echo htmlspecialchars($u['id']); ?>">
@@ -1745,21 +1372,6 @@ include_once '../includes/header.php';
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
-                    
-                    <div class="form-group" id="role_assignment_group" style="display: none;">
-                        <label for="assigned_to_role">Rolle auswählen *</label>
-                        <select class="form-control" id="assigned_to_role" name="assigned_to_role">
-                            <option value="">-- Bitte auswählen --</option>
-                            <?php foreach ($allRoles as $roleData): ?>
-                                <option value="<?php echo htmlspecialchars($roleData['id']); ?>">
-                                    <?php echo htmlspecialchars($roleData['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="form-text text-muted">
-                            Alle Benutzer mit dieser Rolle sehen die Aufgabe und können sie beanspruchen.
-                        </small>
                     </div>
                     
                     <div class="form-group">
@@ -2460,19 +2072,7 @@ $(document).ready(function() {
                     $('#taskPriority').html('<span class="badge ' + priorityClass + '">' + priorityText + '</span>');
                     
                     // Zugewiesen an
-                    let assigneeHtml = '<i class="fas fa-user mr-1"></i> ' + task.assigned_to_name;
-                    
-                    // Zeige Beanspruchungsinformationen bei Rollenaufgaben
-                    if (task.assignment_type === 'role') {
-                        if (task.claimed_by) {
-                            assigneeHtml += '<br><small class="text-success"><i class="fas fa-user-check"></i> Beansprucht von: ' + 
-                                          (task.claimed_by_name || 'Unbekannt') + '</small>';
-                        } else {
-                            assigneeHtml += '<br><small class="text-warning"><i class="fas fa-clock"></i> Noch nicht beansprucht</small>';
-                        }
-                    }
-                    
-                    $('#taskAssignee').html(assigneeHtml);
+                    $('#taskAssignee').html('<i class="fas fa-user mr-1"></i> ' + task.assigned_to_name);
                     
                     // Fälligkeitsdatum
                     if (task.due_date) {
@@ -2778,129 +2378,6 @@ $(document).ready(function() {
     $('#createCategoryModal, #editCategoryModal, #deleteCategoryModal').on('hidden.bs.modal', function() {
         $('#manageCategoriesModal').modal('show');
     });
-    
-    // Aufgabe beanspruchen (Claim)
-    $(document).on('click', '.claim-task-btn', function(e) {
-        e.preventDefault();
-        const taskId = $(this).data('task-id');
-        const btn = $(this);
-        
-        if (!confirm('Möchten Sie diese Aufgabe beanspruchen?')) {
-            return;
-        }
-        
-        $.ajax({
-            url: 'task_assignments.php',
-            method: 'POST',
-            data: {
-                action: 'claim_task',
-                task_id: taskId
-            },
-            dataType: 'json',
-            beforeSend: function() {
-                btn.prop('disabled', true);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showAlert('success', response.message);
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    showAlert('danger', response.message);
-                    btn.prop('disabled', false);
-                }
-            },
-            error: function() {
-                showAlert('danger', 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
-                btn.prop('disabled', false);
-            }
-        });
-    });
-    
-    // Aufgabe freigeben (Unclaim)
-    $(document).on('click', '.unclaim-task-btn', function(e) {
-        e.preventDefault();
-        const taskId = $(this).data('task-id');
-        const btn = $(this);
-        
-        if (!confirm('Möchten Sie die Beanspruchung dieser Aufgabe aufheben?')) {
-            return;
-        }
-        
-        $.ajax({
-            url: 'task_assignments.php',
-            method: 'POST',
-            data: {
-                action: 'unclaim_task',
-                task_id: taskId
-            },
-            dataType: 'json',
-            beforeSend: function() {
-                btn.prop('disabled', true);
-            },
-            success: function(response) {
-                if (response.success) {
-                    showAlert('success', response.message);
-                    setTimeout(function() {
-                        location.reload();
-                    }, 1000);
-                } else {
-                    showAlert('danger', response.message);
-                    btn.prop('disabled', false);
-                }
-            },
-            error: function() {
-                showAlert('danger', 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
-                btn.prop('disabled', false);
-            }
-        });
-    });
-    
-    // Radio-Button Wechsel für Zuweisungstyp
-    $('input[name="assignment_type"]').on('change', function() {
-        const assignmentType = $(this).val();
-        
-        if (assignmentType === 'user') {
-            $('#user_assignment_group').show();
-            $('#role_assignment_group').hide();
-            $('#assigned_to').prop('required', true);
-            $('#assigned_to_role').prop('required', false);
-        } else if (assignmentType === 'role') {
-            $('#user_assignment_group').hide();
-            $('#role_assignment_group').show();
-            $('#assigned_to').prop('required', false);
-            $('#assigned_to_role').prop('required', true);
-        }
-    });
-    
-    // Beim Absenden des Formulars den richtigen Wert setzen
-    $('#createTaskModal form').on('submit', function(e) {
-        const assignmentType = $('input[name="assignment_type"]:checked').val();
-        
-        if (assignmentType === 'role') {
-            // Kopiere den Wert von assigned_to_role nach assigned_to
-            const roleId = $('#assigned_to_role').val();
-            $('#assigned_to').val(roleId);
-        }
-    });
-    
-    // Hilfsfunktion zum Anzeigen von Alerts
-    function showAlert(type, message) {
-        const alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
-            message +
-            '<button type="button" class="close" data-dismiss="alert" aria-label="Schließen">' +
-            '<span aria-hidden="true">&times;</span>' +
-            '</button>' +
-            '</div>';
-        
-        $('main .border-bottom').after(alertHtml);
-        
-        // Scrolle zum Alert
-        $('html, body').animate({
-            scrollTop: $('.alert').offset().top - 100
-        }, 300);
-    }
     
     // Hilfsfunktionen
     function formatDate(dateString) {
