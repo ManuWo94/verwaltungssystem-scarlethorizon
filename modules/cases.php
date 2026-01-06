@@ -378,8 +378,13 @@ function renderCaseTable($casesToDisplay) {
                                         <tr>
                                             <td>
                                                 <?php 
-                                                $type = $case['case_type'] ?? 'Straf';
-                                                $badgeClass = $type === 'Zivil' ? 'badge-info' : 'badge-danger';
+                                                $type = $case['case_type'] ?? 'Unbekannt';
+                                                $badgeClass = 'badge-secondary';
+                                                if ($type === 'Zivil') {
+                                                    $badgeClass = 'badge-primary';
+                                                } elseif ($type === 'Straf') {
+                                                    $badgeClass = 'badge-danger';
+                                                }
                                                 echo '<span class="badge ' . $badgeClass . '">' . htmlspecialchars($type) . '</span>';
                                                 ?>
                                             </td>
