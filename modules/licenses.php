@@ -10,9 +10,6 @@ if (!currentUserCan('licenses', 'view')) {
     exit;
 }
 
-require_once __DIR__ . '/../includes/header.php';
-$basePath = getBasePath();
-
 // Daten laden
 $licenses = loadJsonData('licenses.json');
 $categories = loadJsonData('license_categories.json');
@@ -23,7 +20,7 @@ $activeCategories = array_filter($categories, function($cat) {
     return $cat['active'] ?? true;
 });
 
-// AJAX Handler
+// AJAX Handler - VOR dem Header!
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     
@@ -136,6 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 }
+
+// Header nur bei GET-Anfragen laden
+require_once __DIR__ . '/../includes/header.php';
+$basePath = getBasePath();
 
 // Hilfsfunktion: Lizenznummer generieren
 function generateLicenseNumber($category, $licenses) {
