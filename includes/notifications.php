@@ -22,26 +22,43 @@ $notificationsFile = __DIR__ . '/../data/notifications.json';
 function createNotification($userId, $type, $title, $message, $link = '', $relatedId = '') {
     global $notificationsFile;
     
-    $notifications = getJsonData($notificationsFile);
-    if ($notifications === false) {
-        $notifications = [];
+    // Validierung
+    if (empty($userId) || empty($type) || empty($title)) {
+        error_log("Fehler bei Benachrichtigung: userId=$userId, type=$type, title=$title");
+        return false;
     }
     
-    $notification = [
-        'id' => generateUniqueId(),
-        'user_id' => $userId,
-        'type' => $type,
-        'title' => $title,
-        'message' => $message,
-        'link' => $link,
-        'related_id' => $relatedId,
-        'is_read' => false,
-        'created_at' => date('Y-m-d H:i:s')
-    ];
-    
-    array_unshift($notifications, $notification);
-    
-    return saveJsonData($notificationsFile, $notifications);
+    try {
+        $notifications = getJsonData($notificationsFile);
+        if ($notifications === false) {
+            $notifications = [];
+        }
+        
+        $notification = [
+            'id' => generateUniqueId(),
+            'user_id' => $userId,
+            'type' => $type,
+            'title' => $title,
+            'message' => $message,
+            'link' => $link,
+            'related_id' => $relatedId,
+            'is_read' => false,
+            'created_at' => date('Y-m-d H:i:s')
+        ];
+        
+        array_unshift($notifications, $notification);
+        
+        $result = saveJsonData($notificationsFile, $notifications);
+        
+        if (!$result) {
+            error_log("Fehler beim Speichern der Benachrichtigung: " . $notificationsFile);
+        }
+        
+        return $result;
+    } catch (Exception $e) {
+        error_log("Exception bei createNotification: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
