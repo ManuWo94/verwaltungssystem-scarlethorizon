@@ -442,6 +442,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    // Aufgabe weiterleiten (nur Empfänger + optional Kommentar + optionaler Titel)
+    elseif ($action === 'forward_task' && isset($_POST['task_id'])) {
+        $taskId = sanitize($_POST['task_id']);
+        $taskFound = false;
+        $forwardTo = sanitize($_POST['assigned_to'] ?? '');
+        $forwardComment = trim($_POST['forward_comment'] ?? '');
+        $newTitle = isset($_POST['title']) ? sanitize($_POST['title']) : '';
+
+        if (empty($forwardTo)) {
+            $error = 'Bitte wähle einen Empfänger aus.';
+        } elseif (empty($newTitle)) {
+            $error = 'Bitte geben Sie einen Titel an.';
+        } else {
+            // Validierung Empfänger
+            $userExists = false;
+            $forwardToName = '';
+            foreach ($users as $u) {
+                if ($u['id'] === $forwardTo) {
+                    $userExists = true;
+                    $forwardToName = isset($u['first_name']) && isset($u['last_name']) ?
+                        $u['first_name'] . ' ' . $u['last_name'] : $u['username'];
+                    break;
+                }
+            }
+            if (!$userExists) {
+                $error = 'Der ausgewählte Benutzer existiert nicht.';
+            }
+        }
+
+        if (empty($error)) {
+            foreach ($tasks as $key => $task) {
+                if ($task['id'] === $taskId) {
+                    $taskFound = true;
+
+                    $userCanForward = $canAssignTasks || $task['created_by'] === $user_id || $task['assigned_to'] === $user_id;
+                    if (!$userCanForward) {
+                        $error = 'Sie haben keine Berechtigung, diese Aufgabe weiterzuleiten.';
+                        break;
+                    }
+
+                    // Update Assignment und ggf. Titel
+                    $oldTitle = $task['title'];
+                    $tasks[$key]['title'] = $newTitle;
+                    $tasks[$key]['assigned_to'] = $forwardTo;
+                    $tasks[$key]['assigned_to_name'] = $forwardToName;
+                    $tasks[$key]['updated_by'] = $user_id;
+                    $tasks[$key]['updated_at'] = date('Y-m-d H:i:s');
+
+                    // Optional Kommentar als Systemkommentar anhängen
+                    $commentText = 'Weitergeleitet an ' . $forwardToName;
+                    if ($oldTitle !== $newTitle) {
+                        $commentText .= ' (Titel geändert)';
+                    }
+                    if ($forwardComment !== '') {
+                        $commentText .= ' – Hinweis: ' . sanitize($forwardComment);
+                    }
+
+                    $commentObj = [
+                        'id' => generateUniqueId(),
+                        'text' => $commentText,
+                        'created_by' => $user_id,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ];
+                    if (!isset($tasks[$key]['comments'])) {
+                        $tasks[$key]['comments'] = [];
+                    }
+                    $tasks[$key]['comments'][] = $commentObj;
+
+                    if (saveJsonData($tasksFile, $tasks)) {
+                        $message = 'Aufgabe wurde weitergeleitet.';
+                    } else {
+                        $error = 'Fehler beim Speichern der Weiterleitung.';
+                    }
+                    break;
+                }
+            }
+
+            if (!$taskFound) {
+                $error = 'Die Aufgabe wurde nicht gefunden.';
+            }
+        }
+    }
+
     // Aufgabe bearbeiten
     elseif ($action === 'edit_task' && isset($_POST['task_id'])) {
         $taskId = sanitize($_POST['task_id']);
@@ -1061,7 +1144,7 @@ include_once '../includes/header.php';
                                                     </button>
                                                     
                                                     <?php if ($userCanEditTask): ?>
-                                                        <button class="btn btn-sm btn-outline-info forward-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Weiterleiten">
+                                                        <button class="btn btn-sm btn-outline-info forward-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" data-task-title="<?php echo htmlspecialchars($task['title']); ?>" title="Weiterleiten">
                                                             <i class="fas fa-share"></i>
                                                         </button>
                                                         <button class="btn btn-sm btn-outline-secondary edit-task-btn" data-task-id="<?php echo htmlspecialchars($task['id']); ?>" title="Bearbeiten">
@@ -1258,6 +1341,61 @@ include_once '../includes/header.php';
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
                     <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Aufgabe weiterleiten Modal -->
+<div class="modal fade" id="forwardTaskModal" tabindex="-1" role="dialog" aria-labelledby="forwardTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="task_assignments.php" method="post">
+                <input type="hidden" name="action" value="forward_task">
+                <input type="hidden" id="forward_task_id" name="task_id" value="">
+                
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="forwardTaskModalLabel">
+                        <i class="fas fa-share"></i> Aufgabe weiterleiten
+                    </h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Schließen">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="forward_title">Titel *</label>
+                        <input type="text" class="form-control" id="forward_title" name="title" required>
+                        <small class="form-text text-muted">Sie können den Titel bei Bedarf anpassen</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="forward_assigned_to">Weiterleiten an *</label>
+                        <select class="form-control" id="forward_assigned_to" name="assigned_to" required>
+                            <option value="">-- Bitte auswählen --</option>
+                            <?php foreach ($activeUsers as $u): ?>
+                                <option value="<?php echo htmlspecialchars($u['id']); ?>">
+                                    <?php echo htmlspecialchars(isset($u['first_name']) && isset($u['last_name']) ? 
+                                          $u['first_name'] . ' ' . $u['last_name'] . ' (' . $u['role'] . ')' : 
+                                          $u['username'] . ' (' . $u['role'] . ')'); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-0">
+                        <label for="forward_comment">Kommentar (optional)</label>
+                        <textarea class="form-control" id="forward_comment" name="forward_comment" rows="3" placeholder="Hinweise oder Gründe für die Weiterleitung"></textarea>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-share"></i> Weiterleiten
+                    </button>
                 </div>
             </form>
         </div>
@@ -2083,10 +2221,7 @@ $(document).ready(function() {
     $(document).on('click', '.edit-task-btn, .forward-task-btn', function(e) {
         e.preventDefault();
         const taskId = $(this).data('task-id');
-        
-        // Finde die Aufgabe in der Tabelle
-        const taskItem = $('.task-item[data-task-id="' + taskId + '"]');
-        const taskTitle = taskItem.find('.view-task-btn').text().trim();
+        const isForward = $(this).hasClass('forward-task-btn');
         
         // Hol weitere Details über AJAX (oder aus dem DOM, wenn verfügbar)
         $.ajax({
@@ -2101,17 +2236,25 @@ $(document).ready(function() {
                 if (response.success) {
                     const task = response.task;
                     
-                    // Formular füllen
-                    $('#edit_task_id').val(task.id);
-                    $('#edit_title').val(task.title);
-                    $('#edit_description').val(task.description);
-                    $('#edit_assigned_to').val(task.assigned_to);
-                    $('#edit_category_id').val(task.category_id);
-                    $('#edit_priority').val(task.priority || 2);
-                    $('#edit_due_date').val(task.due_date);
-                    
-                    // Modal öffnen
-                    $('#editTaskModal').modal('show');
+                    if (isForward) {
+                        $('#forward_task_id').val(task.id);
+                        $('#forward_title').val(task.title);
+                        $('#forward_assigned_to').val('');
+                        $('#forward_comment').val('');
+                        $('#forwardTaskModal').modal('show');
+                    } else {
+                        // Formular füllen
+                        $('#edit_task_id').val(task.id);
+                        $('#edit_title').val(task.title);
+                        $('#edit_description').val(task.description || '');
+                        $('#edit_assigned_to').val(task.assigned_to);
+                        $('#edit_category_id').val(task.category_id || '');
+                        $('#edit_priority').val(task.priority || 2);
+                        $('#edit_due_date').val(task.due_date || '');
+                        
+                        // Modal öffnen
+                        $('#editTaskModal').modal('show');
+                    }
                 } else {
                     alert('Fehler: ' + response.message);
                 }
