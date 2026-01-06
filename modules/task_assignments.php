@@ -328,7 +328,7 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                                 'task',
                                 'Neuer Kommentar zu Ihrer Aufgabe',
                                 $commentatorName . ' hat einen Kommentar zu "' . $task['title'] . '" hinzugefügt.',
-                                'modules/task_assignments.php',
+                                'modules/task_assignments.php?task_id=' . $task['id'] . '&highlight=comment',
                                 $task['id']
                             );
                         }
@@ -340,7 +340,7 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                                 'task',
                                 'Neuer Kommentar zu Ihrer erstellten Aufgabe',
                                 $commentatorName . ' hat einen Kommentar zu "' . $task['title'] . '" hinzugefügt.',
-                                'modules/task_assignments.php',
+                                'modules/task_assignments.php?task_id=' . $task['id'] . '&highlight=comment',
                                 $task['id']
                             );
                         }
@@ -473,7 +473,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'task',
                                 'Neue Aufgabe zugewiesen',
                                 $creatorName . ' hat Ihnen die Aufgabe "' . $taskData['title'] . '" zugewiesen.',
-                                'modules/task_assignments.php',
+                                'modules/task_assignments.php?task_id=' . $taskData['id'],
                                 $taskData['id']
                             );
                         } catch (Exception $e) {
@@ -568,7 +568,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'task',
                                 'Aufgabe weitergeleitet',
                                 $forwarderName . ' hat Ihnen die Aufgabe "' . $newTitle . '" weitergeleitet.',
-                                'modules/task_assignments.php',
+                                'modules/task_assignments.php?task_id=' . $taskId,
                                 $taskId
                             );
                         } catch (Exception $e) {
@@ -2411,8 +2411,65 @@ $(document).ready(function() {
         
         callback(name);
     }
+    
+    // Automatisch Aufgabe öffnen, wenn task_id in URL
+    $(document).ready(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const taskId = urlParams.get('task_id');
+        const highlight = urlParams.get('highlight');
+        
+        if (taskId) {
+            // Finde die Aufgabe in der Tabelle
+            const taskRow = $('.task-item[data-task-id="' + taskId + '"]');
+            
+            if (taskRow.length > 0) {
+                // Scrolle zur Aufgabe
+                $('html, body').animate({
+                    scrollTop: taskRow.offset().top - 100
+                }, 500);
+                
+                // Öffne automatisch die Aufgaben-Details
+                setTimeout(function() {
+                    const viewButton = taskRow.find('.view-task-btn');
+                    if (viewButton.length > 0) {
+                        viewButton.click();
+                    }
+                    
+                    // Hervorhebung hinzufügen
+                    if (highlight === 'comment') {
+                        taskRow.addClass('notification-highlight');
+                        
+                        // Nach 3 Sekunden Hervorhebung entfernen
+                        setTimeout(function() {
+                            taskRow.removeClass('notification-highlight');
+                        }, 3000);
+                    }
+                }, 600);
+                
+                // URL Parameter entfernen
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+    });
 });
 </script>
+
+<style>
+.notification-highlight {
+    animation: highlight-pulse 2s ease-in-out;
+    border: 2px solid #ffc107 !important;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+}
+
+@keyframes highlight-pulse {
+    0%, 100% { 
+        background-color: inherit;
+    }
+    50% { 
+        background-color: #fff3cd;
+    }
+}
+</style>
 
 <?php
 include_once '../includes/footer.php';

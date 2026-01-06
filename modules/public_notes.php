@@ -214,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'public_note_comment',
                                 'Neuer Kommentar zu öffentlicher Notiz',
                                 $commenterName . ' hat die Notiz "' . $note['title'] . '" kommentiert.',
-                                'modules/public_notes.php',
+                                'modules/public_notes.php?note_id=' . $note_id . '&highlight=comment',
                                 $note_id
                             );
                         }
@@ -310,8 +310,8 @@ include '../includes/header.php';
                     $noteComments = getCommentsForNote($note['id'], $comments);
                     $isOwner = $note['created_by'] === $user_id;
                 ?>
-                    <div class="col-12 mb-4">
-                        <div class="card">
+                    <div class="col-12 mb-4" data-note-id="<?php echo htmlspecialchars($note['id']); ?>">
+                        <div class="card note-card">
                             <div class="card-header d-flex justify-content-between align-items-start">
                                 <div>
                                     <h5 class="card-title mb-1">
@@ -497,5 +497,95 @@ include '../includes/header.php';
         </div>
     </div>
 <?php endif; ?>
+
+<script>
+$(document).ready(function() {
+    // Automatisch zur Notiz scrollen und hervorheben, wenn note_id in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const noteId = urlParams.get('note_id');
+    const highlight = urlParams.get('highlight');
+    
+    if (noteId) {
+        // Finde die Notiz
+        const noteCard = $('[data-note-id="' + noteId + '"]');
+        
+        if (noteCard.length > 0) {
+            // Scrolle zur Notiz
+            $('html, body').animate({
+                scrollTop: noteCard.offset().top - 100
+            }, 500);
+            
+            // Hervorhebung hinzufügen
+            if (highlight === 'comment') {
+                const card = noteCard.find('.note-card');
+                card.addClass('notification-highlight');
+                
+                // Scrolle zu den Kommentaren innerhalb der Notiz
+                setTimeout(function() {
+                    const commentsSection = noteCard.find('.comments-list');
+                    if (commentsSection.length > 0) {
+                        // Scrolle innerhalb der Kommentar-Liste nach unten (neueste Kommentare)
+                        commentsSection.animate({
+                            scrollTop: commentsSection[0].scrollHeight
+                        }, 300);
+                        
+                        // Markiere den letzten Kommentar
+                        const lastComment = commentsSection.find('.comment').last();
+                        if (lastComment.length > 0) {
+                            lastComment.addClass('new-comment-highlight');
+                            
+                            // Nach 4 Sekunden Hervorhebung entfernen
+                            setTimeout(function() {
+                                lastComment.removeClass('new-comment-highlight');
+                            }, 4000);
+                        }
+                    }
+                }, 600);
+                
+                // Nach 3 Sekunden Card-Hervorhebung entfernen
+                setTimeout(function() {
+                    card.removeClass('notification-highlight');
+                }, 3000);
+            }
+            
+            // URL Parameter entfernen
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+});
+</script>
+
+<style>
+.notification-highlight {
+    animation: highlight-pulse 2s ease-in-out;
+    border: 2px solid #ffc107 !important;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+}
+
+.new-comment-highlight {
+    background-color: #fff3cd;
+    border-left: 3px solid #ffc107;
+    padding-left: 10px;
+    animation: comment-fade 4s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0%, 100% { 
+        background-color: inherit;
+    }
+    50% { 
+        background-color: #fff3cd;
+    }
+}
+
+@keyframes comment-fade {
+    0% { 
+        background-color: #fff3cd;
+    }
+    100% { 
+        background-color: transparent;
+    }
+}
+</style>
 
 <?php include '../includes/footer.php'; ?>
