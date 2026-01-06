@@ -122,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'defendant' => $defendantName,
             'defendant_tg' => $defendantTg,
             'charge' => sanitize($_POST['charge'] ?? ''),
-            'case_type' => sanitize($_POST['case_type'] ?? ''),
+            'case_type' => sanitize($_POST['case_type'] ?? 'Straf'),
             'incident_date' => $incidentDate,
             'expiration_date' => $expirationDateInput,
             'limitation_id' => $limitationId,
@@ -137,21 +137,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($caseData['defendant']) || empty($caseData['charge']) || empty($caseData['incident_date'])) {
             $error = 'Please fill in all required fields.';
         } else {
-            // Nur bei NEUEN Akten case_type validieren (beim Bearbeiten wird es von case_edit.php nicht gesendet)
-            if (!isset($_POST['case_id']) || empty($_POST['case_id'])) {
-                if (empty($caseData['case_type']) || !in_array($caseData['case_type'], ['Straf', 'Zivil'])) {
-                    $error = 'Fehler: Aktentyp (Straf/Zivil) wurde nicht korrekt übermittelt.';
-                }
-            }
-        }
-        
-        if (empty($error)) {
             if (isset($_POST['case_id']) && !empty($_POST['case_id'])) {
-                // Update existing case - case_type NICHT überschreiben wenn nicht gesendet
+                // Update existing case - case_type vom existierenden Fall übernehmen wenn leer
                 $caseId = $_POST['case_id'];
                 $existingCase = findById('cases.json', $caseId);
                 if ($existingCase && empty($caseData['case_type'])) {
-                    // case_type vom existierenden Fall übernehmen
                     $caseData['case_type'] = $existingCase['case_type'] ?? 'Straf';
                 }
                 
@@ -537,7 +527,7 @@ function renderCaseTable($casesToDisplay, $showType = 'all') {
             <form method="post" action="cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
                     <!-- Hidden Aktentyp - wird per JavaScript gesetzt -->
-                    <input type="hidden" name="case_type" id="caseTypeInput" value="">
+                    <input type="hidden" name="case_type" id="caseTypeInput" value="Straf">
                     
                     <hr>
                     
