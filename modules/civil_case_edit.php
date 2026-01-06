@@ -26,12 +26,12 @@ $role = $_SESSION['role'];
 $message = '';
 $error = '';
 
-function ce_findOrCreatePlaintiff($name, $tgNumber, $userId) {
-    $plaintiffs = loadJsonData('parties.json');
+function ce_findOrCreateDefendant($name, $tgNumber, $userId) {
+    $defendants = loadJsonData('parties.json');
     $normalizedName = strtolower(trim($name));
     $matchId = null;
 
-    foreach ($plaintiffs as $plaintiff) {
+    foreach ($defendants as $plaintiff) {
         $defName = strtolower(trim($plaintiff['name'] ?? ''));
         $defTg = strtolower(trim($plaintiff['tg_number'] ?? ''));
         if ($defName === $normalizedName || (!empty($tgNumber) && $defTg === strtolower(trim($tgNumber)))) {
@@ -45,7 +45,7 @@ function ce_findOrCreatePlaintiff($name, $tgNumber, $userId) {
     }
 
     if (!$matchId) {
-        $newPlaintiff = [
+        $newDefendant = [
             'id' => generateUniqueId(),
             'name' => $name,
             'tg_number' => $tgNumber,
@@ -53,18 +53,18 @@ function ce_findOrCreatePlaintiff($name, $tgNumber, $userId) {
             'created_by' => $userId,
             'date_created' => date('Y-m-d H:i:s')
         ];
-        insertRecord('parties.json', $newPlaintiff);
-        $matchId = $newPlaintiff['id'];
+        insertRecord('parties.json', $newDefendant);
+        $matchId = $newDefendant['id'];
     }
 
     return $matchId;
 }
 
-function ce_appendPlaintiffHistory($plaintiffId, $entry) {
-    if (!$plaintiffId) {
+function ce_appendDefendantHistory($defendantId, $entry) {
+    if (!$defendantId) {
         return;
     }
-    $plaintiff = findById('parties.json', $plaintiffId);
+    $plaintiff = findById('parties.json', $defendantId);
     if (!$plaintiff) {
         return;
     }
@@ -72,20 +72,13 @@ function ce_appendPlaintiffHistory($plaintiffId, $entry) {
         $plaintiff['history'] = [];
     }
     array_unshift($plaintiff['history'], $entry);
-    updateRecord('parties.json', $plaintiffId, $plaintiff);
+    updateRecord('parties.json', $defendantId, $plaintiff);
 }
 
 // Verwende die checkUserHasRoleType Funktion für konsistente Rollenüberprüfung
 $userRole = $_SESSION['role'];
 $isLeadership = checkUserHasRoleType($userRole, 'leadership');
 $isJudge = checkUserHasRoleType($userRole, 'judge');
-$isMarshal = checkUserHasRoleType($userRole, 'marshal');
-
-// Debug-Info
-error_log("Rollenprüfung: " . $_SESSION['role'] . 
-      ", isLeadership: " . ($isLeadership ? "true" : "false") .
-      ", isJudge: " . ($isJudge ? "true" : "false") .
-      ", isMarshal: " . ($isMarshal ? "true" : "false"));
 
 // Id des zu bearbeitenden Falls aus der URL erhalten
 $caseId = isset($_GET['id']) ? $_GET['id'] : null;
@@ -111,12 +104,15 @@ if (!$caseData) {
 if ($action === 'close_case') {
     // Verwende die zentrale Rollenprüfung (checkUserHasRoleType)
     $userRole = $_SESSION['role'];
+    $isProsecutor = checkUserHasRoleType($userRole, 'prosecutor');
     $isLeadership = checkUserHasRoleType($userRole, 'leadership');
     
     // Debug-Info
     error_log("Zugriffsprüfung für Fall schließen - Rolle: " . $_SESSION['role'] . 
+              ", isProsecutor: " . ($isProsecutor ? "true" : "false") . 
               ", isLeadership: " . ($isLeadership ? "true" : "false"));
     
+    if ($isLeadership || $isJudge) {
         // Zeige ein Formular an, um den Fall zu schließen
         $showCloseForm = true;
     } else {
@@ -144,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Fallaktualisierung (grundlegende Informationen)
     if (isset($_POST['action']) && $_POST['action'] === 'update_case') {
         $plaintiff = sanitize($_POST['plaintiff'] ?? '');
-        $plaintiffTg = sanitize($_POST['plaintiff_tg'] ?? '');
+        $defendantTg = sanitize($_POST['defendant_tg'] ?? '');
         $dispute_subject = sanitize($_POST['dispute_subject'] ?? '');
         $incidentDate = sanitize($_POST['incident_date'] ?? '');
         $district = sanitize($_POST['district'] ?? '');
@@ -175,12 +171,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($plaintiff) || empty($dispute_subject) || empty($incidentDate) || empty($district)) {
             $error = 'Bitte füllen Sie alle Pflichtfelder aus.';
         } else {
-            $plaintiffId = ce_findOrCreatePlaintiff($plaintiff, $plaintiffTg, $user_id);
+            $defendantId = ce_findOrCreateDefendant($plaintiff, $defendantTg, $user_id);
             // Fall aktualisieren
             $updatedCase = $caseData;
             $updatedCase['plaintiff'] = $plaintiff;
-            $updatedCase['plaintiff_id'] = $plaintiffId;
-            $updatedCase['plaintiff_tg'] = $plaintiffTg;
+            $updatedCase['defendant_id'] = $defendantId;
+            $updatedCase['defendant_tg'] = $defendantTg;
             $updatedCase['dispute_subject'] = $dispute_subject;
             $updatedCase['incident_date'] = $incidentDate;
             $updatedCase['limitation_id'] = $limitationId;
@@ -278,6 +274,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $indictmentData = [
                 'case_id' => $caseId,
                 'content' => $indictmentText,
+                'submitted_by_id' => $user_id,
+                'submitted_by_name' => $username,
                 'status' => 'pending',
                 'date_created' => date('Y-m-d H:i:s')
             ];
@@ -524,7 +522,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $caseData = $updatedCase;
 
                 // Historie beim Klägern ergänzen
-                ce_appendPlaintiffHistory($updatedCase['plaintiff_id'] ?? null, [
+                ce_appendDefendantHistory($updatedCase['defendant_id'] ?? null, [
                     'case_id' => $caseId,
                     'type' => 'verdict',
                     'dispute_subject' => $updatedCase['dispute_subject'] ?? '',
@@ -674,6 +672,7 @@ Der Kläger, {$caseData['plaintiff']}, wird wegen {$caseData['dispute_subject']}
 Datum: {$dateFormatted}
 
 {{SIGNATURE}}
+(Staatsanwalt)";
 }
 
 include '../includes/header.php';
@@ -754,6 +753,7 @@ include '../includes/header.php';
                                 echo '<span class="badge badge-' . $statusClass . '">' . $statusText . '</span>';
                                 ?>
                             </p>
+                            <p><strong>Staatsanwalt:</strong> <?php echo htmlspecialchars($caseData['prosecutor'] ?? 'Nicht zugewiesen'); ?></p>
                             <p><strong>Richter:</strong> <?php echo htmlspecialchars($caseData['judge'] ?? 'Nicht zugewiesen'); ?></p>
                             <p><strong>Erstellt am:</strong> <?php echo formatDate($caseData['date_created'], 'd.m.Y H:i'); ?></p>
                             <?php if (isset($caseData['date_updated'])): ?>
@@ -789,6 +789,7 @@ include '../includes/header.php';
                 <li class="nav-item">
                     <a class="nav-link active" id="edit-tab" data-toggle="tab" href="#edit" role="tab" aria-controls="edit" aria-selected="true">Fall bearbeiten</a>
                 </li>
+                <?php if (!$existingIndictment && ($isLeadership || $isJudge)): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="indictment-tab" data-toggle="tab" href="#indictment" role="tab" aria-controls="indictment" aria-selected="false">Klageschrift einreichen</a>
                     </li>
@@ -798,27 +799,24 @@ include '../includes/header.php';
                         <a class="nav-link" id="view-indictment-tab" data-toggle="tab" href="#view-indictment" role="tab" aria-controls="view-indictment" aria-selected="false">Klageschrift ansehen</a>
                     </li>
                 <?php endif; ?>
+                <?php if (($caseData['status'] === 'open' || $caseData['status'] === 'in_progress' || $caseData['status'] === 'pending') && ($isLeadership || $isJudge)): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="settlement-tab" data-toggle="tab" href="#settlement" role="tab" aria-controls="settlement" aria-selected="false">Außergerichtlicher Deal</a>
                     </li>
                 <?php endif; ?>
                 <?php 
-                // Staatsanwälte und Führungskräfte dürfen Fälle schließen
+                // Richter und Führungskräfte dürfen Fälle schließen
                 $userRole = $_SESSION['role'];
-                
-                // Auch hier die Funktion zur konsistenten Rollenüberprüfung verwenden
                 $isLeadership = checkUserHasRoleType($userRole, 'leadership');
                 
-                // Debug-Info
-                error_log("Tabs - Rollenprüfung: " . $_SESSION['role'] . 
-                      ", isLeadership: " . ($isLeadership ? "true" : "false"));
-                
                 if ($caseData['status'] !== 'completed' && $caseData['status'] !== 'dismissed' && 
+                    ($role === 'Administrator' || $role === 'Richter' || $isLeadership || $isJudge)): 
                 ?>
                     <li class="nav-item">
                         <a class="nav-link" id="close-tab" data-toggle="tab" href="#close" role="tab" aria-controls="close" aria-selected="false">Fall schließen</a>
                     </li>
                 <?php endif; ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected') && ($isLeadership || $isJudge)): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="revision-tab" data-toggle="tab" href="#revision" role="tab" aria-controls="revision" aria-selected="false">Revision beantragen</a>
                     </li>
@@ -844,17 +842,17 @@ include '../includes/header.php';
                                 
                                 <div class="form-group">
                                     <label for="plaintiff">Kläger *</label>
-                                    <?php $allPlaintiffs = loadJsonData('parties.json'); ?>
-                                    <input list="plaintiff_list_edit" class="form-control" id="plaintiff" name="plaintiff" value="<?php echo htmlspecialchars($caseData['plaintiff']); ?>" required>
-                                    <datalist id="plaintiff_list_edit">
-                                        <?php foreach ($allPlaintiffs as $plaintiff): ?>
+                                    <?php $allDefendants = loadJsonData('parties.json'); ?>
+                                    <input list="defendant_list_edit" class="form-control" id="plaintiff" name="plaintiff" value="<?php echo htmlspecialchars($caseData['plaintiff']); ?>" required>
+                                    <datalist id="defendant_list_edit">
+                                        <?php foreach ($allDefendants as $plaintiff): ?>
                                             <option value="<?php echo htmlspecialchars($plaintiff['name']); ?>"><?php echo htmlspecialchars($plaintiff['tg_number'] ?? ''); ?></option>
                                         <?php endforeach; ?>
                                     </datalist>
                                 </div>
                                 <div class="form-group">
-                                    <label for="plaintiff_tg">TG-Nummer des Klägern</label>
-                                    <input type="text" class="form-control" id="plaintiff_tg" name="plaintiff_tg" value="<?php echo htmlspecialchars($caseData['plaintiff_tg'] ?? ''); ?>" placeholder="z.B. TG-1234">
+                                    <label for="defendant_tg">TG-Nummer des Klägern</label>
+                                    <input type="text" class="form-control" id="defendant_tg" name="defendant_tg" value="<?php echo htmlspecialchars($caseData['defendant_tg'] ?? ''); ?>" placeholder="z.B. TG-1234">
                                 </div>
                                 
                                 <div class="form-group">
@@ -904,6 +902,8 @@ include '../includes/header.php';
                                 
                                 <div class="form-row">
                                     <div class="form-group col-md-6">
+                                        <label for="prosecutor">Staatsanwalt</label>
+                                        <input type="text" class="form-control" id="prosecutor" name="prosecutor" value="<?php echo htmlspecialchars($caseData['prosecutor'] ?? ''); ?>">
                                     </div>
                                     
                                     <div class="form-group col-md-6">
@@ -942,6 +942,7 @@ include '../includes/header.php';
                 </div>
                 
                 <!-- Tab: Klageschrift einreichen -->
+                <?php if (!$existingIndictment && ($isLeadership || $isJudge)): ?>
                     <div class="tab-pane fade" id="indictment" role="tabpanel" aria-labelledby="indictment-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">
@@ -950,11 +951,11 @@ include '../includes/header.php';
                                     
                                     <!-- Streitgegenstandpunkte manuell festlegen -->
                                     <div class="form-group">
-                                        <label for="dispute_subjects">Streitgegenstandpunkte *</label>
-                                        <div id="dispute_subjects-container">
+                                        <label for="charges">Streitgegenstandpunkte *</label>
+                                        <div id="charges-container">
                                             <div class="mb-2 dispute_subject-item">
                                                 <div class="input-group">
-                                                    <input type="text" class="form-control" name="dispute_subjects[]" required placeholder="z.B. §131 StGB - Raub">
+                                                    <input type="text" class="form-control" name="charges[]" required placeholder="z.B. §131 StGB - Raub">
                                                     <div class="input-group-append">
                                                         <button type="button" class="btn btn-danger remove-dispute_subject" style="display:none;">-</button>
                                                     </div>
@@ -971,6 +972,7 @@ include '../includes/header.php';
                                         $incident_date = isset($caseData['incident_date']) ? date('d.m.Y', strtotime($caseData['incident_date'])) : date('d.m.Y');
                                         $district = isset($caseData['district']) ? $caseData['district'] : 'unbekannt';
                                         
+                                        $indictmentTemplate = "KLAGESCHRIFT\n\nGegen: {$caseData['plaintiff']}\n\nVerbrechen: {$caseData['dispute_subject']}\nDatum des Verbrechens: {$incident_date}\nOrt des Verbrechens: {$district}\n\nBeschreibung des Sachverhalts:\n[Detaillierte Beschreibung des Sachverhalts einfügen]\n\nDer Kläger wird hiermit beschuldigt, am {$incident_date} in {$district} [Beschreibung der kriminellen Handlung] begangen zu haben, was einen Verstoß gegen [relevantes Gesetz/Paragraf] darstellt.\n\nDie Staatsanwaltschaft ersucht um Streitgegenstanderhebung.\n\nDatum: " . date('d.m.Y') . "\n\n{{SIGNATURE}}";
                                         ?>
                                         <textarea class="form-control" id="indictment_text" name="indictment_text" rows="15" required><?php echo htmlspecialchars($indictmentTemplate); ?></textarea>
                                         <small class="form-text text-muted">
@@ -984,21 +986,21 @@ include '../includes/header.php';
                                 <script>
                                 // JavaScript für die Streitgegenstandpunkte
                                 document.addEventListener('DOMContentLoaded', function() {
-                                    const dispute_subjectsContainer = document.getElementById('dispute_subjects-container');
-                                    const addDispute_subjectButton = document.getElementById('add-dispute_subject');
+                                    const chargesContainer = document.getElementById('charges-container');
+                                    const addChargeButton = document.getElementById('add-dispute_subject');
                                     
-                                    addDispute_subjectButton.addEventListener('click', function() {
-                                        const newDispute_subjectItem = document.createElement('div');
-                                        newDispute_subjectItem.className = 'mb-2 dispute_subject-item';
-                                        newDispute_subjectItem.innerHTML = `
+                                    addChargeButton.addEventListener('click', function() {
+                                        const newChargeItem = document.createElement('div');
+                                        newChargeItem.className = 'mb-2 dispute_subject-item';
+                                        newChargeItem.innerHTML = `
                                             <div class="input-group">
-                                                <input type="text" class="form-control" name="dispute_subjects[]" required placeholder="z.B. §131 StGB - Raub">
+                                                <input type="text" class="form-control" name="charges[]" required placeholder="z.B. §131 StGB - Raub">
                                                 <div class="input-group-append">
                                                     <button type="button" class="btn btn-danger remove-dispute_subject">-</button>
                                                 </div>
                                             </div>
                                         `;
-                                        dispute_subjectsContainer.appendChild(newDispute_subjectItem);
+                                        chargesContainer.appendChild(newChargeItem);
                                         
                                         // Aktiviere alle Lösch-Buttons, wenn mehr als ein Eintrag vorhanden ist
                                         const removeButtons = document.querySelectorAll('.remove-dispute_subject');
@@ -1008,7 +1010,7 @@ include '../includes/header.php';
                                     });
                                     
                                     // Event-Delegation für Lösch-Buttons
-                                    dispute_subjectsContainer.addEventListener('click', function(e) {
+                                    chargesContainer.addEventListener('click', function(e) {
                                         if (e.target.classList.contains('remove-dispute_subject')) {
                                             e.target.closest('.dispute_subject-item').remove();
                                             
@@ -1046,6 +1048,7 @@ include '../includes/header.php';
                                             echo '<span class="badge badge-' . $indictmentStatusClass . '">' . $indictmentStatusText . '</span>';
                                         ?>
                                     </h5>
+                                    <p>Eingereicht von: <?php echo htmlspecialchars($existingIndictment['prosecutor_name']); ?></p>
                                     <p>Eingereicht am: <?php echo formatDate($existingIndictment['date_created'], 'd.m.Y H:i'); ?></p>
                                     
                                     <?php if (isset($existingIndictment['processor_name'])): ?>
@@ -1085,6 +1088,7 @@ include '../includes/header.php';
                 <?php endif; ?>
                 
                 <!-- Tab: Außergerichtlicher Deal -->
+                <?php if (($caseData['status'] === 'open' || $caseData['status'] === 'in_progress' || $caseData['status'] === 'pending') && ($isLeadership || $isJudge)): ?>
                     <div class="tab-pane fade" id="settlement" role="tabpanel" aria-labelledby="settlement-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">
@@ -1119,6 +1123,7 @@ include '../includes/header.php';
                 
                 <!-- Tab: Fall schließen -->
                 <?php if ($caseData['status'] !== 'completed' && $caseData['status'] !== 'dismissed' && 
+                         ($role === 'Administrator' || $role === 'Richter' || $isLeadership || $isJudge)): ?>
                     <div class="tab-pane fade" id="close" role="tabpanel" aria-labelledby="close-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">
@@ -1158,6 +1163,7 @@ include '../includes/header.php';
                 <?php endif; ?>
                 
                 <!-- Tab: Revision beantragen -->
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected') && ($isLeadership || $isJudge)): ?>
                     <div class="tab-pane fade" id="revision" role="tabpanel" aria-labelledby="revision-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">
@@ -1253,12 +1259,12 @@ include '../includes/header.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const plaintiffsData = <?php echo json_encode(loadJsonData('parties.json'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    const defendantsData = <?php echo json_encode(loadJsonData('parties.json'), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 
     const normalize = (val) => (val || '').trim().toLowerCase();
     const findByName = (name) => {
         const needle = normalize(name);
-        return plaintiffsData.find(d => normalize(d.name) === needle);
+        return defendantsData.find(d => normalize(d.name) === needle);
     };
 
     const wireAutoFill = (nameSelector, tgSelector) => {
@@ -1282,6 +1288,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    wireAutoFill('#plaintiff', '#plaintiff_tg');
+    wireAutoFill('#plaintiff', '#defendant_tg');
 });
 </script>

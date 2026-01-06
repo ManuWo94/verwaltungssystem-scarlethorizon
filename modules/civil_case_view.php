@@ -277,13 +277,13 @@ include '../includes/header.php';
                                     <?php endif; ?>
                                 </table>
                                 <?php if ($plaintiffRecord && !empty($plaintiffRecord['history'])): ?>
-                                    <h6 class="mt-3">Historie des Klägern</h6>
+                                    <h6 class="mt-3">Historie des Klägers</h6>
                                     <div class="table-responsive">
                                         <table class="table table-sm table-striped mb-0">
                                             <thead>
                                                 <tr>
                                                     <th>Datum</th>
-                                                    <th>Typ</th>
+                                                    <th>Fall-ID</th>
                                                     <th>Details</th>
                                                 </tr>
                                             </thead>
@@ -291,7 +291,7 @@ include '../includes/header.php';
                                                 <?php foreach ($plaintiffRecord['history'] as $entry): ?>
                                                     <tr>
                                                         <td><?php echo htmlspecialchars(!empty($entry['date']) ? formatDateTime($entry['date']) : ''); ?></td>
-                                                        <td><?php echo htmlspecialchars($entry['type'] ?? ''); ?></td>
+                                                        <td><?php echo htmlspecialchars($entry['case_id'] ?? ''); ?></td>
                                                         <td>
                                                             <?php if (!empty($entry['dispute_subject'])): ?>
                                                                 <div><strong>Streitgegenstand:</strong> <?php echo htmlspecialchars($entry['dispute_subject']); ?></div>
