@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Lizenz erstellen
     if ($action === 'create') {
         try {
-            checkModulePermission('licenses', 'create');
+            checkPermissionOrDie('licenses', 'create');
             
             $categoryId = $_POST['category_id'] ?? '';
             $category = null;
