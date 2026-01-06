@@ -161,8 +161,8 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                     exit;
                 }
                 
-                // Prüfe, ob bereits jemand die Aufgabe beansprucht hat
-                if (!empty($task['claimed_by'])) {
+                // Prüfe, ob bereits jemand die Aufgabe beansprucht hat (außer bei Admins)
+                if (!empty($task['claimed_by']) && !$canAssignTasks) {
                     echo json_encode([
                         'success' => false,
                         'message' => 'Diese Aufgabe wurde bereits beansprucht.'
@@ -170,31 +170,34 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQU
                     exit;
                 }
                 
-                // Prüfe, ob der Benutzer die zugewiesene Rolle hat
-                $userHasRole = false;
-                $assignedRoleId = $task['assigned_to'];
-                
-                // Prüfe in den Rollen des Benutzers
-                if (in_array($assignedRoleId, array_map(function($r) { return $r; }, $roles)) || 
-                    (isset($_SESSION['role_id']) && $_SESSION['role_id'] === $assignedRoleId)) {
-                    $userHasRole = true;
-                } else {
-                    // Fallback: Prüfe auch Rollennamen
-                    foreach ($allRoles as $roleData) {
-                        if (($roleData['id'] === $assignedRoleId || $roleData['name'] === $task['assigned_to']) &&
-                            (in_array($roleData['name'], $roles) || $role === $roleData['name'])) {
-                            $userHasRole = true;
-                            break;
+                // Admins können jede Rollenaufgabe beanspruchen
+                if (!$canAssignTasks) {
+                    // Prüfe, ob der Benutzer die zugewiesene Rolle hat
+                    $userHasRole = false;
+                    $assignedRoleId = $task['assigned_to'];
+                    
+                    // Prüfe in den Rollen des Benutzers
+                    if (in_array($assignedRoleId, array_map(function($r) { return $r; }, $roles)) || 
+                        (isset($_SESSION['role_id']) && $_SESSION['role_id'] === $assignedRoleId)) {
+                        $userHasRole = true;
+                    } else {
+                        // Fallback: Prüfe auch Rollennamen
+                        foreach ($allRoles as $roleData) {
+                            if (($roleData['id'] === $assignedRoleId || $roleData['name'] === $task['assigned_to']) &&
+                                (in_array($roleData['name'], $roles) || $role === $roleData['name'])) {
+                                $userHasRole = true;
+                                break;
+                            }
                         }
                     }
-                }
-                
-                if (!$userHasRole) {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'Sie haben nicht die erforderliche Rolle für diese Aufgabe.'
-                    ]);
-                    exit;
+                    
+                    if (!$userHasRole) {
+                        echo json_encode([
+                            'success' => false,
+                            'message' => 'Sie haben nicht die erforderliche Rolle für diese Aufgabe.'
+                        ]);
+                        exit;
+                    }
                 }
                 
                 // Beanspruche die Aufgabe
@@ -1540,17 +1543,26 @@ include_once '../includes/header.php';
                                                     $canUnclaim = false;
                                                     
                                                     if (!empty($task['assignment_type']) && $task['assignment_type'] === 'role') {
-                                                        // Prüfe, ob Benutzer die Rolle hat
-                                                        $assignedRoleId = $task['assigned_to'];
-                                                        foreach ($allRoles as $roleData) {
-                                                            if (($roleData['id'] === $assignedRoleId || $roleData['name'] === $assignedRoleId) &&
-                                                                (in_array($roleData['name'], $roles) || $role === $roleData['name'])) {
-                                                                if (empty($task['claimed_by'])) {
-                                                                    $canClaim = true;
-                                                                } elseif ($task['claimed_by'] === $user_id || $canAssignTasks) {
-                                                                    $canUnclaim = true;
+                                                        // Admins können immer beanspruchen/freigeben
+                                                        if ($canAssignTasks) {
+                                                            if (empty($task['claimed_by'])) {
+                                                                $canClaim = true;
+                                                            } else {
+                                                                $canUnclaim = true;
+                                                            }
+                                                        } else {
+                                                            // Prüfe, ob Benutzer die Rolle hat
+                                                            $assignedRoleId = $task['assigned_to'];
+                                                            foreach ($allRoles as $roleData) {
+                                                                if (($roleData['id'] === $assignedRoleId || $roleData['name'] === $assignedRoleId) &&
+                                                                    (in_array($roleData['name'], $roles) || $role === $roleData['name'])) {
+                                                                    if (empty($task['claimed_by'])) {
+                                                                        $canClaim = true;
+                                                                    } elseif ($task['claimed_by'] === $user_id) {
+                                                                        $canUnclaim = true;
+                                                                    }
+                                                                    break;
                                                                 }
-                                                                break;
                                                             }
                                                         }
                                                     }
