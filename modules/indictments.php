@@ -31,6 +31,22 @@ $isJudge = checkUserHasRoleType($role, 'judge');
 $isLeadership = checkUserHasRoleType($role, 'leadership');
 $isProsecutor = checkUserHasRoleType($role, 'prosecutor');
 
+// Hilfsfunktion um Klageschrift-Details zu rendern
+function renderIndictmentRow($indictment, $showActions = true) {
+    $isCivil = ($indictment['case_type'] ?? 'criminal') === 'civil';
+    $party = $isCivil ? ($indictment['case']['plaintiff'] ?? '') : ($indictment['case']['defendant'] ?? '');
+    $subject = $isCivil ? ($indictment['case']['dispute_subject'] ?? '') : ($indictment['case']['charge'] ?? '');
+    $submittedBy = $indictment['submitted_by_name'] ?? $indictment['prosecutor_name'] ?? '';
+    $caseLink = $isCivil ? 'civil_cases.php' : 'cases.php';
+    $typeBadge = $isCivil ? '<span class="badge badge-primary">Zivilakte</span>' : '<span class="badge badge-danger">Strafakte</span>';
+    
+    echo '<td><a href="' . $caseLink . '?id=' . htmlspecialchars($indictment['case_id']) . '">#' . substr($indictment['case_id'], 0, 8) . '</a></td>';
+    echo '<td>' . $typeBadge . '</td>';
+    echo '<td>' . htmlspecialchars($party) . '</td>';
+    echo '<td>' . htmlspecialchars($subject) . '</td>';
+    echo '<td>' . htmlspecialchars($submittedBy) . '</td>';
+}
+
 // Standardmäßige Ansichtsmodi - werden später gegebenenfalls überschrieben
 $editingIndictment = false;
 $viewingIndictmentDetails = false;
@@ -551,11 +567,19 @@ $completedIndictments = [];
 $otherIndictments = [];
 
 foreach ($indictments as $indictment) {
+    // Prüfe ob Strafakte oder Zivilakte
     $case = findById('cases.json', $indictment['case_id']);
+    $caseType = 'criminal'; // Standardmäßig Strafakte
+    
+    if (!$case) {
+        // Versuche als Zivilakte zu laden
+        $case = findById('civil_cases.json', $indictment['case_id']);
+        $caseType = 'civil';
+    }
+    
     if ($case) {
-        // Diese Filterung ist bereits oben implementiert und nicht mehr nötig
-        
         $indictment['case'] = $case;
+        $indictment['case_type'] = $caseType; // Markiere den Typ
         
         // Nach Status kategorisieren
         switch($indictment['status']) {
@@ -645,20 +669,35 @@ include '../includes/header.php';
                                         <thead>
                                             <tr>
                                                 <th>Aktenzeichen</th>
-                                                <th>Angeklagter</th>
-                                                <th>Anklage</th>
-                                                <th>Staatsanwalt</th>
+                                                <th>Typ</th>
+                                                <th>Partei</th>
+                                                <th>Gegenstand</th>
+                                                <th>Eingereicht von</th>
                                                 <th>Einreichungsdatum</th>
                                                 <th>Aktionen</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($pendingIndictments as $indictment): ?>
+                                            <?php foreach ($pendingIndictments as $indictment): 
+                                                $isCivil = ($indictment['case_type'] ?? 'criminal') === 'civil';
+                                                $party = $isCivil ? ($indictment['case']['plaintiff'] ?? '') : ($indictment['case']['defendant'] ?? '');
+                                                $subject = $isCivil ? ($indictment['case']['dispute_subject'] ?? '') : ($indictment['case']['charge'] ?? '');
+                                                $submittedBy = $indictment['submitted_by_name'] ?? $indictment['prosecutor_name'] ?? '';
+                                            ?>
                                                 <tr>
-                                                    <td><a href="cases.php?id=<?php echo $indictment['case_id']; ?>">#<?php echo substr($indictment['case_id'], 0, 8); ?></a></td>
-                                                    <td><?php echo htmlspecialchars($indictment['case']['defendant'] ?? ''); ?></td>
-                                                    <td><?php echo htmlspecialchars($indictment['case']['charge'] ?? ''); ?></td>
-                                                    <td><?php echo htmlspecialchars($indictment['prosecutor_name']); ?></td>
+                                                    <td>
+                                                        <a href="<?php echo $isCivil ? 'civil_cases.php' : 'cases.php'; ?>?id=<?php echo $indictment['case_id']; ?>">
+                                                            #<?php echo substr($indictment['case_id'], 0, 8); ?>
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge badge-<?php echo $isCivil ? 'primary' : 'danger'; ?>">
+                                                            <?php echo $isCivil ? 'Zivilakte' : 'Strafakte'; ?>
+                                                        </span>
+                                                    </td>
+                                                    <td><?php echo htmlspecialchars($party); ?></td>
+                                                    <td><?php echo htmlspecialchars($subject); ?></td>
+                                                    <td><?php echo htmlspecialchars($submittedBy); ?></td>
                                                     <td><?php echo date('d.m.Y', strtotime($indictment['date_created'])); ?></td>
                                                     <td>
                                                         <a href="indictments.php?id=<?php echo $indictment['id']; ?>&view=detail" class="btn btn-sm btn-primary">
