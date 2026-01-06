@@ -267,13 +267,26 @@ include '../includes/header.php';
                                                                 'Administration' => ['admin', 'users', 'roles']
                                                             ];
                                                             
-                                                            foreach ($categories as $categoryName => $categoryModules): ?>
-                                                                <div class="permission-category mb-4">
-                                                                    <h6 class="border-bottom pb-2 mb-3" style="color: #333; font-weight: 600;">
-                                                                        <span data-feather="folder"></span> <?php echo $categoryName; ?>
+                                                            $categoryIndex = 0;
+                                                            foreach ($categories as $categoryName => $categoryModules): 
+                                                                $categoryIndex++;
+                                                                $categoryId = 'category-' . $categoryIndex;
+                                                                ?>
+                                                                <div class="permission-category mb-3">
+                                                                    <h6 class="category-header collapsed" 
+                                                                        data-toggle="collapse" 
+                                                                        data-target="#<?php echo $categoryId; ?>" 
+                                                                        aria-expanded="false" 
+                                                                        style="color: #333; font-weight: 600; cursor: pointer; padding: 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+                                                                        <span data-feather="folder" style="width: 16px; height: 16px;"></span> 
+                                                                        <?php echo $categoryName; ?>
+                                                                        <span class="toggle-icon float-right" style="transition: transform 0.3s;">
+                                                                            <span data-feather="chevron-down" style="width: 16px; height: 16px;"></span>
+                                                                        </span>
                                                                     </h6>
                                                                     
-                                                                    <div class="row">
+                                                                    <div class="collapse" id="<?php echo $categoryId; ?>">
+                                                                        <div class="row mt-3">
                                                                         <?php foreach ($categoryModules as $moduleId):
                                                                             if (!isset($availableModules[$moduleId])) continue;
                                                                             $moduleName = $availableModules[$moduleId];
@@ -305,6 +318,7 @@ include '../includes/header.php';
                                                                                 </div>
                                                                             </div>
                                                                         <?php endforeach; ?>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             <?php endforeach; ?>
@@ -317,10 +331,20 @@ include '../includes/header.php';
                                                             }
                                                             .permission-category {
                                                                 border-bottom: 1px solid #e9ecef;
-                                                                padding-bottom: 20px;
+                                                                padding-bottom: 15px;
                                                             }
                                                             .permission-category h6 {
-                                                                margin-bottom: 15px !important;
+                                                                margin-bottom: 0 !important;
+                                                            }
+                                                            .category-header:hover {
+                                                                background-color: #e9ecef !important;
+                                                            }
+                                                            .category-header .toggle-icon {
+                                                                display: inline-block;
+                                                                transition: transform 0.3s;
+                                                            }
+                                                            .category-header:not(.collapsed) .toggle-icon {
+                                                                transform: rotate(180deg);
                                                             }
                                                             .card {
                                                                 box-shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -334,6 +358,34 @@ include '../includes/header.php';
                                                                 overflow-y: auto;
                                                             }
                                                         </style>
+                                                        
+                                                        <script>
+                                                            // SessionStorage für Kategorie-Zustand
+                                                            document.addEventListener('DOMContentLoaded', function() {
+                                                                // Restore collapse states
+                                                                for (let i = 1; i <= 5; i++) {
+                                                                    const categoryId = 'category-' + i;
+                                                                    const isOpen = sessionStorage.getItem('roles_' + categoryId);
+                                                                    if (isOpen === 'true') {
+                                                                        $('#' + categoryId).collapse('show');
+                                                                    }
+                                                                }
+                                                                
+                                                                // Save state when toggled
+                                                                $('.permission-category .collapse').on('shown.bs.collapse', function() {
+                                                                    sessionStorage.setItem('roles_' + this.id, 'true');
+                                                                });
+                                                                
+                                                                $('.permission-category .collapse').on('hidden.bs.collapse', function() {
+                                                                    sessionStorage.setItem('roles_' + this.id, 'false');
+                                                                });
+                                                                
+                                                                // Feather icons
+                                                                if (typeof feather !== 'undefined') {
+                                                                    feather.replace();
+                                                                }
+                                                            });
+                                                        </script>
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
