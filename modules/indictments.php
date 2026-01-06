@@ -31,20 +31,45 @@ $isJudge = checkUserHasRoleType($role, 'judge');
 $isLeadership = checkUserHasRoleType($role, 'leadership');
 $isProsecutor = checkUserHasRoleType($role, 'prosecutor');
 
-// Hilfsfunktion um Klageschrift-Details zu rendern
-function renderIndictmentRow($indictment, $showActions = true) {
+// Hilfsfunktion um Klageschrift-Tabellenzeile zu rendern
+function renderIndictmentTableRow($indictment, $showDate = 'created', $showJudge = false, $showActions = true, $isJudge = false, $isLeadership = false) {
     $isCivil = ($indictment['case_type'] ?? 'criminal') === 'civil';
     $party = $isCivil ? ($indictment['case']['plaintiff'] ?? '') : ($indictment['case']['defendant'] ?? '');
     $subject = $isCivil ? ($indictment['case']['dispute_subject'] ?? '') : ($indictment['case']['charge'] ?? '');
     $submittedBy = $indictment['submitted_by_name'] ?? $indictment['prosecutor_name'] ?? '';
     $caseLink = $isCivil ? 'civil_cases.php' : 'cases.php';
-    $typeBadge = $isCivil ? '<span class="badge badge-primary">Zivilakte</span>' : '<span class="badge badge-danger">Strafakte</span>';
     
+    echo '<tr>';
     echo '<td><a href="' . $caseLink . '?id=' . htmlspecialchars($indictment['case_id']) . '">#' . substr($indictment['case_id'], 0, 8) . '</a></td>';
-    echo '<td>' . $typeBadge . '</td>';
+    echo '<td><span class="badge badge-' . ($isCivil ? 'primary' : 'danger') . '">' . ($isCivil ? 'Zivilakte' : 'Strafakte') . '</span></td>';
     echo '<td>' . htmlspecialchars($party) . '</td>';
     echo '<td>' . htmlspecialchars($subject) . '</td>';
-    echo '<td>' . htmlspecialchars($submittedBy) . '</td>';
+    
+    // Datum/Termin
+    if ($showDate === 'process') {
+        echo '<td>' . htmlspecialchars($submittedBy) . '</td>';
+        echo '<td>' . date('d.m.Y', strtotime($indictment['process_date'] ?? $indictment['date_updated'])) . '</td>';
+    } else if ($showDate === 'trial') {
+        echo '<td>' . (isset($indictment['trial_date']) ? date('d.m.Y H:i', strtotime($indictment['trial_date'])) : 'Nicht terminiert') . '</td>';
+        if ($showJudge) {
+            echo '<td>' . htmlspecialchars($indictment['processor_name'] ?? '') . '</td>';
+        }
+    } else {
+        echo '<td>' . htmlspecialchars($submittedBy) . '</td>';
+        echo '<td>' . date('d.m.Y', strtotime($indictment['date_created'])) . '</td>';
+    }
+    
+    // Aktionen
+    if ($showActions) {
+        echo '<td>';
+        echo '<a href="indictments.php?id=' . htmlspecialchars($indictment['id']) . '&view=detail" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Details</a> ';
+        if (($isJudge || $isLeadership) && in_array($indictment['status'], ['accepted', 'scheduled'])) {
+            echo '<a href="indictments.php?id=' . htmlspecialchars($indictment['id']) . '&view=edit" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i> Bearbeiten</a>';
+        }
+        echo '</td>';
+    }
+    
+    echo '</tr>';
 }
 
 // Standardmäßige Ansichtsmodi - werden später gegebenenfalls überschrieben
@@ -1057,33 +1082,18 @@ include '../includes/header.php';
                                             <thead>
                                                 <tr>
                                                     <th>Aktenzeichen</th>
-                                                    <th>Angeklagter</th>
-                                                    <th>Anklage</th>
-                                                    <th>Staatsanwalt</th>
+                                                    <th>Typ</th>
+                                                    <th>Partei</th>
+                                                    <th>Gegenstand</th>
+                                                    <th>Eingereicht von</th>
                                                     <th>Verarbeitungsdatum</th>
                                                     <th>Aktionen</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php foreach ($acceptedIndictments as $indictment): ?>
-                                                    <tr>
-                                                        <td><a href="cases.php?id=<?php echo $indictment['case_id']; ?>">#<?php echo substr($indictment['case_id'], 0, 8); ?></a></td>
-                                                        <td><?php echo htmlspecialchars($indictment['case']['defendant'] ?? ''); ?></td>
-                                                        <td><?php echo htmlspecialchars($indictment['case']['charge'] ?? ''); ?></td>
-                                                        <td><?php echo htmlspecialchars($indictment['prosecutor_name']); ?></td>
-                                                        <td><?php echo date('d.m.Y', strtotime($indictment['process_date'] ?? $indictment['date_updated'])); ?></td>
-                                                        <td>
-                                                            <a href="indictments.php?id=<?php echo $indictment['id']; ?>&view=detail" class="btn btn-sm btn-primary">
-                                                                <i class="fa fa-eye"></i> Details
-                                                            </a>
-                                                            <?php if (($isJudge || $isLeadership) && ($indictment['status'] === 'accepted' || $indictment['status'] === 'scheduled')): ?>
-                                                            <a href="indictments.php?id=<?php echo $indictment['id']; ?>&view=edit" class="btn btn-sm btn-warning">
-                                                                <i class="fa fa-edit"></i> Bearbeiten
-                                                            </a>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
+                                                <?php foreach ($acceptedIndictments as $indictment): 
+                                                    renderIndictmentTableRow($indictment, 'process', false, true, $isJudge, $isLeadership);
+                                                endforeach; ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -1114,33 +1124,18 @@ include '../includes/header.php';
                                             <thead>
                                                 <tr>
                                                     <th>Aktenzeichen</th>
-                                                    <th>Angeklagter</th>
-                                                    <th>Anklage</th>
+                                                    <th>Typ</th>
+                                                    <th>Partei</th>
+                                                    <th>Gegenstand</th>
                                                     <th>Verhandlungstermin</th>
                                                     <th>Richter</th>
                                                     <th>Aktionen</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php foreach ($scheduledIndictments as $indictment): ?>
-                                                    <tr>
-                                                        <td><a href="cases.php?id=<?php echo $indictment['case_id']; ?>">#<?php echo substr($indictment['case_id'], 0, 8); ?></a></td>
-                                                        <td><?php echo htmlspecialchars($indictment['case']['defendant'] ?? ''); ?></td>
-                                                        <td><?php echo htmlspecialchars($indictment['case']['charge'] ?? ''); ?></td>
-                                                        <td><?php echo formatDate($indictment['trial_date'], 'd.m.Y H:i'); ?></td>
-                                                        <td><?php echo htmlspecialchars($indictment['processor_name']); ?></td>
-                                                        <td>
-                                                            <a href="indictments.php?id=<?php echo $indictment['id']; ?>&view=detail" class="btn btn-sm btn-primary">
-                                                                <i class="fa fa-eye"></i> Details
-                                                            </a>
-                                                            <?php if (($isJudge || $isLeadership) && ($indictment['status'] === 'accepted' || $indictment['status'] === 'scheduled')): ?>
-                                                            <a href="indictments.php?id=<?php echo $indictment['id']; ?>&view=edit" class="btn btn-sm btn-warning">
-                                                                <i class="fa fa-edit"></i> Bearbeiten
-                                                            </a>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
+                                                <?php foreach ($scheduledIndictments as $indictment): 
+                                                    renderIndictmentTableRow($indictment, 'trial', true, true, $isJudge, $isLeadership);
+                                                endforeach; ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -1245,28 +1240,18 @@ include '../includes/header.php';
                                             <thead>
                                                 <tr>
                                                     <th>Aktenzeichen</th>
-                                                    <th>Angeklagter</th>
-                                                    <th>Anklage</th>
+                                                    <th>Typ</th>
+                                                    <th>Partei</th>
+                                                    <th>Gegenstand</th>
+                                                    <th>Eingereicht von</th>
                                                     <th>Ablehnungsdatum</th>
-                                                    <th>Richter</th>
                                                     <th>Aktionen</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php foreach ($rejectedIndictments as $indictment): ?>
-                                                    <tr>
-                                                        <td><a href="cases.php?id=<?php echo $indictment['case_id']; ?>">#<?php echo substr($indictment['case_id'], 0, 8); ?></a></td>
-                                                        <td><?php echo htmlspecialchars($indictment['case']['defendant'] ?? ''); ?></td>
-                                                        <td><?php echo htmlspecialchars($indictment['case']['charge'] ?? ''); ?></td>
-                                                        <td><?php echo formatDate($indictment['rejection_date'] ?? $indictment['process_date'], 'd.m.Y'); ?></td>
-                                                        <td><?php echo htmlspecialchars($indictment['processor_name']); ?></td>
-                                                        <td>
-                                                            <a href="indictments.php?id=<?php echo $indictment['id']; ?>&view=detail" class="btn btn-sm btn-primary">
-                                                                <i class="fa fa-eye"></i> Details
-                                                            </a>
-                                                        </td>
-                                                    </tr>
-                                                <?php endforeach; ?>
+                                                <?php foreach ($rejectedIndictments as $indictment): 
+                                                    renderIndictmentTableRow($indictment, 'process', false, true, $isJudge, $isLeadership);
+                                                endforeach; ?>
                                             </tbody>
                                         </table>
                                     </div>
