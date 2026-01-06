@@ -301,14 +301,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<!-- Modal für Erstellen (Alias) -->
-<div class="modal fade" id="createCategoryModal"></div>
-
 <script>
 $(document).ready(function() {
     feather.replace();
     
     let fields = [];
+    
+    // "Neue Kategorie" Button - öffnet das categoryModal direkt
+    $(document).on('click', '[data-target="#createCategoryModal"]', function(e) {
+        e.preventDefault();
+        $('#categoryModal').modal('show');
+    });
     
     // Felder rendern
     function renderFields() {
@@ -389,19 +392,17 @@ $(document).ready(function() {
         }
     });
     
-    // Kategorie erstellen Modal öffnen
-    $('#createCategoryModal').on('show.bs.modal', function() {
-        $('#categoryModal').modal('show');
-    });
-    
-    // Modal zurücksetzen
-    $('#categoryModal').on('show.bs.modal', function() {
-        $('#categoryForm')[0].reset();
-        $('#categoryAction').val('create');
-        $('#categoryId').val('');
-        $('#categoryModalTitle').text('Kategorie erstellen');
-        fields = [];
-        renderFields();
+    // Modal zurücksetzen beim Öffnen
+    $('#categoryModal').on('show.bs.modal', function(e) {
+        // Nur zurücksetzen wenn es nicht vom Edit-Button kommt
+        if (!$(e.relatedTarget).hasClass('edit-category')) {
+            $('#categoryForm')[0].reset();
+            $('#categoryAction').val('create');
+            $('#categoryId').val('');
+            $('#categoryModalTitle').text('Kategorie erstellen');
+            fields = [];
+            renderFields();
+        }
     });
     
     // Kategorie bearbeiten
