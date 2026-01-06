@@ -630,7 +630,6 @@ $(document).ready(function() {
                 
                 if (response.success) {
                     $('#createLicenseModal').modal('hide');
-                    alert('Lizenz erfolgreich erstellt!');
                     location.reload();
                 } else {
                     alert('Fehler: ' + response.message);
