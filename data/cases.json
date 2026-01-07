@@ -8,8 +8,9 @@
         "district": "Los Santos",
         "prosecutor": "Rhodes",
         "judge": "",
-        "status": "open",
+        "status": "pending",
         "created_by": "1",
-        "date_created": "2026-01-07 10:00:00"
+        "date_created": "2026-01-07 10:00:00",
+        "date_updated": "2026-01-07 01:12:15"
     }
 ]
