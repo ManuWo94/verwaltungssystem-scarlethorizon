@@ -26,13 +26,16 @@ $role = $_SESSION['role'];
 $message = '';
 $error = '';
 
-// Bestimme Benutzerberechtigungen für die Anzeige
-$isJudge = checkUserHasRoleType($role, 'judge');
-$isLeadership = checkUserHasRoleType($role, 'leadership');
-$isProsecutor = checkUserHasRoleType($role, 'prosecutor');
+// Bestimme Benutzerberechtigungen basierend auf dem Rechte-System
+$canEdit = currentUserCan('indictments', 'edit');
+$canDelete = currentUserCan('indictments', 'delete');
+$canSchedule = currentUserCan('indictments', 'schedule');
 
 // Hilfsfunktion um Klageschrift-Tabellenzeile zu rendern
-function renderIndictmentTableRow($indictment, $showDate = 'created', $showJudge = false, $showActions = true, $isJudge = false, $isLeadership = false) {
+function renderIndictmentTableRow($indictment, $showDate = 'created', $showJudge = false, $showActions = true) {
+    $canEdit = currentUserCan('indictments', 'edit');
+    $user_id = $_SESSION['user_id'] ?? '';
+    $isOwner = ($indictment['submitted_by_id'] ?? $indictment['prosecutor_id'] ?? '') === $user_id;
     $isCivil = ($indictment['case_type'] ?? 'criminal') === 'civil';
     $party = $isCivil ? ($indictment['case']['plaintiff'] ?? '') : ($indictment['case']['defendant'] ?? '');
     $subject = $isCivil ? ($indictment['case']['dispute_subject'] ?? '') : ($indictment['case']['charge'] ?? '');
@@ -63,8 +66,14 @@ function renderIndictmentTableRow($indictment, $showDate = 'created', $showJudge
     if ($showActions) {
         echo '<td>';
         echo '<a href="indictments.php?id=' . htmlspecialchars($indictment['id']) . '&view=detail" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Details</a> ';
-        if (($isJudge || $isLeadership) && in_array($indictment['status'], ['accepted', 'scheduled'])) {
-            echo '<a href="indictments.php?id=' . htmlspecialchars($indictment['id']) . '&view=edit" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i> Bearbeiten</a>';
+        // Bearbeiten erlauben wenn Edit-Rechte vorhanden und Status akzeptiert/terminiert ODER wenn eigene pending Klageschrift
+        if (($canEdit && in_array($indictment['status'], ['accepted', 'scheduled'])) || 
+            ($isOwner && $indictment['status'] === 'pending')) {
+            echo '<a href="indictments.php?id=' . htmlspecialchars($indictment['id']) . '&view=edit" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i> Bearbeiten</a> ';
+        }
+        // Zurückziehen erlauben wenn eigene pending Klageschrift
+        if ($isOwner && $indictment['status'] === 'pending') {
+            echo '<a href="indictments.php?action=withdraw&id=' . htmlspecialchars($indictment['id']) . '" class="btn btn-sm btn-danger" onclick="return confirm(\'Möchten Sie diese Klageschrift wirklich zurückziehen?\');"><i class="fa fa-times"></i> Zurückziehen</a>';
         }
         echo '</td>';
     }
@@ -76,6 +85,49 @@ function renderIndictmentTableRow($indictment, $showDate = 'created', $showJudge
 $editingIndictment = false;
 $viewingIndictmentDetails = false;
 $selectedIndictment = null;
+
+// GET-Aktion: Klageschrift zurückziehen
+if (isset($_GET['action']) && $_GET['action'] === 'withdraw' && isset($_GET['id'])) {
+    $indictmentId = sanitize($_GET['id']);
+    $indictment = findById('indictments.json', $indictmentId);
+    
+    if (!$indictment) {
+        $error = 'Klageschrift nicht gefunden.';
+    } else {
+        // Prüfe ob der aktuelle Benutzer der Ersteller ist
+        $isOwner = ($indictment['submitted_by_id'] ?? $indictment['prosecutor_id'] ?? '') === $user_id;
+        
+        if (!$isOwner) {
+            $error = 'Sie können nur Ihre eigenen Klageschriften zurückziehen.';
+        } else if ($indictment['status'] !== 'pending') {
+            $error = 'Nur ausstehende Klageschriften können zurückgezogen werden.';
+        } else {
+            // Lösche die Klageschrift
+            if (deleteRecord('indictments.json', $indictmentId)) {
+                // Aktualisiere auch den Fall-Status zurück auf 'open'
+                $caseId = $indictment['case_id'];
+                $case = findById('cases.json', $caseId);
+                if (!$case) {
+                    $case = findById('civil_cases.json', $caseId);
+                    $caseFile = 'civil_cases.json';
+                } else {
+                    $caseFile = 'cases.json';
+                }
+                
+                if ($case && $case['status'] === 'pending') {
+                    $case['status'] = 'open';
+                    $caseNote = "Klageschrift zurückgezogen von " . $username . " am " . date('d.m.Y H:i:s');
+                    $case['notes'] = ($case['notes'] ? $caseNote . "\n\n" . $case['notes'] : $caseNote);
+                    updateRecord($caseFile, $caseId, $case);
+                }
+                
+                $message = 'Klageschrift erfolgreich zurückgezogen.';
+            } else {
+                $error = 'Fehler beim Zurückziehen der Klageschrift.';
+            }
+        }
+    }
+}
 
 // Verarbeitung der Aktionen für Klageschriften
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -331,8 +383,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($indictmentId) || empty($status)) {
                 $error = 'Bitte geben Sie alle erforderlichen Informationen an.';
             } else {
-                // Überprüfen der Berechtigung (nur Richter oder Führungskräfte)
-                if (!$isJudge && !$isLeadership) {
+                // Überprüfen der Berechtigung über das Rechtesystem
+                if (!currentUserCan('indictments', 'edit')) {
                     $error = 'Sie haben keine Berechtigung, Klageschriften zu verarbeiten.';
                 } else {
                     $indictment = findById('indictments.json', $indictmentId);
@@ -526,20 +578,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $cases = getJsonData('cases.json');
 $indictments = getJsonData('indictments.json');
 
-// Filtere Fälle basierend auf der Benutzerrolle
-if ($isProsecutor && !$isJudge && !$isLeadership) {
-    // Staatsanwälte sehen nur ihre eigenen Fälle
-    $cases = array_filter($cases, function($case) use ($username) {
-        return isset($case['prosecutor']) && $case['prosecutor'] === $username;
-    });
-}
-
-// Richter und Führungskräfte sehen alle Klageschriften, Staatsanwälte nur ihre eigenen
-if (!$isJudge && !$isLeadership) {
-    $indictments = array_filter($indictments, function($indictment) use ($username) {
-        return isset($indictment['prosecutor_name']) && $indictment['prosecutor_name'] === $username;
-    });
-}
+// Alle Benutzer mit View-Rechten sehen alle Klageschriften
+// Keine rollenbasierte Filterung mehr
 
 // Sortiere Fälle nach Angeklagtenname
 usort($cases, function($a, $b) {
@@ -581,7 +621,7 @@ if (isset($_GET['case_id'])) {
 
 // Debug-Log vor der Kategorisierung
 error_log("Indictments count before categorization: " . count($indictments));
-error_log("Current user: $username, Role: $role, isJudge: " . ($isJudge ? 'true' : 'false') . ", isLeadership: " . ($isLeadership ? 'true' : 'false') . ", isProsecutor: " . ($isProsecutor ? 'true' : 'false'));
+error_log("Current user: $username, Role: $role, canEdit: " . ($canEdit ? 'true' : 'false') . ", canDelete: " . ($canDelete ? 'true' : 'false') . ", canSchedule: " . ($canSchedule ? 'true' : 'false'));
 
 // Kategorisiere Klageschriften nach Status
 $pendingIndictments = [];
@@ -845,7 +885,7 @@ include '../includes/header.php';
                                     </p>
                                 </div>
                                 
-                                <?php if (($isJudge || $isLeadership) && $selectedIndictment['status'] === 'pending'): ?>
+                                <?php if ($canEdit && $selectedIndictment['status'] === 'pending'): ?>
                                     <div class="mb-4">
                                         <h5>Klageschrift verarbeiten</h5>
                                         <form method="post" action="indictments.php">
@@ -930,7 +970,7 @@ include '../includes/header.php';
                                     </div>
                                 <?php endif; ?>
                                 
-                                <?php if ($isLeadership): ?>
+                                <?php if ($canDelete): ?>
                                     <div class="mt-4">
                                         <form method="post" action="indictments.php" onsubmit="return confirm('Sind Sie sicher, dass Sie diese Klageschrift löschen möchten?');">
                                             <input type="hidden" name="indictment_id" value="<?php echo $selectedIndictment['id']; ?>">
@@ -941,7 +981,7 @@ include '../includes/header.php';
                                 <?php endif; ?>
                                 
                                 <!-- Verfahrensmanagement-Bereich -->
-                                <?php if (($isJudge || $isLeadership) && 
+                                <?php if ($canEdit && 
                                           ($selectedIndictment['status'] === 'accepted' || $selectedIndictment['status'] === 'scheduled')): ?>
                                 <div class="mb-4">
                                     <h5>Verfahrensmanagement</h5>
@@ -1083,7 +1123,7 @@ include '../includes/header.php';
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($acceptedIndictments as $indictment): 
-                                                    renderIndictmentTableRow($indictment, 'process', false, true, $isJudge, $isLeadership);
+                                                    renderIndictmentTableRow($indictment, 'process', false, true);
                                                 endforeach; ?>
                                             </tbody>
                                         </table>
@@ -1125,7 +1165,7 @@ include '../includes/header.php';
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($scheduledIndictments as $indictment): 
-                                                    renderIndictmentTableRow($indictment, 'trial', true, true, $isJudge, $isLeadership);
+                                                    renderIndictmentTableRow($indictment, 'trial', true, true);
                                                 endforeach; ?>
                                             </tbody>
                                         </table>
@@ -1241,7 +1281,7 @@ include '../includes/header.php';
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($rejectedIndictments as $indictment): 
-                                                    renderIndictmentTableRow($indictment, 'process', false, true, $isJudge, $isLeadership);
+                                                    renderIndictmentTableRow($indictment, 'process', false, true);
                                                 endforeach; ?>
                                             </tbody>
                                         </table>

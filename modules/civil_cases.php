@@ -165,6 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['date_created'] = date('Y-m-d H:i:s');
                     
                     if (insertRecord('civil_cases.json', $caseData)) {
+                        $newCaseId = $caseData['id'];
                         $message = 'Fall wurde erfolgreich erstellt.';
                         // history entry for plaintiff
                         appendPartyHistory($plaintiffId, [
@@ -174,6 +175,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'status' => $caseData['status'],
                             'date' => date('Y-m-d H:i:s')
                         ]);
+                        
+                        // Setze Flag für Popup zur Klageschrifterstellung
+                        $_SESSION['show_indictment_prompt'] = true;
+                        $_SESSION['new_case_id'] = $newCaseId;
+                        $_SESSION['new_case_plaintiff'] = $caseData['plaintiff'];
+                        $_SESSION['is_civil'] = true;
                     } else {
                         $error = 'Fehler beim Erstellen des Falls.';
                     }
@@ -587,5 +594,21 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     wireAutoFill('#plaintiff', '#plaintiff_tg');
+    
+    // Popup zur Klageschrifterstellung nach Aktenanlage
+    <?php if (isset($_SESSION['show_indictment_prompt']) && $_SESSION['show_indictment_prompt'] && isset($_SESSION['is_civil'])): ?>
+        <?php 
+            $promptCaseId = $_SESSION['new_case_id'] ?? '';
+            $promptPlaintiff = $_SESSION['new_case_plaintiff'] ?? '';
+            unset($_SESSION['show_indictment_prompt']);
+            unset($_SESSION['new_case_id']);
+            unset($_SESSION['new_case_plaintiff']);
+            unset($_SESSION['is_civil']);
+        ?>
+        
+        if (confirm('Zivilakte für "<?php echo htmlspecialchars($promptPlaintiff); ?>" wurde erfolgreich erstellt.\n\nMöchten Sie jetzt direkt eine Klageschrift für diesen Fall einreichen?')) {
+            window.location.href = 'civil_case_edit.php?id=<?php echo urlencode($promptCaseId); ?>#indictment';
+        }
+    <?php endif; ?>
 });
 </script>

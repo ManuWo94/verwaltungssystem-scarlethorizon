@@ -166,6 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['date_created'] = date('Y-m-d H:i:s');
                     
                     if (insertRecord('cases.json', $caseData)) {
+                        $newCaseId = $caseData['id'];
                         $message = 'Fall wurde erfolgreich erstellt.';
                         // history entry for defendant
                         appendDefendantHistory($defendantId, [
@@ -175,6 +176,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'status' => $caseData['status'],
                             'date' => date('Y-m-d H:i:s')
                         ]);
+                        
+                        // Setze Flag für Popup zur Klageschrifterstellung
+                        $_SESSION['show_indictment_prompt'] = true;
+                        $_SESSION['new_case_id'] = $newCaseId;
+                        $_SESSION['new_case_defendant'] = $caseData['defendant'];
                     } else {
                         $error = 'Fehler beim Erstellen des Falls.';
                     }
@@ -606,5 +612,20 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     wireAutoFill('#defendant', '#defendant_tg');
+    
+    // Popup zur Klageschrifterstellung nach Aktenanlage
+    <?php if (isset($_SESSION['show_indictment_prompt']) && $_SESSION['show_indictment_prompt']): ?>
+        <?php 
+            $promptCaseId = $_SESSION['new_case_id'] ?? '';
+            $promptDefendant = $_SESSION['new_case_defendant'] ?? '';
+            unset($_SESSION['show_indictment_prompt']);
+            unset($_SESSION['new_case_id']);
+            unset($_SESSION['new_case_defendant']);
+        ?>
+        
+        if (confirm('Strafakte für "<?php echo htmlspecialchars($promptDefendant); ?>" wurde erfolgreich erstellt.\n\nMöchten Sie jetzt direkt eine Klageschrift für diesen Fall einreichen?')) {
+            window.location.href = 'case_edit.php?id=<?php echo urlencode($promptCaseId); ?>#indictment';
+        }
+    <?php endif; ?>
 });
 </script>
