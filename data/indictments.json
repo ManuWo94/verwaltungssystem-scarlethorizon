@@ -6,5 +6,16 @@
         "prosecutor_name": "Rhodes",
         "status": "pending",
         "date_created": "2026-01-07 00:13:14"
+    },
+    {
+        "id": "ind-scheduled-001",
+        "case_id": "TEST-001",
+        "case_type": "criminal",
+        "content": "Test Klageschrift",
+        "prosecutor_name": "Rhodes",
+        "status": "scheduled",
+        "trial_date": "2026-01-10 14:00:00",
+        "judge_name": "TestRichter",
+        "date_created": "2026-01-07 10:00:00"
     }
 ]

@@ -12,5 +12,20 @@
         "created_by": "1",
         "date_created": "2026-01-07 10:00:00",
         "date_updated": "2026-01-07 01:12:15"
+    },
+    {
+        "id": "COMPLETED-001",
+        "defendant": "Test Angeklagter",
+        "defendant_id": "def-002",
+        "charge": "Testanklage",
+        "incident_date": "2026-01-01",
+        "district": "Los Santos",
+        "prosecutor": "Rhodes",
+        "judge": "TestRichter",
+        "status": "completed",
+        "verdict": "Schuldig - 5 Jahre Haft",
+        "verdict_date": "2026-01-06",
+        "created_by": "1",
+        "date_created": "2026-01-05 10:00:00"
     }
 ]

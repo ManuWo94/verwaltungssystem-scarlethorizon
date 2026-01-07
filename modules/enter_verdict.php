@@ -130,40 +130,63 @@ include '../includes/header.php';
 </div>
 
 <script>
-// Scrolle zum Urteilsfeld wenn #verdict in URL
+// Scrolle zum Urteilsfeld wenn #verdict in URL - VERBESSERTE VERSION
+console.log('[VERDICT_SCROLL] Script geladen, Hash:', window.location.hash);
+
 (function() {
     let attempts = 0;
-    const maxAttempts = 20; // Maximal 2 Sekunden warten (20 * 100ms)
+    const maxAttempts = 30; // Maximal 3 Sekunden warten
     
     function tryScrollToVerdict() {
+        console.log('[VERDICT_SCROLL] tryScrollToVerdict aufgerufen, Versuch:', attempts + 1, 'Hash:', window.location.hash);
+        
         if (window.location.hash === '#verdict') {
             const verdictField = document.getElementById('verdict');
+            console.log('[VERDICT_SCROLL] Feld gesucht, gefunden:', !!verdictField);
+            
             if (verdictField) {
-                console.log('Urteilsfeld gefunden, scrolle und fokussiere');
+                console.log('[VERDICT_SCROLL] ✓ Urteilsfeld gefunden! Scrolle und fokussiere...');
                 verdictField.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 setTimeout(function() {
                     verdictField.focus();
+                    verdictField.style.border = '2px solid green'; // Visuelles Feedback
+                    setTimeout(function() {
+                        verdictField.style.border = '';
+                    }, 2000);
+                    console.log('[VERDICT_SCROLL] ✓ Feld fokussiert');
                 }, 500);
                 return true;
             } else {
                 attempts++;
                 if (attempts < maxAttempts) {
-                    console.log('Urteilsfeld noch nicht geladen, warte... (Versuch ' + attempts + ')');
+                    console.log('[VERDICT_SCROLL] ⏳ Feld nicht gefunden, warte...');
                     setTimeout(tryScrollToVerdict, 100);
                 } else {
-                    console.warn('Urteilsfeld nicht gefunden nach ' + maxAttempts + ' Versuchen');
+                    console.error('[VERDICT_SCROLL] ✗ Feld nach', maxAttempts, 'Versuchen nicht gefunden!');
+                    alert('DEBUG: Verdict-Feld nicht gefunden. Überprüfe die Konsole.');
                 }
             }
+        } else {
+            console.log('[VERDICT_SCROLL] Kein #verdict Hash in URL, abgebrochen');
         }
         return false;
     }
     
-    // Starte beim Page Load
+    // Sofort starten + Event-Listener
+    console.log('[VERDICT_SCROLL] ReadyState:', document.readyState);
+    tryScrollToVerdict(); // Sofort versuchen
+    
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryScrollToVerdict);
-    } else {
-        tryScrollToVerdict();
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('[VERDICT_SCROLL] DOMContentLoaded Event');
+            tryScrollToVerdict();
+        });
     }
+    
+    window.addEventListener('load', function() {
+        console.log('[VERDICT_SCROLL] Window Load Event');
+        tryScrollToVerdict();
+    });
 })();
 </script>
 
