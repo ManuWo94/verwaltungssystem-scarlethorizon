@@ -131,14 +131,23 @@ include '../includes/header.php';
 
 <script>
 // Scrolle zum Urteilsfeld wenn #verdict in URL
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.location.hash === '#verdict') {
-        const verdictField = document.getElementById('verdict');
-        if (verdictField) {
-            verdictField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            verdictField.focus();
+window.addEventListener('load', function() {
+    // Verzögere leicht, um sicherzustellen dass die Seite komplett geladen ist
+    setTimeout(function() {
+        if (window.location.hash === '#verdict') {
+            const verdictField = document.getElementById('verdict');
+            if (verdictField) {
+                console.log('Scrolle zum Urteilsfeld');
+                verdictField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Zusätzliche Verzögerung vor dem Focus
+                setTimeout(function() {
+                    verdictField.focus();
+                }, 300);
+            } else {
+                console.warn('Urteilsfeld nicht gefunden');
+            }
         }
-    }
+    }, 100);
 });
 </script>
 
