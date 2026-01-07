@@ -378,8 +378,12 @@ usort($revisionCases, function($a, $b) {
                             // Debug-Ausgabe
                             error_log("Rendering complete button for in-progress revision: " . $case['id']);
                             
+                            // Bestimme den richtigen Link basierend auf Aktentyp
+                            $caseType = $case['case_type'] ?? 'criminal';
+                            $editLink = $caseType === 'civil' ? 'civil_case_edit.php' : 'case_edit.php';
+                            
                             $html .= '
-                                <a href="case_edit.php?id=' . $case['id'] . '" class="btn btn-sm btn-primary">
+                                <a href="' . $editLink . '?id=' . $case['id'] . '#revision_verdict" class="btn btn-sm btn-primary">
                                     <span data-feather="edit"></span> Revisionsurteil eintragen
                                 </a>';
                         }
