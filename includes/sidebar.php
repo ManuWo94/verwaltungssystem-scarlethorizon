@@ -416,9 +416,12 @@ $openHilfe = in_array($currentPage, $hilfePages);
     });
     
     // Stelle sicher, dass nur ein Menü gleichzeitig offen ist - nur beim aktiven Klick
+    var isUserClick = false;
     var menuToggles = document.querySelectorAll('.sidebar-section [data-toggle="collapse"]');
+    
     menuToggles.forEach(function(toggle) {
         toggle.addEventListener('click', function(e) {
+            isUserClick = true;
             var targetId = this.getAttribute('href');
             var targetMenu = document.querySelector(targetId);
             
@@ -439,9 +442,23 @@ $openHilfe = in_array($currentPage, $hilfePages);
                             console.log('[Sidebar] Schließe Menü:', menu.id);
                         }
                     });
+                    isUserClick = false;
                 }, 50);
+            } else {
+                isUserClick = false;
             }
         });
+    });
+    
+    // Verhindere, dass Bootstrap beim Page Load Menüs schließt
+    $('.sidebar-section .collapse').on('hide.bs.collapse', function(e) {
+        // Erlaube nur das Schließen durch User-Interaktion
+        if (!isUserClick) {
+            console.log('[Sidebar] Verhindere automatisches Schließen von:', this.id);
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
     });
     
 })();
