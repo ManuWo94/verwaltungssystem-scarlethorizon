@@ -26,7 +26,7 @@ if (isset($_SESSION['user_id']) && file_exists(__DIR__ . '/notifications.php')) 
 // Bestimme welcher Sidebar-Bereich aufgeklappt sein soll
 $currentPage = getCurrentPage();
 $hauptPages = ['modules/duty_log.php', 'modules/calendar.php', 'modules/notes.php', 'modules/public_notes.php', 'modules/todos.php', 'modules/task_assignments.php'];
-$aktenPages = ['modules/cases.php', 'modules/civil_cases.php', 'modules/defendants.php', 'modules/indictments.php', 'modules/revisions.php', 'modules/files.php', 'modules/templates.php', 'modules/warrants.php'];
+$aktenPages = ['modules/cases.php', 'modules/case_edit.php', 'modules/case_view.php', 'modules/civil_cases.php', 'modules/civil_case_edit.php', 'modules/civil_case_view.php', 'modules/defendants.php', 'modules/indictments.php', 'modules/enter_verdict.php', 'modules/revisions.php', 'modules/files.php', 'modules/templates.php', 'modules/warrants.php'];
 $bueroPages = ['modules/staff.php', 'modules/trainings.php', 'modules/vacation.php', 'modules/evidence.php', 'modules/equipment.php', 'modules/address_book.php', 'modules/justice_references.php', 'modules/business_licenses_new.php'];
 $lizenzPages = ['modules/licenses.php', 'modules/license_archive.php', 'modules/license_categories.php'];
 $adminPages = ['admin/index.php', 'admin/users.php', 'admin/roles.php', 'admin/database.php', 'admin/delete_cases_by_timeframe.php', 'admin/limitations.php', 'admin/themes.php'];
