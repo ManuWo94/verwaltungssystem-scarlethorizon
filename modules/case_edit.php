@@ -310,6 +310,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Die insertRecord-Funktion gibt die ID zurück, wenn erfolgreich
             $indictmentId = insertRecord('indictments.json', $indictmentData);
             
+            // Debug-Logging
+            error_log("INDICTMENT SUBMIT: indictmentId = " . ($indictmentId ? $indictmentId : "FALSE"));
+            error_log("INDICTMENT DATA: " . json_encode($indictmentData));
+            
             if ($indictmentId && updateRecord('cases.json', $caseId, $updatedCase)) {
                 $message = 'Klageschrift wurde erfolgreich eingereicht.';
                 
@@ -318,10 +322,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $existingIndictment = findById('indictments.json', $indictmentId);
                 
                 // Weiterleitung zur Fallübersicht nach erfolgreicher Einreichung
-                header('Location: cases.php');
+                header('Location: cases.php?message=' . urlencode($message));
                 exit;
             } else {
-                $error = 'Fehler beim Einreichen der Klageschrift.';
+                $error = 'Fehler beim Einreichen der Klageschrift. Debug: indictmentId=' . ($indictmentId ? 'OK' : 'FAILED');
             }
         }
     }
