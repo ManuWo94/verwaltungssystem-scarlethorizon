@@ -112,7 +112,7 @@ include '../includes/header.php';
                     <?php endif; ?>
 
                     <!-- Revision beantragen Button -->
-                    <?php if (($isLeadership || $isJudge) && (isset($case['status']) && ($case['status'] === 'completed' || $case['status'] === 'rejected'))): ?>
+                    <?php if (($isLeadership || $isJudge) && (isset($case['status']) && ($case['status'] === 'completed' || $case['status'] === 'dismissed' || $case['status'] === 'rejected'))): ?>
                     <a href="civil_case_edit.php?id=<?php echo $case_id; ?>#revision" class="btn btn-warning">
                         <span data-feather="refresh-cw"></span> Revision beantragen
                     </a>
@@ -430,7 +430,7 @@ include '../includes/header.php';
                         <?php if ($status === 'accepted' || $status === 'klage angenommen' || $status === 'scheduled' || $status === 'terminiert'): ?>
                             <div class="mt-4">
                                 <h5>Urteil hinzufügen</h5>
-                                <form method="post" action="civil_case_edit.php">
+                                <form method="post" action="civil_case_edit.php?id=<?php echo $case_id; ?>">
                                     <input type="hidden" name="action" value="add_verdict">
                                     <input type="hidden" name="case_id" value="<?php echo $case_id; ?>">
                                     
