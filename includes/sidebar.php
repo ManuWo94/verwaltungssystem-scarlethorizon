@@ -415,29 +415,33 @@ $openHilfe = in_array($currentPage, $hilfePages);
         }
     });
     
-    // Stelle sicher, dass nur ein Menü gleichzeitig offen ist
-    document.addEventListener('click', function(e) {
-        var target = e.target.closest('[data-toggle="collapse"]');
-        if (target && target.closest('.sidebar-section')) {
-            var targetId = target.getAttribute('href');
+    // Stelle sicher, dass nur ein Menü gleichzeitig offen ist - nur beim aktiven Klick
+    var menuToggles = document.querySelectorAll('.sidebar-section [data-toggle="collapse"]');
+    menuToggles.forEach(function(toggle) {
+        toggle.addEventListener('click', function(e) {
+            var targetId = this.getAttribute('href');
+            var targetMenu = document.querySelector(targetId);
+            
             console.log('[Sidebar] Collapse-Toggle geklickt:', targetId);
             
-            // Wenn ein neues Menü geöffnet wird, schließe die anderen
-            setTimeout(function() {
-                var allMenus = document.querySelectorAll('.sidebar-section .collapse');
-                var clickedMenu = document.querySelector(targetId);
-                
-                allMenus.forEach(function(menu) {
-                    // Schließe alle außer dem geklickten Menü
-                    if (menu !== clickedMenu && menu.classList.contains('show')) {
-                        var menuToggle = document.querySelector('[href="#' + menu.id + '"]');
-                        if (menuToggle) {
+            // Prüfe ob das Menü gerade geöffnet oder geschlossen wird
+            var isCurrentlyOpen = targetMenu.classList.contains('show');
+            
+            // Wenn wir ein Menü öffnen (nicht schließen), schließe alle anderen
+            if (!isCurrentlyOpen) {
+                setTimeout(function() {
+                    var allMenus = document.querySelectorAll('.sidebar-section .collapse');
+                    
+                    allMenus.forEach(function(menu) {
+                        // Schließe alle anderen Menüs (außer dem gerade geklickten)
+                        if (menu !== targetMenu && menu.classList.contains('show')) {
                             $(menu).collapse('hide');
+                            console.log('[Sidebar] Schließe Menü:', menu.id);
                         }
-                    }
-                });
-            }, 50);
-        }
+                    });
+                }, 50);
+            }
+        });
     });
     
 })();
