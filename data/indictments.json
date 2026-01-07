@@ -1,1 +1,10 @@
-[]
+[
+    {
+        "id": "test-123",
+        "case_id": "TEST-001",
+        "content": "Test Klageschrift",
+        "prosecutor_name": "Rhodes",
+        "status": "pending",
+        "date_created": "2026-01-07 00:13:14"
+    }
+]
