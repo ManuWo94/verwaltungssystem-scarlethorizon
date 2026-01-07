@@ -460,7 +460,7 @@ include '../includes/header.php';
                         
                         <!-- Urteilsanzeige, wenn ein Urteil vorhanden ist -->
                         <?php if (isset($case['verdict']) && !empty($case['verdict'])): ?>
-                            <div class="mt-4">
+                            <div class="mt-4" id="verdict">
                                 <h5>Urteil</h5>
                                 <div class="card">
                                     <div class="card-body">

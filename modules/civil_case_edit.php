@@ -475,6 +475,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Urteil zum Fall hinzufügen
     elseif (isset($_POST['action']) && $_POST['action'] === 'add_verdict') {
+        error_log("add_verdict Handler - caseId: " . $caseId . ", POST case_id: " . ($_POST['case_id'] ?? 'nicht gesetzt'));
+        
         $verdictText = sanitize($_POST['verdict_text'] ?? '');
         $verdictDate = sanitize($_POST['verdict_date'] ?? '');
         $verdictStatus = sanitize($_POST['verdict_status'] ?? 'completed');
@@ -539,7 +541,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
                 
                 // Weiterleitung zur Fallansicht nach erfolgreichem Hinzufügen des Urteils
-                header('Location: civil_case_view.php?id=' . $caseId);
+                header('Location: civil_case_view.php?id=' . $caseId . '#verdict');
                 exit;
             } else {
                 $error = 'Fehler beim Hinzufügen des Urteils.';
