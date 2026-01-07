@@ -22,8 +22,20 @@ $error = '';
 // Status to filter
 $statusFilter = $_GET['status'] ?? '';
 
-// Get all cases
-$allCases = loadJsonData('cases.json');
+// Get all cases (Strafakten und Zivilakten)
+$criminalCases = loadJsonData('cases.json');
+$civilCases = loadJsonData('civil_cases.json');
+
+// Markiere den Typ jeder Akte für die Anzeige
+foreach ($criminalCases as &$case) {
+    $case['case_type'] = 'criminal';
+}
+foreach ($civilCases as &$case) {
+    $case['case_type'] = 'civil';
+}
+
+// Kombiniere beide Arrays
+$allCases = array_merge($criminalCases, $civilCases);
 
 // Filter cases with revision status
 $revisionCases = array_filter($allCases, function($case) {
@@ -56,7 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($caseId) || empty($newStatus)) {
             $error = 'Alle erforderlichen Felder müssen ausgefüllt werden.';
         } else {
+            // Versuche zuerst in Strafakten, dann in Zivilakten zu finden
             $case = findById('cases.json', $caseId);
+            $caseFile = 'cases.json';
+            
+            if (!$case) {
+                $case = findById('civil_cases.json', $caseId);
+                $caseFile = 'civil_cases.json';
+            }
             
             if (!$case) {
                 $error = "Fall mit ID '$caseId' konnte nicht gefunden werden.";
@@ -172,7 +191,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $case['revision_updated_by'] = $username;
                     $case['revision_updated_date'] = date('Y-m-d H:i:s');
                     
-                    if (updateRecord('cases.json', $caseId, $case)) {
+                    // Speichere in der richtigen JSON-Datei (Strafakten oder Zivilakten)
+                    if (updateRecord($caseFile, $caseId, $case)) {
                         // Direkt die Erfolgs-Nachricht setzen ohne Weiterleitung
                         $message = $successMessage;
                     } else {
@@ -282,8 +302,9 @@ usort($revisionCases, function($a, $b) {
                         <table class="table table-striped table-hover">
                             <thead>
                                 <tr>
-                                    <th>Angeklagter</th>
-                                    <th>Anklage</th>
+                                    <th>Typ</th>
+                                    <th>Beteiligte</th>
+                                    <th>Gegenstand</th>
                                     <th>Status</th>
                                     <th>Revisionsgrund</th>
                                     <th>Revision beantragt von</th>
@@ -307,15 +328,23 @@ usort($revisionCases, function($a, $b) {
                             $statusClass = 'danger';
                         }
                         
+                        // Bestimme Typ und passende Felder
+                        $caseType = $case['case_type'] ?? 'criminal';
+                        $typeLabel = $caseType === 'civil' ? '<span class="badge badge-warning">Zivilakte</span>' : '<span class="badge badge-primary">Strafakte</span>';
+                        $participant = $caseType === 'civil' ? ($case['plaintiff'] ?? 'Unbekannt') : ($case['defendant'] ?? 'Unbekannt');
+                        $subject = $caseType === 'civil' ? ($case['dispute_subject'] ?? 'Unbekannt') : ($case['charge'] ?? 'Unbekannt');
+                        $editLink = $caseType === 'civil' ? 'civil_case_edit.php' : 'case_edit.php';
+                        
                         $html .= '<tr>
-                            <td>' . htmlspecialchars($case['defendant']) . '</td>
-                            <td>' . htmlspecialchars($case['charge']) . '</td>
+                            <td>' . $typeLabel . '</td>
+                            <td>' . htmlspecialchars($participant) . '</td>
+                            <td>' . htmlspecialchars($subject) . '</td>
                             <td><span class="badge badge-' . $statusClass . '">' . htmlspecialchars($case['status']) . '</span></td>
                             <td>' . htmlspecialchars($case['revision_reason'] ?? 'Nicht angegeben') . '</td>
                             <td>' . htmlspecialchars($case['revision_requested_by'] ?? 'Unbekannt') . '</td>
                             <td>' . (isset($case['revision_requested_date']) ? formatDate($case['revision_requested_date'], true) : 'Unbekannt') . '</td>
                             <td>
-                                <a href="case_edit.php?id=' . $case['id'] . '" class="btn btn-sm btn-secondary">
+                                <a href="' . $editLink . '?id=' . $case['id'] . '" class="btn btn-sm btn-secondary">
                                     <span data-feather="folder"></span> Fall anzeigen
                                 </a>';
                         
