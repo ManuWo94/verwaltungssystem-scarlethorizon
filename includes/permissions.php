@@ -13,6 +13,7 @@ function getAvailableModules() {
         'users' => 'Benutzerverwaltung',
         'roles' => 'Rollenverwaltung',
         'cases' => 'Fallakten',
+        'civil_cases' => 'Zivilakten',
         'indictments' => 'Klageschriften',
         'appeals' => 'Revisionen',
         'defendants' => 'Angeklagte',

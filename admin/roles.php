@@ -261,7 +261,7 @@ include '../includes/header.php';
                                                             // Kategorisiere Module (entsprechend der Sidebar-Struktur)
                                                             $categories = [
                                                                 'Hauptfunktionen' => ['duty_log', 'calendar', 'notes', 'public_notes', 'todos', 'task_assignments'],
-                                                                'Aktenverwaltung' => ['cases', 'defendants', 'indictments', 'revisions', 'files', 'templates', 'warrants', 'appeals', 'hearings', 'verdicts'],
+                                                                'Aktenverwaltung' => ['cases', 'civil_cases', 'defendants', 'indictments', 'revisions', 'files', 'templates', 'warrants', 'appeals', 'hearings', 'verdicts'],
                                                                 'Büroverwaltung' => ['staff', 'trainings', 'vacation', 'evidence', 'seized_assets', 'equipment', 'address_book', 'justice_references', 'business_licenses'],
                                                                 'Lizenzverwaltung' => ['licenses', 'license_categories'],
                                                                 'Administration' => ['admin', 'users', 'roles']
