@@ -794,7 +794,7 @@ include '../includes/header.php';
                         <a class="nav-link" id="view-indictment-tab" data-toggle="tab" href="#view-indictment" role="tab" aria-controls="view-indictment" aria-selected="false">Klageschrift ansehen</a>
                     </li>
                 <?php endif; ?>
-                <?php if (($caseData['status'] === 'open' || $caseData['status'] === 'in_progress' || $caseData['status'] === 'pending') && ($isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'open' || $caseData['status'] === 'in_progress' || $caseData['status'] === 'pending') && currentUserCan('civil_cases', 'edit')): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="settlement-tab" data-toggle="tab" href="#settlement" role="tab" aria-controls="settlement" aria-selected="false">Außergerichtlicher Deal</a>
                     </li>
@@ -1078,7 +1078,7 @@ include '../includes/header.php';
                 <?php endif; ?>
                 
                 <!-- Tab: Außergerichtlicher Deal -->
-                <?php if (($caseData['status'] === 'open' || $caseData['status'] === 'in_progress' || $caseData['status'] === 'pending') && ($isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'open' || $caseData['status'] === 'in_progress' || $caseData['status'] === 'pending') && currentUserCan('civil_cases', 'edit')): ?>
                     <div class="tab-pane fade" id="settlement" role="tabpanel" aria-labelledby="settlement-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">
