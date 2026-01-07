@@ -167,6 +167,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (insertRecord('civil_cases.json', $caseData)) {
                         $newCaseId = $caseData['id'];
                         $message = 'Fall wurde erfolgreich erstellt.';
+                        
+                        // Setze Flag für Popup zur Klageschrifterstellung
+                        $_SESSION['show_indictment_prompt'] = true;
+                        $_SESSION['new_case_id'] = $newCaseId;
+                        $_SESSION['new_case_plaintiff'] = $caseData['plaintiff'];
+                        $_SESSION['is_civil'] = true;
                         // history entry for plaintiff
                         appendPartyHistory($plaintiffId, [
                             'case_id' => $caseData['id'],
@@ -618,8 +624,33 @@ document.addEventListener('DOMContentLoaded', function() {
             unset($_SESSION['is_civil']);
         ?>
         
-        if (confirm('Zivilakte für "<?php echo htmlspecialchars($promptPlaintiff); ?>" wurde erfolgreich erstellt.\n\nMöchten Sie jetzt direkt eine Klageschrift für diesen Fall einreichen?')) {
-            window.location.href = 'civil_case_edit.php?id=<?php echo urlencode($promptCaseId); ?>#indictment';
+        // Zeige Modal für Klageschrift
+        const indictmentModal = $('<div class="modal fade" id="indictmentPromptModal" tabindex="-1" role="dialog">\n' +
+            '<div class="modal-dialog modal-dialog-centered" role="document">\n' +
+            '<div class="modal-content">\n' +
+            '<div class="modal-header bg-success text-white">\n' +
+            '<h5 class="modal-title"><i class="fa fa-check-circle"></i> Akte erfolgreich erstellt</h5>\n' +
+            '<button type="button" class="close text-white" data-dismiss="modal">&times;</button>\n' +
+            '</div>\n' +
+            '<div class="modal-body">\n' +
+            '<p>Die Zivilakte für <strong><?php echo htmlspecialchars($promptPlaintiff); ?></strong> wurde erfolgreich angelegt.</p>\n' +
+            '<p class="mb-0">Möchten Sie jetzt direkt eine Klageschrift für diesen Fall einreichen?</p>\n' +
+            '</div>\n' +
+            '<div class="modal-footer">\n' +
+            '<button type="button" class="btn btn-secondary" data-dismiss="modal">Später</button>\n' +
+            '<button type="button" class="btn btn-primary" id="goToIndictment"><i class="fa fa-file-text"></i> Zur Klageschrift</button>\n' +
+            '</div>\n' +
+            '</div>\n' +
+            '</div>\n' +
+            '</div>');
+        
+        $('body').append(indictmentModal);
+        $('#indictmentPromptModal').modal('show');
+        
+        $('#goToIndictment').on('click', function() {
+            window.location.href = 'civil_case_edit.php?id=<?php echo urlencode($promptCaseId); ?>&tab=indictment';
+        });
+    <?php endif; ?>
         }
     <?php endif; ?>
 });

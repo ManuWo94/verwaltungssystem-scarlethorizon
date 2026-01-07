@@ -280,9 +280,9 @@ require_once __DIR__ . '/../includes/header.php';
                                     </div>
                                     <div class="card-body p-2">
                                         <div class="d-flex flex-wrap gap-2" id="schemaBlocks" style="gap: 8px;">
-                                            <button type="button" class="btn btn-sm btn-primary schema-block-btn" data-value="PREFIX" style="cursor: pointer; font-size: 13px;" title="Fügt Ihr oben eingegebenes Präfix hinzu">
+                                            <span class="badge badge-primary schema-block" draggable="true" data-value="PREFIX" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Fügt Ihr oben eingegebenes Präfix hinzu - ziehen Sie dieses Element in die Drop-Zone">
                                                 📝 PREFIX
-                                            </button>
+                                            </span>
                                             <span class="badge badge-info schema-block" draggable="true" data-value="{YEAR}" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Aktuelles Jahr (z.B. 2026)">
                                                 📅 JAHR
                                             </span>
@@ -310,11 +310,13 @@ require_once __DIR__ . '/../includes/header.php';
                                         </div>
                                         <div class="alert alert-info mt-2 mb-0" style="font-size: 11px;">
                                             <strong>📖 Erklärung:</strong><br>
-                                            <strong>PREFIX:</strong> Tragen Sie oben ein Präfix ein (z.B. "WL"), dann klicken Sie auf diesen Button<br>
+                                            <strong>PREFIX:</strong> Tragen Sie oben ein Präfix ein (z.B. "WL"), dann ziehen Sie diesen Baustein in die Drop-Zone<br>
                                             <strong>JAHR/MONAT:</strong> Wird automatisch mit dem aktuellen Jahr/Monat ersetzt<br>
-                                            <strong>NR (3/4):</strong> Fortlaufende Nummer für diese Kategorie (startet bei 001)<br>
+                                            <strong>NR (3):</strong> Fortlaufende 3-stellige Nummer (001, 002, 003...999)<br>
+                                            <strong>NR (4):</strong> Fortlaufende 4-stellige Nummer (0001, 0002, 0003...9999) - für mehr Lizenzen<br>
                                             <strong>INITIALEN:</strong> Wird aus dem "Inhabername"-Feld generiert (John Doe → JD)<br>
-                                            <strong>Beispiel:</strong> PREFIX + - + JAHR + - + NR(3) = "WL-2026-001"
+                                            <strong>Beispiel:</strong> PREFIX + - + JAHR + - + NR(3) = "WL-2026-001"<br>
+                                            <strong>Wichtig:</strong> Alle Bausteine können per Drag&Drop verschoben werden!
                                         </div>
                                     </div>
                                 </div>
@@ -521,20 +523,22 @@ $(document).ready(function() {
     // Drag Start auf Bausteinen
     $(document).on('dragstart', '.schema-block', function(e) {
         e.originalEvent.dataTransfer.effectAllowed = 'copy';
-        e.originalEvent.dataTransfer.setData('text/plain', $(this).data('value'));
-    });
-    
-    // PREFIX Button Click
-    $(document).on('click', '.schema-block[data-value="PREFIX"]', function(e) {
-        e.preventDefault();
-        const prefixValue = $('#schemaPrefix').val().trim();
-        if (!prefixValue) {
-            alert('Bitte geben Sie einen Präfix-Wert ein (z.B. "LIC" oder "WL")');
-            $('#schemaPrefix').focus();
-            return;
+        const value = $(this).data('value');
+        
+        // Bei PREFIX: Prüfe ob Präfix eingegeben wurde
+        if (value === 'PREFIX') {
+            const prefixValue = $('#schemaPrefix').val().trim();
+            if (!prefixValue) {
+                e.preventDefault();
+                alert('Bitte geben Sie zuerst einen Präfix-Wert ein (z.B. "WL" oder "BL")');
+                $('#schemaPrefix').focus();
+                return false;
+            }
+            // Übertrage den tatsächlichen Präfix-Wert statt "PREFIX"
+            e.originalEvent.dataTransfer.setData('text/plain', prefixValue);
+        } else {
+            e.originalEvent.dataTransfer.setData('text/plain', value);
         }
-        schemaElements.push(prefixValue);
-        updateSchemaPreview();
     });
     
     // Drop Zone Events
@@ -569,12 +573,12 @@ $(document).ready(function() {
             return;
         }
         
-        // Elemente anzeigen mit Löschen-Button
+        // Elemente anzeigen mit Löschen-Button - jetzt DRAGGABLE!
         schemaElements.forEach((elem, index) => {
             const displayText = elem.replace('{', '').replace('}', '').replace('NUM:', 'NR-');
-            const badge = $('<span class="badge badge-secondary mr-1" style="padding: 6px 10px; font-size: 12px;"></span>')
+            const badge = $('<span class="badge badge-secondary mr-1 schema-preview-item" draggable="true" data-index="' + index + '" style="padding: 6px 10px; font-size: 12px; cursor: move;" title="Zum Verschieben ziehen"></span>')
                 .text(displayText)
-                .append(' <span style="cursor: pointer; font-weight: bold;" data-index="' + index + '" class="remove-schema-elem">×</span>');
+                .append(' <span style="cursor: pointer; font-weight: bold;" class="remove-schema-elem">×</span>');
             preview.append(badge);
         });
         
@@ -585,10 +589,49 @@ $(document).ready(function() {
     }
     
     // Element aus Schema entfernen
-    $(document).on('click', '.remove-schema-elem', function() {
-        const index = $(this).data('index');
+    $(document).on('click', '.remove-schema-elem', function(e) {
+        e.stopPropagation();
+        const index = $(this).parent().data('index');
         schemaElements.splice(index, 1);
         updateSchemaPreview();
+    });
+    
+    // Drag&Drop für Schema-Preview-Elemente (Reordering)
+    let draggedPreviewIndex = null;
+    
+    $(document).on('dragstart', '.schema-preview-item', function(e) {
+        draggedPreviewIndex = $(this).data('index');
+        e.originalEvent.dataTransfer.effectAllowed = 'move';
+        e.originalEvent.dataTransfer.setData('text/plain', 'reorder');
+        $(this).css('opacity', '0.4');
+    });
+    
+    $(document).on('dragend', '.schema-preview-item', function(e) {
+        $(this).css('opacity', '1');
+        draggedPreviewIndex = null;
+    });
+    
+    $(document).on('dragover', '.schema-preview-item', function(e) {
+        e.preventDefault();
+        e.originalEvent.dataTransfer.dropEffect = 'move';
+        return false;
+    });
+    
+    $(document).on('drop', '.schema-preview-item', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (draggedPreviewIndex === null) return;
+        
+        const targetIndex = $(this).data('index');
+        if (draggedPreviewIndex !== targetIndex) {
+            // Element verschieben
+            const element = schemaElements.splice(draggedPreviewIndex, 1)[0];
+            schemaElements.splice(targetIndex, 0, element);
+            updateSchemaPreview();
+        }
+        
+        return false;
     });
     
     // Schema komplett zurücksetzen

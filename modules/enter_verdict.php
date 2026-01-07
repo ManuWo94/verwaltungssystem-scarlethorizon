@@ -129,4 +129,17 @@ include '../includes/header.php';
     </div>
 </div>
 
+<script>
+// Scrolle zum Urteilsfeld wenn #verdict in URL
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash === '#verdict') {
+        const verdictField = document.getElementById('verdict');
+        if (verdictField) {
+            verdictField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            verdictField.focus();
+        }
+    }
+});
+</script>
+
 <?php include '../includes/footer.php'; ?>

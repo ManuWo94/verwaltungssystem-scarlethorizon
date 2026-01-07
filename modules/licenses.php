@@ -255,12 +255,12 @@ function generateLicenseText($category, $licenseNumber, $fields, $startDate, $en
     
     $template = $category['template'];
     
-    // Systemfelder
+    // Systemfelder mit deutschem Datumsformat
     $replacements = [
         '{LICENSE_NUMBER}' => $licenseNumber,
         '{START_DATE}' => date('d.m.', strtotime($startDate)) . $textYear,
         '{END_DATE}' => date('d.m.', strtotime($endDate)) . $textYear,
-        '{ISSUE_DATE}' => date('d.m.') . $textYear,
+        '{ISSUE_DATE}' => date('d.m.', strtotime('today')) . $textYear,
         '{ISSUER_NAME}' => $_SESSION['username'],
         '{ISSUER_ROLE}' => getCleanRoleName($_SESSION['role'] ?? 'User')
     ];

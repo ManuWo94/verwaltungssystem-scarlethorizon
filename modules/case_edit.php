@@ -1314,5 +1314,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     wireAutoFill('#defendant', '#defendant_tg');
+    
+    // Aktiviere Tab basierend auf URL-Parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab === 'indictment') {
+        $('#indictment-tab').tab('show');
+    }
 });
 </script>

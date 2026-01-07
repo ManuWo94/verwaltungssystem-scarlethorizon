@@ -62,7 +62,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Hauptfunktionen</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openHaupt ? 'show' : ''; ?>" id="hauptMenu">
+            <div class="collapse <?php echo $openHaupt ? 'show' : ''; ?>" id="hauptMenu" data-parent="#sidebarMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/duty_log.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/duty_log.php">
@@ -117,7 +117,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Aktenverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openAkten ? 'show' : ''; ?>" id="aktenMenu">
+            <div class="collapse <?php echo $openAkten ? 'show' : ''; ?>" id="aktenMenu" data-parent="#sidebarMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/cases.php">
@@ -181,7 +181,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Büroverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openBuero ? 'show' : ''; ?>" id="bueroMenu">
+            <div class="collapse <?php echo $openBuero ? 'show' : ''; ?>" id="bueroMenu" data-parent="#sidebarMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/staff.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/staff.php">
@@ -242,7 +242,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Lizenzverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openLizenz ? 'show' : ''; ?>" id="lizenzMenu">
+            <div class="collapse <?php echo $openLizenz ? 'show' : ''; ?>" id="lizenzMenu" data-parent="#sidebarMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/licenses.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/licenses.php">
@@ -276,7 +276,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Administration</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openAdmin ? 'show' : ''; ?>" id="adminMenu">
+            <div class="collapse <?php echo $openAdmin ? 'show' : ''; ?>" id="adminMenu" data-parent="#sidebarMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'admin/index.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>admin/index.php">
@@ -338,7 +338,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Hilfe</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openHilfe ? 'show' : ''; ?>" id="hilfeMenu">
+            <div class="collapse <?php echo $openHilfe ? 'show' : ''; ?>" id="hilfeMenu" data-parent="#sidebarMenu">
                 <ul class="nav flex-column mb-4">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/help.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/help.php">
@@ -379,59 +379,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Sicher auf sessionStorage zugreifen (Tracking Prevention-kompatibel)
-    try {
-        var saved = sessionStorage.getItem(storageKey);
-        if (saved !== null) {
-            scrollEl.scrollTop = parseInt(saved, 10) || 0;
-        }
-
-        var saveScroll = function() {
-            try {
-                sessionStorage.setItem(storageKey, scrollEl.scrollTop);
-            } catch (e) {
-                // SessionStorage nicht verfügbar - ignorieren
-            }
-        };
-
-        scrollEl.addEventListener('scroll', saveScroll);
-        window.addEventListener('beforeunload', saveScroll);
-
-        // Save immediately when a sidebar link is clicked (before navigation unloads)
-        sidebarNav.addEventListener('click', function(ev) {
-            var target = ev.target;
-            if (target.tagName !== 'A') {
-                target = target.closest('a');
-            }
-            if (target && target.matches('a.nav-link')) {
-                saveScroll();
-            }
-        });
-    } catch (e) {
-        // SessionStorage nicht verfügbar - weiterhin funktionieren
-        console.warn('SessionStorage nicht verfügbar:', e);
-    }
-
+    // SCROLL-WIEDERHERSTELLUNG DEAKTIVIERT - Accordion macht Scrollen unnötig
+    
     // Collapse-Status speichern und wiederherstellen
     try {
         var collapseElements = document.querySelectorAll('.sidebar-section .collapse');
         
-        // Lade gespeicherte Zustände
-        var savedStates = sessionStorage.getItem(collapseStateKey);
-        if (savedStates) {
-            savedStates = JSON.parse(savedStates);
-            collapseElements.forEach(function(el) {
-                var id = el.id;
-                if (savedStates[id] !== undefined) {
-                    if (savedStates[id]) {
-                        $(el).collapse('show');
-                    } else {
-                        $(el).collapse('hide');
-                    }
-                }
-            });
-        }
-
-        // Speichere Zustand bei Änderung
+        // WIEDERHERSTELLUNG DEAKTIVIERT - data-parent steuert Accordion
+        // Die Sidebar öffnet basierend auf der aktuellen Seite (PHP-seitig)
+        
+        // Speichere Zustand bei Änderung (optional für zukünftige Features)
         collapseElements.forEach(function(el) {
             $(el).on('shown.bs.collapse hidden.bs.collapse', function() {
                 var states = {};

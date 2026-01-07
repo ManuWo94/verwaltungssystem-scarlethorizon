@@ -820,7 +820,7 @@ include '../includes/header.php';
                         <a class="nav-link" id="close-tab" data-toggle="tab" href="#close" role="tab" aria-controls="close" aria-selected="false">Fall schließen</a>
                     </li>
                 <?php endif; ?>
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected') && ($isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed') && ($isLeadership || $isJudge)): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="revision-tab" data-toggle="tab" href="#revision" role="tab" aria-controls="revision" aria-selected="false">Revision beantragen</a>
                     </li>
@@ -1167,7 +1167,7 @@ include '../includes/header.php';
                 <?php endif; ?>
                 
                 <!-- Tab: Revision beantragen -->
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected') && ($isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed') && ($isLeadership || $isJudge)): ?>
                     <div class="tab-pane fade" id="revision" role="tabpanel" aria-labelledby="revision-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">
@@ -1293,5 +1293,12 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     wireAutoFill('#plaintiff', '#defendant_tg');
+    
+    // Aktiviere Tab basierend auf URL-Parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab');
+    if (activeTab === 'indictment') {
+        $('#indictment-tab').tab('show');
+    }
 });
 </script>

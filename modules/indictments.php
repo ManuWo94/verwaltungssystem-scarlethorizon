@@ -406,11 +406,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         // Finde die zugehörige Case-Datei und setze dort ebenfalls den Richter
                         $caseId = $indictment['case_id'] ?? '';
+                        $caseType = $indictment['case_type'] ?? 'criminal';
                         if (!empty($caseId)) {
-                            $caseData = findById('cases.json', $caseId);
+                            // Bestimme die richtige Datei basierend auf dem Falltyp
+                            $caseFile = ($caseType === 'civil') ? 'civil_cases.json' : 'cases.json';
+                            $caseData = findById($caseFile, $caseId);
+                            
                             if ($caseData) {
                                 // Debug-Ausgabe
-                                error_log("RICHTER: Updating case: id=$caseId, old judge=" . ($caseData['judge_name'] ?? 'none'));
+                                error_log("RICHTER: Updating case: id=$caseId, type=$caseType, old judge=" . ($caseData['judge_name'] ?? 'none'));
                                 
                                 // WICHTIG: Hier wird der Richter explizit gesetzt
                                 $caseData['judge_id'] = $user_id;
@@ -418,12 +422,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $caseData['judge'] = $username; // Für die ursprüngliche Fallakte
                                 $caseData['judge_assignment_date'] = date('Y-m-d H:i:s');
                                 
-                                // Direkt in die cases.json-Datei schreiben
-                                if (updateRecord('cases.json', $caseId, $caseData)) {
-                                    error_log("RICHTER: Case updated successfully with judge: $username");
+                                // Aktualisiere auch den Status der Akte
+                                if ($status === 'accepted') {
+                                    $caseData['status'] = 'accepted';
+                                } elseif ($status === 'rejected') {
+                                    $caseData['status'] = 'rejected';
+                                }
+                                
+                                // Direkt in die richtige Datei schreiben
+                                if (updateRecord($caseFile, $caseId, $caseData)) {
+                                    error_log("RICHTER: Case updated successfully with judge: $username and status: $status");
                                 } else {
                                     error_log("RICHTER: Failed to update case with judge information");
                                 }
+                            } else {
+                                error_log("RICHTER: Case not found in $caseFile for id=$caseId");
                             }
                         }
                         
@@ -1047,7 +1060,7 @@ include '../includes/header.php';
                                                         </div>
                                                     <?php elseif ($selectedIndictment['status'] === 'scheduled'): ?>
                                                         <!-- Direkter Link zu dedizierter Seite statt Modal -->
-                                                        <a href="enter_verdict.php?id=<?php echo $selectedIndictment['id']; ?>" class="btn btn-success">
+                                                        <a href="enter_verdict.php?id=<?php echo $selectedIndictment['id']; ?>#verdict" class="btn btn-success">
                                                             <i class="fas fa-gavel"></i> Urteil eintragen
                                                         </a>
                                                     <?php endif; ?>
