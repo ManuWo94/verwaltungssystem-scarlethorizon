@@ -527,8 +527,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'date' => date('Y-m-d H:i:s')
                 ]);
                 
-                // Weiterleitung zur Fallansicht nach erfolgreichem Hinzufügen des Urteils
-                header('Location: civil_case_view.php?id=' . $caseId . '#verdict');
+                // Weiterleitung zur Bearbeitungsseite nach erfolgreichem Hinzufügen des Urteils
+                header('Location: civil_case_edit.php?id=' . $caseId);
                 exit;
             } else {
                 $error = 'Fehler beim Hinzufügen des Urteils.';
