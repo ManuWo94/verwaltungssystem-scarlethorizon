@@ -585,6 +585,25 @@ document.addEventListener('DOMContentLoaded', function() {
         feather.replace();
     }
     
+    // Bootstrap Form Validation aktivieren
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            console.log('Form submit event triggered');
+            console.log('Form valid:', form.checkValidity());
+            
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                console.log('Form validation failed');
+            } else {
+                console.log('Form validation passed, submitting...');
+            }
+            
+            form.classList.add('was-validated');
+        }, false);
+    });
+    
     const defendantsData = <?php echo json_encode($defendants, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 
     const normalize = (val) => (val || '').trim().toLowerCase();
