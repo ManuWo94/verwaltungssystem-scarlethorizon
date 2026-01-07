@@ -1080,7 +1080,7 @@ include '../includes/header.php';
                                 
                                 <div class="mt-4">
                                     <a href="indictments.php" class="btn btn-primary">Zurück zur Übersicht</a>
-                                    <?php if (($isJudge || $isLeadership) && ($selectedIndictment['status'] === 'accepted' || $selectedIndictment['status'] === 'scheduled')): ?>
+                                    <?php if ($canEdit && ($selectedIndictment['status'] === 'accepted' || $selectedIndictment['status'] === 'scheduled')): ?>
                                     <a href="indictments.php?id=<?php echo $selectedIndictment['id']; ?>&view=edit" class="btn btn-warning">
                                         <i class="fa fa-edit"></i> Bearbeiten
                                     </a>
@@ -1093,15 +1093,8 @@ include '../includes/header.php';
                 
                 <!-- Weitere Klageschriften nach Status gruppiert -->
                 <?php if (!$viewingIndictmentDetails): ?>
-                    <?php 
-                    // Debug-Log für akzeptierte Klageschriften
-                    error_log("Showing accepted indictments section. isJudge: " . ($isJudge ? 'true' : 'false') . 
-                              ", isLeadership: " . ($isLeadership ? 'true' : 'false') . 
-                              ", isProsecutor: " . ($isProsecutor ? 'true' : 'false') . 
-                              ", count acceptedIndictments: " . count($acceptedIndictments) . 
-                              ", viewingIndictmentDetails: " . ($viewingIndictmentDetails ? 'true' : 'false'));
-                    ?>
-                    <?php if ($isJudge || $isLeadership || (count($acceptedIndictments) > 0 && $isProsecutor)): ?>
+                    <!-- Angenommene Klageschriften -->
+                    <?php if (count($acceptedIndictments) > 0): ?>
                         <div class="col-md-12">
                             <div class="card mb-4">
                                 <div class="card-header bg-success text-white">
@@ -1128,22 +1121,13 @@ include '../includes/header.php';
                                             </tbody>
                                         </table>
                                     </div>
-                                    <?php if (count($acceptedIndictments) == 0): ?>
-                                        <p class="text-muted">Keine angenommenen Klageschriften gefunden.</p>
-                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     <?php endif; ?>
                     
-                    <?php 
-                    // Debug-Log für terminierte Verhandlungen
-                    error_log("Showing scheduled indictments section. isJudge: " . ($isJudge ? 'true' : 'false') . 
-                              ", isLeadership: " . ($isLeadership ? 'true' : 'false') . 
-                              ", isProsecutor: " . ($isProsecutor ? 'true' : 'false') . 
-                              ", count scheduledIndictments: " . count($scheduledIndictments));
-                    ?>
-                    <?php if ($isJudge || $isLeadership || (count($scheduledIndictments) > 0 && $isProsecutor)): ?>
+                    <!-- Terminierte Verhandlungen -->
+                    <?php if (count($scheduledIndictments) > 0): ?>
                         <div class="col-md-12">
                             <div class="card mb-4">
                                 <div class="card-header bg-primary text-white">

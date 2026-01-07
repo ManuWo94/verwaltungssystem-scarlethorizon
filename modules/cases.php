@@ -127,8 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'limitation_id' => $limitationId,
             'bail_amount' => sanitize($_POST['bail_amount'] ?? ''),
             'district' => sanitize($_POST['district'] ?? ''),
-            'prosecutor' => sanitize($_POST['prosecutor'] ?? ''),
-            'judge' => sanitize($_POST['judge'] ?? ''),
+            'case_officer' => sanitize($_POST['case_officer'] ?? $username), // Sachbearbeiter, default = Ersteller
             'status' => sanitize($_POST['status'] ?? 'Open')
         ];
         
@@ -509,27 +508,26 @@ $prosecutors = array_filter($users, function($user) {
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="prosecutor">Staatsanwalt</label>
-                                <select class="form-control" id="prosecutor" name="prosecutor">
-                                    <option value="">Staatsanwalt auswählen</option>
-                                    <?php foreach ($prosecutors as $prosecutor): ?>
-                                        <option value="<?php echo htmlspecialchars($prosecutor['username']); ?>">
-                                            <?php echo htmlspecialchars($prosecutor['username']); ?>
+                                <label for="case_officer">Sachbearbeiter</label>
+                                <select class="form-control" id="case_officer" name="case_officer">
+                                    <option value="<?php echo htmlspecialchars($username); ?>"><?php echo htmlspecialchars($username); ?> (Ich)</option>
+                                    <?php foreach ($allUsers as $user): ?>
+                                        <?php if ($user['username'] !== $username): ?>
+                                        <option value="<?php echo htmlspecialchars($user['username']); ?>">
+                                            <?php echo htmlspecialchars($user['username']); ?>
                                         </option>
+                                        <?php endif; ?>
                                     <?php endforeach; ?>
                                 </select>
+                                <small class="form-text text-muted">Zuständiger Bearbeiter für diese Akte. Der Richter wird automatisch beim Verarbeiten der Klageschrift zugewiesen.</small>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="judge">Richter</label>
-                                <select class="form-control" id="judge" name="judge">
-                                    <option value="">Richter auswählen</option>
-                                    <?php foreach ($judges as $judge): ?>
-                                        <option value="<?php echo htmlspecialchars($judge['username']); ?>">
-                                            <?php echo htmlspecialchars($judge['username']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
+                                <label for="district">Bezirk</label>
+                                <select class="form-control" id="district" name="district">
+                                    <option value="Ost">Ost</option>
+                                    <option value="West">West</option>
                                 </select>
                             </div>
                         </div>
