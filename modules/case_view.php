@@ -127,7 +127,7 @@ include '../includes/header.php';
                     <?php endif; ?>
 
                     <!-- Revision beantragen Button für Staatsanwälte -->
-                    <?php if (($isProsecutor || $isLeadership) && (isset($case['status']) && ($case['status'] === 'completed' || $case['status'] === 'rejected'))): ?>
+                    <?php if (($isProsecutor || $isLeadership) && (isset($case['status']) && ($case['status'] === 'completed' || $case['status'] === 'rejected' || $case['status'] === 'dismissed'))): ?>
                     <a href="case_edit.php?id=<?php echo $case_id; ?>#revision" class="btn btn-warning">
                         <span data-feather="refresh-cw"></span> Revision beantragen
                     </a>

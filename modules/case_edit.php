@@ -1316,11 +1316,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     wireAutoFill('#defendant', '#defendant_tg');
     
-    // Aktiviere Tab basierend auf URL-Parameter
+    // Aktiviere Tab basierend auf URL-Parameter oder Hash
     const urlParams = new URLSearchParams(window.location.search);
     const activeTab = urlParams.get('tab');
+    const hash = window.location.hash.substring(1); // Entfernt das #
+    
     if (activeTab === 'indictment') {
         $('#indictment-tab').tab('show');
+    } else if (hash) {
+        // Hash-basierte Tab-Aktivierung (#revision, #indictment, #settlement, etc.)
+        const targetTab = $('#' + hash + '-tab');
+        if (targetTab.length) {
+            targetTab.tab('show');
+            // Scrolle zum Tab nach kurzer Verzögerung
+            setTimeout(function() {
+                targetTab[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
     }
 });
 </script>

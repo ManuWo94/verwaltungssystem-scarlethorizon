@@ -131,24 +131,40 @@ include '../includes/header.php';
 
 <script>
 // Scrolle zum Urteilsfeld wenn #verdict in URL
-window.addEventListener('load', function() {
-    // Verzögere leicht, um sicherzustellen dass die Seite komplett geladen ist
-    setTimeout(function() {
+(function() {
+    let attempts = 0;
+    const maxAttempts = 20; // Maximal 2 Sekunden warten (20 * 100ms)
+    
+    function tryScrollToVerdict() {
         if (window.location.hash === '#verdict') {
             const verdictField = document.getElementById('verdict');
             if (verdictField) {
-                console.log('Scrolle zum Urteilsfeld');
+                console.log('Urteilsfeld gefunden, scrolle und fokussiere');
                 verdictField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Zusätzliche Verzögerung vor dem Focus
                 setTimeout(function() {
                     verdictField.focus();
-                }, 300);
+                }, 500);
+                return true;
             } else {
-                console.warn('Urteilsfeld nicht gefunden');
+                attempts++;
+                if (attempts < maxAttempts) {
+                    console.log('Urteilsfeld noch nicht geladen, warte... (Versuch ' + attempts + ')');
+                    setTimeout(tryScrollToVerdict, 100);
+                } else {
+                    console.warn('Urteilsfeld nicht gefunden nach ' + maxAttempts + ' Versuchen');
+                }
             }
         }
-    }, 100);
-});
+        return false;
+    }
+    
+    // Starte beim Page Load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryScrollToVerdict);
+    } else {
+        tryScrollToVerdict();
+    }
+})();
 </script>
 
 <?php include '../includes/footer.php'; ?>
