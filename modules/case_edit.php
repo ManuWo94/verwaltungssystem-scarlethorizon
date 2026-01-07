@@ -842,7 +842,7 @@ include '../includes/header.php';
                         <a class="nav-link" id="close-tab" data-toggle="tab" href="#close" role="tab" aria-controls="close" aria-selected="false">Fall schließen</a>
                     </li>
                 <?php endif; ?>
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected') && ($isProsecutor || $isLeadership)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'abgeschlossen') && ($isProsecutor || $isLeadership)): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="revision-tab" data-toggle="tab" href="#revision" role="tab" aria-controls="revision" aria-selected="false">Revision beantragen</a>
                     </li>
@@ -1189,7 +1189,7 @@ include '../includes/header.php';
                 <?php endif; ?>
                 
                 <!-- Tab: Revision beantragen -->
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected') && ($isProsecutor || $isLeadership)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'rejected' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'abgeschlossen') && ($isProsecutor || $isLeadership)): ?>
                     <div class="tab-pane fade" id="revision" role="tabpanel" aria-labelledby="revision-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">

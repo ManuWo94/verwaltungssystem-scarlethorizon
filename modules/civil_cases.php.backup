@@ -16,11 +16,11 @@ $error = '';
 
 // Helper: find or create plaintiff by name/tg
 function findOrCreateParty($name, $tgNumber, $userId) {
-    $parties = loadJsonData('parties.json');
+    $plaintiffs = loadJsonData('parties.json');
     $normalizedName = strtolower(trim($name));
     $matchId = null;
 
-    foreach ($parties as $plaintiff) {
+    foreach ($plaintiffs as $plaintiff) {
         $defName = strtolower(trim($plaintiff['name'] ?? ''));
         $defTg = strtolower(trim($plaintiff['tg_number'] ?? ''));
         if ($defName === $normalizedName || (!empty($tgNumber) && $defTg === strtolower(trim($tgNumber)))) {
@@ -35,7 +35,7 @@ function findOrCreateParty($name, $tgNumber, $userId) {
     }
 
     if (!$matchId) {
-        $newParty = [
+        $newPlaintiff = [
             'id' => generateUniqueId(),
             'name' => $name,
             'tg_number' => $tgNumber,
@@ -43,8 +43,8 @@ function findOrCreateParty($name, $tgNumber, $userId) {
             'created_by' => $userId,
             'date_created' => date('Y-m-d H:i:s')
         ];
-        insertRecord('parties.json', $newParty);
-        $matchId = $newParty['id'];
+        insertRecord('parties.json', $newPlaintiff);
+        $matchId = $newPlaintiff['id'];
     }
 
     return $matchId;
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $caseId = $_POST['case_id'];
             
-            if (deleteRecord('cases.json', $caseId)) {
+            if (deleteRecord('civil_cases.json', $caseId)) {
                 $message = 'Fall wurde erfolgreich gelöscht.';
             } else {
                 $error = 'Fehler beim Löschen des Falls.';
@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update existing case
                 $caseId = $_POST['case_id'];
                 
-                if (updateRecord('cases.json', $caseId, $caseData)) {
+                if (updateRecord('civil_cases.json', $caseId, $caseData)) {
                     $message = 'Fall wurde erfolgreich aktualisiert.';
                 } else {
                     $error = 'Fehler beim Aktualisieren des Falls.';
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['id'] = sanitize($_POST['custom_id']);
                     
                     // Überprüfe, ob die ID bereits existiert
-                    $existingCase = findById('cases.json', $caseData['id']);
+                    $existingCase = findById('civil_cases.json', $caseData['id']);
                     if ($existingCase) {
                         $error = 'Ein Fall mit diesem Aktenzeichen existiert bereits.';
                     }
@@ -164,9 +164,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['created_by'] = $user_id;
                     $caseData['date_created'] = date('Y-m-d H:i:s');
                     
-                    if (insertRecord('cases.json', $caseData)) {
+                    if (insertRecord('civil_cases.json', $caseData)) {
                         $newCaseId = $caseData['id'];
                         $message = 'Fall wurde erfolgreich erstellt.';
+                        
+                        // Setze Flag für Popup zur Klageschrifterstellung
+                        $_SESSION['show_indictment_prompt'] = true;
+                        $_SESSION['new_case_id'] = $newCaseId;
+                        $_SESSION['new_case_plaintiff'] = $caseData['plaintiff'];
+                        $_SESSION['is_civil'] = true;
                         // history entry for plaintiff
                         appendPartyHistory($plaintiffId, [
                             'case_id' => $caseData['id'],
@@ -180,6 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['show_indictment_prompt'] = true;
                         $_SESSION['new_case_id'] = $newCaseId;
                         $_SESSION['new_case_plaintiff'] = $caseData['plaintiff'];
+                        $_SESSION['is_civil'] = true;
                     } else {
                         $error = 'Fehler beim Erstellen des Falls.';
                     }
@@ -193,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $statusFilter = $_GET['status'] ?? '';
 
 // Load cases with optional filtering
-$cases = loadJsonData('cases.json');
+$cases = loadJsonData('civil_cases.json');
 
 // Überprüfe jede Fallakte auf Verjährung bevor sie angezeigt wird
 foreach ($cases as $key => $case) {
@@ -212,33 +219,26 @@ usort($cases, function($a, $b) {
     return strtotime($b['date_created'] ?? '0') - strtotime($a['date_created'] ?? '0');
 });
 
-// Load parties for dropdown
-$parties = loadJsonData('parties.json');
+// Load plaintiffs for dropdown
+$plaintiffs = loadJsonData('parties.json');
 
 // Load limitations for dropdown
 $limitations = loadJsonData('limitations.json');
 
-// Load users for prosecutor/judge dropdowns
+// Load users for judge dropdown
 $users = getAllUsers();
 $judges = array_filter($users, function($user) {
-    // Überprüfe sowohl die Hauptrolle als auch zusätzliche Rollen
-    if ($user['role'] === 'Judge') {
+    // Überprüfe sowohl die Hauptrolle als auch zusätzliche Rollen (Englisch und Deutsch)
+    if (in_array($user['role'], ['Judge', 'Richter', 'Judge (Richter)'])) {
         return true;
     }
     // Überprüfe auch die roles-Array, wenn es existiert
     if (isset($user['roles']) && is_array($user['roles'])) {
-        return in_array('Judge', $user['roles']);
-    }
-    return false;
-});
-$prosecutors = array_filter($users, function($user) {
-    // Überprüfe sowohl die Hauptrolle als auch zusätzliche Rollen
-    if ($user['role'] === 'Prosecutor') {
-        return true;
-    }
-    // Überprüfe auch die roles-Array, wenn es existiert
-    if (isset($user['roles']) && is_array($user['roles'])) {
-        return in_array('Prosecutor', $user['roles']);
+        foreach ($user['roles'] as $role) {
+            if (in_array($role, ['Judge', 'Richter', 'Judge (Richter)'])) {
+                return true;
+            }
+        }
     }
     return false;
 });
@@ -252,11 +252,11 @@ $prosecutors = array_filter($users, function($user) {
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-md-4 cases-page main-content">
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2"><span data-feather="alert-triangle" class="text-danger"></span> Zivilakten</h1>
+                <h1 class="h2"><span data-feather="briefcase" class="text-primary"></span> Zivilakten</h1>
                 <div>
                     <?php if (currentUserCan('civil_cases', 'create')): ?>
-                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#addCaseModal">
-                        <span data-feather="plus"></span> Neue Strafakte anlegen
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal">
+                        <span data-feather="plus"></span> Neue Zivilakte anlegen
                     </button>
                     <?php endif; ?>
                 </div>
@@ -433,7 +433,7 @@ $prosecutors = array_filter($users, function($user) {
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="post" action="cases.php" class="needs-validation" novalidate>
+            <form method="post" action="civil_cases.php" class="needs-validation" novalidate>
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="custom_id">Aktenzeichen (optional)</label>
@@ -446,15 +446,15 @@ $prosecutors = array_filter($users, function($user) {
                         <label for="plaintiff">Kläger *</label>
                         <input list="plaintiff_list" class="form-control" id="plaintiff" name="plaintiff" required placeholder="Name eingeben oder auswählen">
                         <datalist id="plaintiff_list">
-                            <?php foreach ($parties as $plaintiff): ?>
+                            <?php foreach ($plaintiffs as $plaintiff): ?>
                                 <option value="<?php echo htmlspecialchars($plaintiff['name']); ?>"><?php echo htmlspecialchars($plaintiff['tg_number'] ?? ''); ?></option>
                             <?php endforeach; ?>
                         </datalist>
                         <small class="form-text text-muted">Vorhandene Kläger können gewählt oder neue eingetragen werden.</small>
-                        <div class="invalid-feedback">Bitte wählen oder erfassen Sie einen Klägern.</div>
+                        <div class="invalid-feedback">Bitte wählen oder erfassen Sie einen Kläger.</div>
                     </div>
                     <div class="form-group">
-                        <label for="plaintiff_tg">TG-Nummer des Klägern</label>
+                        <label for="plaintiff_tg">TG-Nummer des Klägers</label>
                         <input type="text" class="form-control" id="plaintiff_tg" name="plaintiff_tg" placeholder="z.B. TG-1234">
                     </div>
                     <div class="form-group">
@@ -507,32 +507,19 @@ $prosecutors = array_filter($users, function($user) {
                             </div>
                         </div>
                     </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="case_officer">Sachbearbeiter</label>
-                                <select class="form-control" id="case_officer" name="case_officer">
-                                    <option value="<?php echo htmlspecialchars($username); ?>"><?php echo htmlspecialchars($username); ?> (Ich)</option>
-                                    <?php foreach ($allUsers as $user): ?>
-                                        <?php if ($user['username'] !== $username): ?>
-                                        <option value="<?php echo htmlspecialchars($user['username']); ?>">
-                                            <?php echo htmlspecialchars($user['username']); ?>
-                                        </option>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </select>
-                                <small class="form-text text-muted">Zuständiger Bearbeiter für diese Akte. Der Richter wird automatisch beim Verarbeiten der Klageschrift zugewiesen.</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="district">Bezirk</label>
-                                <select class="form-control" id="district" name="district">
-                                    <option value="Ost">Ost</option>
-                                    <option value="West">West</option>
-                                </select>
-                            </div>
-                        </div>
+                    <div class="form-group">
+                        <label for="case_officer">Sachbearbeiter</label>
+                        <select class="form-control" id="case_officer" name="case_officer">
+                            <option value="<?php echo htmlspecialchars($username); ?>"><?php echo htmlspecialchars($username); ?> (Ich)</option>
+                            <?php foreach ($users as $user): ?>
+                                <?php if ($user['username'] !== $username): ?>
+                                <option value="<?php echo htmlspecialchars($user['username']); ?>">
+                                    <?php echo htmlspecialchars($user['username']); ?>
+                                </option>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-text text-muted">Zuständiger Bearbeiter für diese Akte. Der Richter wird automatisch beim Verarbeiten der Klageschrift zugewiesen.</small>
                     </div>
                     <div class="form-group">
                         <label for="status">Status</label>
@@ -581,13 +568,13 @@ document.addEventListener('DOMContentLoaded', function() {
         feather.replace();
     }
     
-    const partiesData = <?php echo json_encode($parties, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    const plaintiffsData = <?php echo json_encode($plaintiffs, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
 
     const normalize = (val) => (val || '').trim().toLowerCase();
 
     const findByName = (name) => {
         const needle = normalize(name);
-        return partiesData.find(d => normalize(d.name) === needle);
+        return plaintiffsData.find(d => normalize(d.name) === needle);
     };
 
     const wireAutoFill = (nameSelector, tgSelector) => {
@@ -614,13 +601,14 @@ document.addEventListener('DOMContentLoaded', function() {
     wireAutoFill('#plaintiff', '#plaintiff_tg');
     
     // Popup zur Klageschrifterstellung nach Aktenanlage
-    <?php if (isset($_SESSION['show_indictment_prompt']) && $_SESSION['show_indictment_prompt']): ?>
+    <?php if (isset($_SESSION['show_indictment_prompt']) && $_SESSION['show_indictment_prompt'] && isset($_SESSION['is_civil'])): ?>
         <?php 
             $promptCaseId = $_SESSION['new_case_id'] ?? '';
-            $promptParty = $_SESSION['new_case_plaintiff'] ?? '';
+            $promptPlaintiff = $_SESSION['new_case_plaintiff'] ?? '';
             unset($_SESSION['show_indictment_prompt']);
             unset($_SESSION['new_case_id']);
             unset($_SESSION['new_case_plaintiff']);
+            unset($_SESSION['is_civil']);
         ?>
         
         // Zeige Modal für Klageschrift
@@ -632,7 +620,7 @@ document.addEventListener('DOMContentLoaded', function() {
             '<button type="button" class="close text-white" data-dismiss="modal">&times;</button>\n' +
             '</div>\n' +
             '<div class="modal-body">\n' +
-            '<p>Die Strafakte für <strong><?php echo htmlspecialchars($promptParty); ?></strong> wurde erfolgreich angelegt.</p>\n' +
+            '<p>Die Zivilakte für <strong><?php echo htmlspecialchars($promptPlaintiff); ?></strong> wurde erfolgreich angelegt.</p>\n' +
             '<p class="mb-0">Möchten Sie jetzt direkt eine Klageschrift für diesen Fall einreichen?</p>\n' +
             '</div>\n' +
             '<div class="modal-footer">\n' +
@@ -647,7 +635,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#indictmentPromptModal').modal('show');
         
         $('#goToIndictment').on('click', function() {
-            window.location.href = 'case_edit.php?id=<?php echo urlencode($promptCaseId); ?>&tab=indictment';
+            window.location.href = 'civil_case_edit.php?id=<?php echo urlencode($promptCaseId); ?>&tab=indictment';
         });
     <?php endif; ?>
 });
