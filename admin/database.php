@@ -18,6 +18,58 @@ $message = null;
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Download backup
+    if (isset($_POST['download_backup'])) {
+        $dataDir = __DIR__ . '/../data/';
+        $zipFile = sys_get_temp_dir() . '/backup_' . date('Y-m-d_H-i-s') . '.zip';
+        
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile, ZipArchive::CREATE) === TRUE) {
+            $files = scandir($dataDir);
+            foreach ($files as $file) {
+                if (pathinfo($file, PATHINFO_EXTENSION) === 'json') {
+                    $zip->addFile($dataDir . $file, $file);
+                }
+            }
+            $zip->close();
+            
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="backup_' . date('Y-m-d_H-i-s') . '.zip"');
+            header('Content-Length: ' . filesize($zipFile));
+            readfile($zipFile);
+            unlink($zipFile);
+            exit;
+        } else {
+            $error = 'Fehler beim Erstellen des Backups.';
+        }
+    }
+    
+    // Upload backup
+    if (isset($_POST['upload_backup']) && isset($_FILES['backup_file'])) {
+        if ($_FILES['backup_file']['error'] === UPLOAD_ERR_OK) {
+            $tmpFile = $_FILES['backup_file']['tmp_name'];
+            $dataDir = __DIR__ . '/../data/';
+            
+            $zip = new ZipArchive();
+            if ($zip->open($tmpFile) === TRUE) {
+                $extractedCount = 0;
+                for ($i = 0; $i < $zip->numFiles; $i++) {
+                    $filename = $zip->getNameIndex($i);
+                    if (pathinfo($filename, PATHINFO_EXTENSION) === 'json') {
+                        $zip->extractTo($dataDir, $filename);
+                        $extractedCount++;
+                    }
+                }
+                $zip->close();
+                $message = "$extractedCount JSON-Dateien wurden erfolgreich wiederhergestellt.";
+            } else {
+                $error = 'Fehler beim Extrahieren des Backups.';
+            }
+        } else {
+            $error = 'Fehler beim Hochladen der Datei.';
+        }
+    }
+    
     // Synchronize JSON to Database
     if (isset($_POST['sync_to_db'])) {
         $tableName = $_POST['table_name'];
@@ -139,6 +191,46 @@ include '../includes/header.php';
                     </button>
                 </div>
             <?php endif; ?>
+
+            <!-- Backup & Restore -->
+            <div class="row mb-4">
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><span data-feather="download"></span> Backup herunterladen</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">Laden Sie alle JSON-Daten als ZIP-Archiv herunter.</p>
+                            <p class="text-muted small">Enthält: <?php echo count($jsonFiles); ?> JSON-Dateien</p>
+                            <form method="post">
+                                <button type="submit" name="download_backup" class="btn btn-success">
+                                    <span data-feather="download"></span> Backup herunterladen
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><span data-feather="upload"></span> Backup wiederherstellen</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">Laden Sie ein Backup-ZIP hoch, um Daten wiederherzustellen.</p>
+                            <p class="text-danger small"><strong>Warnung:</strong> Vorhandene Dateien werden überschrieben!</p>
+                            <form method="post" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <input type="file" name="backup_file" class="form-control-file" accept=".zip" required>
+                                </div>
+                                <button type="submit" name="upload_backup" class="btn btn-primary" onclick="return confirm('Sind Sie sicher? Dies überschreibt vorhandene Daten!')">
+                                    <span data-feather="upload"></span> Backup hochladen
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Database Connection Status -->
             <div class="row mb-4">
