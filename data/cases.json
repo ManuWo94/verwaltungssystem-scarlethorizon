@@ -1,1 +1,15 @@
-[]
+[
+    {
+        "id": "TEST-001",
+        "defendant": "Max Mustermann",
+        "defendant_id": "def-001",
+        "charge": "Diebstahl",
+        "incident_date": "2026-01-01",
+        "district": "Los Santos",
+        "prosecutor": "Rhodes",
+        "judge": "",
+        "status": "open",
+        "created_by": "1",
+        "date_created": "2026-01-07 10:00:00"
+    }
+]
