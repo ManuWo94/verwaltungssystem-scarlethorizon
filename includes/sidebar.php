@@ -365,44 +365,64 @@ $openHilfe = in_array($currentPage, $hilfePages);
 </nav>
 
 <script>
-// Preserve sidebar scroll position across page loads; also save before navigation clicks
-document.addEventListener('DOMContentLoaded', function() {
-    var storageKey = 'sidebarScrollTop';
-
-    // Determine the actual scrollable sidebar element
-    var sidebarNav = document.getElementById('sidebarMenu');
-    if (!sidebarNav) return;
-    var sticky = sidebarNav.querySelector('.sidebar-sticky');
-    var scrollEl = sidebarNav;
-    if (sticky && sticky.scrollHeight > sticky.clientHeight) {
-        scrollEl = sticky;
-    } else if (sidebarNav.scrollHeight <= sidebarNav.clientHeight && sticky) {
-        // If nav itself isn't scrollable but sticky is, prefer sticky
-        scrollEl = sticky;
-    }
-
-    // Sicher auf sessionStorage zugreifen (Tracking Prevention-kompatibel)
-    // SCROLL-WIEDERHERSTELLUNG DEAKTIVIERT - Accordion macht Scrollen unnötig
+// Sidebar-Initialisierung mit erweitertem Debugging
+(function() {
+    'use strict';
     
-    // Stelle sicher, dass das korrekte Accordion-Panel offen bleibt
-    // Die PHP-Seite setzt bereits die 'show'-Klasse basierend auf der aktuellen Seite
-    // Wir müssen nur sicherstellen, dass Bootstrap dies respektiert
-    try {
-        var collapseElements = document.querySelectorAll('.sidebar-section .collapse');
+    console.log('[Sidebar] Initialisierung gestartet');
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[Sidebar] DOM geladen');
         
-        // Finde das Element, das die 'show'-Klasse hat (von PHP gesetzt)
-        collapseElements.forEach(function(el) {
-            if (el.classList.contains('show')) {
-                // Stelle sicher, dass der zugehörige Toggle-Button nicht 'collapsed' ist
-                var toggleBtn = document.querySelector('[href="#' + el.id + '"]');
-                if (toggleBtn) {
-                    toggleBtn.classList.remove('collapsed');
-                    toggleBtn.setAttribute('aria-expanded', 'true');
+        var sidebarNav = document.getElementById('sidebarMenu');
+        if (!sidebarNav) {
+            console.error('[Sidebar] Element #sidebarMenu nicht gefunden!');
+            return;
+        }
+        
+        console.log('[Sidebar] Sidebar-Element gefunden');
+        
+        // Stelle sicher, dass das korrekte Accordion-Panel offen bleibt
+        // Die PHP-Seite setzt bereits die 'show'-Klasse basierend auf der aktuellen Seite
+        try {
+            var collapseElements = document.querySelectorAll('.sidebar-section .collapse');
+            console.log('[Sidebar] Gefundene Collapse-Elemente:', collapseElements.length);
+            
+            var openPanels = [];
+            
+            // Finde das Element, das die 'show'-Klasse hat (von PHP gesetzt)
+            collapseElements.forEach(function(el) {
+                if (el.classList.contains('show')) {
+                    openPanels.push(el.id);
+                    console.log('[Sidebar] Panel geöffnet:', el.id);
+                    
+                    // Stelle sicher, dass der zugehörige Toggle-Button nicht 'collapsed' ist
+                    var toggleBtn = document.querySelector('[href="#' + el.id + '"]');
+                    if (toggleBtn) {
+                        toggleBtn.classList.remove('collapsed');
+                        toggleBtn.setAttribute('aria-expanded', 'true');
+                        console.log('[Sidebar] Toggle-Button für', el.id, 'aktualisiert');
+                    } else {
+                        console.warn('[Sidebar] Kein Toggle-Button für', el.id, 'gefunden');
+                    }
                 }
-            }
-        });
-    } catch (e) {
-        console.warn('Sidebar-Initialisierung fehlgeschlagen:', e);
-    }
-});
+            });
+            
+            console.log('[Sidebar] Initialisierung erfolgreich. Offene Panels:', openPanels.join(', '));
+            
+        } catch (e) {
+            console.error('[Sidebar] Fehler bei Initialisierung:', e);
+        }
+    });
+    
+    // Debugging: Zeige an, wenn Sidebar-Elemente geklickt werden
+    document.addEventListener('click', function(e) {
+        var target = e.target.closest('[data-toggle="collapse"]');
+        if (target) {
+            var targetId = target.getAttribute('href');
+            console.log('[Sidebar] Collapse-Toggle geklickt:', targetId);
+        }
+    });
+    
+})();
 </script>
