@@ -200,7 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $statusFilter = $_GET['status'] ?? '';
 
 // Load cases with optional filtering
-$cases = loadJsonData('cases.json');
+$cases = loadJsonData('civil_cases.json');
 
 // Überprüfe jede Fallakte auf Verjährung bevor sie angezeigt wird
 foreach ($cases as $key => $case) {
