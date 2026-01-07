@@ -658,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
             '<button type="button" class="close text-white" data-dismiss="modal">&times;</button>\n' +
             '</div>\n' +
             '<div class="modal-body">\n' +
-            '<p>Die Strafakte für <strong><?php echo htmlspecialchars($promptParty); ?></strong> wurde erfolgreich angelegt.</p>\n' +
+            '<p>Die Zivilakte für <strong><?php echo htmlspecialchars($promptParty); ?></strong> wurde erfolgreich angelegt.</p>\n' +
             '<p class="mb-0">Möchten Sie jetzt direkt eine Klageschrift für diesen Fall einreichen?</p>\n' +
             '</div>\n' +
             '<div class="modal-footer">\n' +
@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#indictmentPromptModal').modal('show');
         
         $('#goToIndictment').on('click', function() {
-            window.location.href = 'case_edit.php?id=<?php echo urlencode($promptCaseId); ?>&tab=indictment';
+            window.location.href = 'civil_case_edit.php?id=<?php echo urlencode($promptCaseId); ?>&tab=indictment';
         });
     <?php endif; ?>
 });
