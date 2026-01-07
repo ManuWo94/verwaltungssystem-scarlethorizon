@@ -112,7 +112,15 @@ include '../includes/header.php';
                     <?php endif; ?>
 
                     <!-- Revision beantragen Button -->
-                    <?php if (($isLeadership || $isJudge) && (isset($case['status']) && ($case['status'] === 'completed' || $case['status'] === 'dismissed' || $case['status'] === 'rejected'))): ?>
+                    <?php 
+                    // Debug: Warum wird der Revisions-Button nicht angezeigt?
+                    error_log("Revisions-Button Check - isLeadership: " . ($isLeadership ? 'true' : 'false') . 
+                              ", isJudge: " . ($isJudge ? 'true' : 'false') . 
+                              ", Status: " . ($case['status'] ?? 'nicht gesetzt') . 
+                              ", case_id: " . $case_id);
+                    
+                    if (($isLeadership || $isJudge) && (isset($case['status']) && ($case['status'] === 'completed' || $case['status'] === 'dismissed' || $case['status'] === 'rejected'))): 
+                    ?>
                     <a href="civil_case_edit.php?id=<?php echo $case_id; ?>#revision" class="btn btn-warning">
                         <span data-feather="refresh-cw"></span> Revision beantragen
                     </a>

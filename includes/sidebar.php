@@ -461,5 +461,46 @@ $openHilfe = in_array($currentPage, $hilfePages);
         }
     });
     
+    // Speichere Sidebar-Zustand in localStorage
+    $('.sidebar-section .collapse').on('shown.bs.collapse', function() {
+        localStorage.setItem('sidebar_' + this.id, 'open');
+        console.log('[Sidebar] Gespeichert als offen:', this.id);
+    });
+    
+    $('.sidebar-section .collapse').on('hidden.bs.collapse', function() {
+        localStorage.setItem('sidebar_' + this.id, 'closed');
+        console.log('[Sidebar] Gespeichert als geschlossen:', this.id);
+    });
+    
+    // Stelle Sidebar-Zustand beim Page Load wieder her
+    $(document).ready(function() {
+        $('.sidebar-section .collapse').each(function() {
+            var menuId = this.id;
+            var savedState = localStorage.getItem('sidebar_' + menuId);
+            
+            if (savedState === 'open' && !$(this).hasClass('show')) {
+                console.log('[Sidebar] Stelle wieder her als offen:', menuId);
+                $(this).collapse('show');
+            } else if (savedState === 'closed' && $(this).hasClass('show')) {
+                console.log('[Sidebar] Stelle wieder her als geschlossen:', menuId);
+                // Nur schließen wenn es nicht durch PHP geöffnet wurde (aktuelle Seite)
+                var currentPage = '<?php echo $currentPage; ?>';
+                var shouldStayOpen = false;
+                
+                // Prüfe ob aktuelle Seite zu diesem Menü gehört
+                if (menuId === 'hauptMenu' && <?php echo $openHaupt ? 'true' : 'false'; ?>) shouldStayOpen = true;
+                if (menuId === 'aktenMenu' && <?php echo $openAkten ? 'true' : 'false'; ?>) shouldStayOpen = true;
+                if (menuId === 'bueroMenu' && <?php echo $openBuero ? 'true' : 'false'; ?>) shouldStayOpen = true;
+                if (menuId === 'lizenzMenu' && <?php echo $openLizenz ? 'true' : 'false'; ?>) shouldStayOpen = true;
+                if (menuId === 'adminMenu' && <?php echo $openAdmin ? 'true' : 'false'; ?>) shouldStayOpen = true;
+                if (menuId === 'hilfeMenu' && <?php echo $openHilfe ? 'true' : 'false'; ?>) shouldStayOpen = true;
+                
+                if (!shouldStayOpen) {
+                    $(this).collapse('hide');
+                }
+            }
+        });
+    });
+    
 })();
 </script>
