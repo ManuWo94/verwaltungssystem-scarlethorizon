@@ -468,7 +468,7 @@ include '../includes/header.php';
                                  (isset($case['revision_verdict']) && !empty($case['revision_verdict']) || 
                                   (isset($case['status']) && ($case['status'] === 'revision_completed' || $case['status'] === 'revision abgeschlossen' || 
                                    $case['status'] === 'revision_verdict' || $case['status'] === 'revisionsurteil')))): ?>
-                            <div class="mt-4">
+                            <div class="mt-4" id="revision_verdict">
                                 <h5>Revisionsurteil</h5>
                                 <div class="card border-primary">
                                     <div class="card-header bg-primary text-white">

@@ -527,8 +527,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'date' => date('Y-m-d H:i:s')
                 ]);
                 
-                // Weiterleitung zur Bearbeitungsseite nach erfolgreichem Hinzufügen des Urteils
-                header('Location: civil_case_edit.php?id=' . $caseId);
+                // Weiterleitung zur Fallansicht mit Anker zum Urteil
+                header('Location: civil_case_view.php?id=' . $caseId . '#verdict');
                 exit;
             } else {
                 $error = 'Fehler beim Hinzufügen des Urteils.';
@@ -574,8 +574,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'Revisionsurteil wurde erfolgreich hinzugefügt.';
                 $caseData = $updatedCase;
                 
-                // Weiterleitung zur Bearbeitungsseite nach erfolgreichem Hinzufügen des Revisionsurteils
-                header('Location: civil_case_edit.php?id=' . $caseId);
+                // Weiterleitung zur Fallansicht mit Anker zum Revisionsurteil
+                header('Location: civil_case_view.php?id=' . $caseId . '#revision_verdict');
                 exit;
             } else {
                 $error = 'Fehler beim Hinzufügen des Revisionsurteils.';
