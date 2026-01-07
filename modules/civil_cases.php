@@ -68,6 +68,9 @@ function appendPartyHistory($plaintiffId, $entry) {
 
 // Handle case actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Debug: Log POST data
+    error_log("civil_cases.php POST received: " . print_r($_POST, true));
+    
     if (isset($_POST['action'])) {
         $action = $_POST['action'];
         
@@ -132,8 +135,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         
         // Validate required fields
+        error_log("Validating fields - plaintiff: '" . $caseData['plaintiff'] . "', dispute_subject: '" . $caseData['dispute_subject'] . "', incident_date: '" . $caseData['incident_date'] . "'");
+        
         if (empty($caseData['plaintiff']) || empty($caseData['dispute_subject']) || empty($caseData['incident_date'])) {
             $error = 'Please fill in all required fields.';
+            error_log("Validation FAILED: " . $error);
         } else {
             if (isset($_POST['case_id']) && !empty($_POST['case_id'])) {
                 // Update existing case
