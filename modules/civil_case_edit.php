@@ -574,8 +574,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'Revisionsurteil wurde erfolgreich hinzugefügt.';
                 $caseData = $updatedCase;
                 
-                // Weiterleitung zur Fallansicht nach erfolgreichem Hinzufügen des Urteils
-                header('Location: civil_case_view.php?id=' . $caseId);
+                // Weiterleitung zur Bearbeitungsseite nach erfolgreichem Hinzufügen des Revisionsurteils
+                header('Location: civil_case_edit.php?id=' . $caseId);
                 exit;
             } else {
                 $error = 'Fehler beim Hinzufügen des Revisionsurteils.';
