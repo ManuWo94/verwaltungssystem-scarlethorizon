@@ -299,14 +299,14 @@ include '../includes/header.php';
                                                                                     <div class="card-body" style="padding: 10px 15px;">
                                                                                         <div class="permission-actions">
                                                                                             <?php foreach ($availableActions as $actionKey => $actionLabel):
-                                                                                                $actionValue = $actionLabel; // store action name, not numeric index
-                                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionValue, $currentPerms[$moduleId]);
+                                                                                                // $actionKey ist z.B. 'view', $actionLabel ist 'Anzeigen'
+                                                                                                $isGranted = isset($currentPerms[$moduleId]) && in_array($actionKey, $currentPerms[$moduleId]);
                                                                                                 ?>
                                                                                                 <div class="form-check" style="margin-bottom: 6px;">
                                                                                                     <input class="form-check-input" type="checkbox" 
-                                                                                                           id="perm_<?php echo $moduleId . '_' . $actionValue; ?>" 
+                                                                                                           id="perm_<?php echo $moduleId . '_' . $actionKey; ?>" 
                                                                                                            name="permissions[<?php echo $moduleId; ?>][]" 
-                                                                                                           value="<?php echo $actionValue; ?>" 
+                                                                                                           value="<?php echo $actionKey; ?>" 
                                                                                                            <?php if ($isGranted) echo 'checked'; ?>>
                                                                                                     <label class="form-check-label" for="perm_<?php echo $moduleId . '_' . $actionKey; ?>">
                                                                                                         <?php echo htmlspecialchars($actionLabel); ?>

@@ -46,7 +46,11 @@ function getAvailableModules() {
  * Defines all available actions for permission checking (tri-state model)
  */
 function getAvailableActions() {
-    return ['view', 'edit', 'delete'];
+    return [
+        'view' => 'Anzeigen',
+        'edit' => 'Bearbeiten',
+        'delete' => 'Löschen'
+    ];
 }
 
 /**

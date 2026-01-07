@@ -335,11 +335,14 @@ usort($revisionCases, function($a, $b) {
                         $subject = $caseType === 'civil' ? ($case['dispute_subject'] ?? 'Unbekannt') : ($case['charge'] ?? 'Unbekannt');
                         $editLink = $caseType === 'civil' ? 'civil_case_edit.php' : 'case_edit.php';
                         
+                        // Übersetze Status ins Deutsche
+                        $statusGerman = mapStatusToGerman($case['status']);
+                        
                         $html .= '<tr>
                             <td>' . $typeLabel . '</td>
                             <td>' . htmlspecialchars($participant) . '</td>
                             <td>' . htmlspecialchars($subject) . '</td>
-                            <td><span class="badge badge-' . $statusClass . '">' . htmlspecialchars($case['status']) . '</span></td>
+                            <td><span class="badge badge-' . $statusClass . '">' . htmlspecialchars($statusGerman) . '</span></td>
                             <td>' . htmlspecialchars($case['revision_reason'] ?? 'Nicht angegeben') . '</td>
                             <td>' . htmlspecialchars($case['revision_requested_by'] ?? 'Unbekannt') . '</td>
                             <td>' . (isset($case['revision_requested_date']) ? formatDate($case['revision_requested_date'], true) : 'Unbekannt') . '</td>
