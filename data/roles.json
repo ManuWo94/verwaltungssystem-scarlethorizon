@@ -124,6 +124,16 @@
                 "view",
                 "edit",
                 "delete"
+            ],
+            "civil_cases": [
+                "view",
+                "edit",
+                "delete"
+            ],
+            "revisions": [
+                "view",
+                "edit",
+                "delete"
             ]
         }
     },
@@ -299,6 +309,12 @@
                 "create",
                 "edit",
                 "delete"
+            ],
+            "civil_cases": [
+                "view",
+                "create",
+                "edit",
+                "delete"
             ]
         }
     },
@@ -306,61 +322,61 @@
         "id": "senatsrichter",
         "name": "Senatsrichter",
         "description": "Senatsrichter",
-        "permissions": {}
+        "permissions": []
     },
     {
         "id": "amtsrichter",
         "name": "Amtsrichter",
         "description": "Amtsrichter",
-        "permissions": {}
+        "permissions": []
     },
     {
         "id": "beisitzender_richter",
         "name": "Beisitzender Richter",
         "description": "Beisitzender Richter",
-        "permissions": {}
+        "permissions": []
     },
     {
         "id": "berufungsrichter",
         "name": "Berufungsrichter",
         "description": "Richter im Berufungsgericht",
-        "permissions": {}
+        "permissions": []
     },
     {
         "id": "friedensrichter",
         "name": "Friedensrichter",
-        "description": "Richter für Schlichtungsverfahren",
-        "permissions": {}
+        "description": "Richter f\u00fcr Schlichtungsverfahren",
+        "permissions": []
     },
     {
         "id": "gerichtsassistent",
         "name": "Gerichtsassistent",
-        "description": "Assistent für richterliche Tätigkeiten",
-        "permissions": {}
+        "description": "Assistent f\u00fcr richterliche T\u00e4tigkeiten",
+        "permissions": []
     },
     {
         "id": "gerichtsvolontar",
-        "name": "Gerichtsvolontär",
-        "description": "Volontär\/Praktikant am Gericht",
-        "permissions": {}
+        "name": "Gerichtsvolont\u00e4r",
+        "description": "Volont\u00e4r\/Praktikant am Gericht",
+        "permissions": []
     },
     {
         "id": "gerichtsreferendar",
         "name": "Gerichtsreferendar",
         "description": "Referendar am Gericht",
-        "permissions": {},
+        "permissions": [],
         "date_updated": "2026-01-05 01:21:58"
     },
     {
         "id": "us_marshal",
         "name": "U.S. Marshal",
         "description": "US Marshal",
-        "permissions": {}
+        "permissions": []
     },
     {
         "id": "marshal_secretary",
         "name": "Marshal Secretary",
         "description": "Sekretariat des Marshal",
-        "permissions": {}
+        "permissions": []
     }
 ]
