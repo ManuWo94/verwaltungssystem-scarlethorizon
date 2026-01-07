@@ -62,7 +62,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Hauptfunktionen</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openHaupt ? 'show' : ''; ?>" id="hauptMenu" data-parent="#sidebarMenu">
+            <div class="collapse <?php echo $openHaupt ? 'show' : ''; ?>" id="hauptMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/duty_log.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/duty_log.php">
@@ -117,7 +117,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Aktenverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openAkten ? 'show' : ''; ?>" id="aktenMenu" data-parent="#sidebarMenu">
+            <div class="collapse <?php echo $openAkten ? 'show' : ''; ?>" id="aktenMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/cases.php">
@@ -185,7 +185,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Büroverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openBuero ? 'show' : ''; ?>" id="bueroMenu" data-parent="#sidebarMenu">
+            <div class="collapse <?php echo $openBuero ? 'show' : ''; ?>" id="bueroMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/staff.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/staff.php">
@@ -246,7 +246,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Lizenzverwaltung</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openLizenz ? 'show' : ''; ?>" id="lizenzMenu" data-parent="#sidebarMenu">
+            <div class="collapse <?php echo $openLizenz ? 'show' : ''; ?>" id="lizenzMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/licenses.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/licenses.php">
@@ -280,7 +280,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Administration</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openAdmin ? 'show' : ''; ?>" id="adminMenu" data-parent="#sidebarMenu">
+            <div class="collapse <?php echo $openAdmin ? 'show' : ''; ?>" id="adminMenu">
                 <ul class="nav flex-column">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'admin/index.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>admin/index.php">
@@ -342,7 +342,7 @@ $openHilfe = in_array($currentPage, $hilfePages);
                 <span class="flex-grow-1">Hilfe</span>
                 <span data-feather="chevron-down" class="toggle-icon"></span>
             </a>
-            <div class="collapse <?php echo $openHilfe ? 'show' : ''; ?>" id="hilfeMenu" data-parent="#sidebarMenu">
+            <div class="collapse <?php echo $openHilfe ? 'show' : ''; ?>" id="hilfeMenu">
                 <ul class="nav flex-column mb-4">
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/help.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/help.php">
@@ -415,12 +415,28 @@ $openHilfe = in_array($currentPage, $hilfePages);
         }
     });
     
-    // Debugging: Zeige an, wenn Sidebar-Elemente geklickt werden
+    // Stelle sicher, dass nur ein Menü gleichzeitig offen ist
     document.addEventListener('click', function(e) {
         var target = e.target.closest('[data-toggle="collapse"]');
-        if (target) {
+        if (target && target.closest('.sidebar-section')) {
             var targetId = target.getAttribute('href');
             console.log('[Sidebar] Collapse-Toggle geklickt:', targetId);
+            
+            // Wenn ein neues Menü geöffnet wird, schließe die anderen
+            setTimeout(function() {
+                var allMenus = document.querySelectorAll('.sidebar-section .collapse');
+                var clickedMenu = document.querySelector(targetId);
+                
+                allMenus.forEach(function(menu) {
+                    // Schließe alle außer dem geklickten Menü
+                    if (menu !== clickedMenu && menu.classList.contains('show')) {
+                        var menuToggle = document.querySelector('[href="#' + menu.id + '"]');
+                        if (menuToggle) {
+                            $(menu).collapse('hide');
+                        }
+                    }
+                });
+            }, 50);
         }
     });
     

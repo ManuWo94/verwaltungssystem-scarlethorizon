@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $caseId = $_POST['case_id'];
             
-            if (deleteRecord('cases.json', $caseId)) {
+            if (deleteRecord('civil_cases.json', $caseId)) {
                 $message = 'Fall wurde erfolgreich gelöscht.';
             } else {
                 $error = 'Fehler beim Löschen des Falls.';
@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Update existing case
                 $caseId = $_POST['case_id'];
                 
-                if (updateRecord('cases.json', $caseId, $caseData)) {
+                if (updateRecord('civil_cases.json', $caseId, $caseData)) {
                     $message = 'Fall wurde erfolgreich aktualisiert.';
                 } else {
                     $error = 'Fehler beim Aktualisieren des Falls.';
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['id'] = sanitize($_POST['custom_id']);
                     
                     // Überprüfe, ob die ID bereits existiert
-                    $existingCase = findById('cases.json', $caseData['id']);
+                    $existingCase = findById('civil_cases.json', $caseData['id']);
                     if ($existingCase) {
                         $error = 'Ein Fall mit diesem Aktenzeichen existiert bereits.';
                     }
@@ -164,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['created_by'] = $user_id;
                     $caseData['date_created'] = date('Y-m-d H:i:s');
                     
-                    if (insertRecord('cases.json', $caseData)) {
+                    if (insertRecord('civil_cases.json', $caseData)) {
                         $newCaseId = $caseData['id'];
                         $message = 'Fall wurde erfolgreich erstellt.';
                         // history entry for plaintiff
@@ -180,6 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['show_indictment_prompt'] = true;
                         $_SESSION['new_case_id'] = $newCaseId;
                         $_SESSION['new_case_plaintiff'] = $caseData['plaintiff'];
+                        $_SESSION['is_civil'] = true;
                     } else {
                         $error = 'Fehler beim Erstellen des Falls.';
                     }
@@ -255,8 +256,8 @@ $prosecutors = array_filter($users, function($user) {
                 <h1 class="h2"><span data-feather="alert-triangle" class="text-danger"></span> Zivilakten</h1>
                 <div>
                     <?php if (currentUserCan('civil_cases', 'create')): ?>
-                    <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#addCaseModal">
-                        <span data-feather="plus"></span> Neue Strafakte anlegen
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addCaseModal">
+                        <span data-feather="plus"></span> Neue Zivilakte anlegen
                     </button>
                     <?php endif; ?>
                 </div>
