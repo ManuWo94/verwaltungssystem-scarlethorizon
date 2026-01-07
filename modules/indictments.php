@@ -673,15 +673,7 @@ include '../includes/header.php';
             <?php endif; ?>
 
             <div class="row">
-                <?php if ($isJudge || $isLeadership || $isProsecutor): ?>
-                <!-- Alle Rollen sehen ihre relevanten ausstehenden Klageschriften -->
-                <?php 
-                // Debug-Log für die Sichtbarkeit
-                error_log("Showing pending indictments section. isJudge: " . ($isJudge ? 'true' : 'false') . 
-                          ", isLeadership: " . ($isLeadership ? 'true' : 'false') . 
-                          ", isProsecutor: " . ($isProsecutor ? 'true' : 'false') . 
-                          ", count pendingIndictments: " . count($pendingIndictments));
-                ?>
+                <!-- Zeige Klageschriften für alle mit View-Rechten -->
                 <div class="col-md-12">
                     <div class="card mb-4">
                         <div class="card-header bg-primary text-white">
@@ -740,8 +732,7 @@ include '../includes/header.php';
                         </div>
                     </div>
                 </div>
-                <?php endif; ?>
-
+                
                 <?php if ($editingIndictment && $selectedIndictment): ?>
                     <div class="col-md-12">
                         <div class="card mb-4">
