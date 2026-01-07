@@ -273,6 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Speichere die Klageschrift
             $indictmentData = [
                 'case_id' => $caseId,
+                'case_type' => 'civil',
                 'content' => $indictmentText,
                 'submitted_by_id' => $user_id,
                 'submitted_by_name' => $username,
@@ -820,7 +821,7 @@ include '../includes/header.php';
                         <a class="nav-link" id="close-tab" data-toggle="tab" href="#close" role="tab" aria-controls="close" aria-selected="false">Fall schließen</a>
                     </li>
                 <?php endif; ?>
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed') && ($isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'rejected') && ($isProsecutor || $isLeadership || $isJudge)): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="revision-tab" data-toggle="tab" href="#revision" role="tab" aria-controls="revision" aria-selected="false">Revision beantragen</a>
                     </li>
@@ -1167,7 +1168,7 @@ include '../includes/header.php';
                 <?php endif; ?>
                 
                 <!-- Tab: Revision beantragen -->
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed') && ($isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'rejected') && ($isProsecutor || $isLeadership || $isJudge)): ?>
                     <div class="tab-pane fade" id="revision" role="tabpanel" aria-labelledby="revision-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">

@@ -285,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Speichere die Klageschrift
             $indictmentData = [
                 'case_id' => $caseId,
+                'case_type' => 'criminal',
                 'content' => $indictmentText,
                 'prosecutor_id' => $user_id,
                 'prosecutor_name' => $username,

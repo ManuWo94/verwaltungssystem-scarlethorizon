@@ -151,7 +151,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$indictment) {
                 $error = 'Klageschrift nicht gefunden.';
             } else {
-                $caseData = findById('cases.json', $indictment['case_id']);
+                // Bestimme den Falltyp und die richtige Datei
+                $caseType = $indictment['case_type'] ?? 'criminal';
+                $caseFile = ($caseType === 'civil') ? 'civil_cases.json' : 'cases.json';
+                
+                $caseData = findById($caseFile, $indictment['case_id']);
                 if (!$caseData) {
                     $error = 'Zugehöriger Fall nicht gefunden.';
                 } else {
@@ -167,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $indictment['judge_name'] = $username;
                     
                     // Debug-Ausgabe
-                    error_log("SCHEDULEV2: Setting court date for indictment: id=$indictmentId, date=$fullTrialDateTime, judge=$username");
+                    error_log("SCHEDULEV2: Setting court date for indictment: id=$indictmentId, date=$fullTrialDateTime, judge=$username, caseType=$caseType");
                     
                     // Aktualisiere Fall
                     $caseData['status'] = 'scheduled';
@@ -180,11 +184,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['judge'] = $username;  // Legacy-Unterstützung
                     
                     // Debug-Ausgabe
-                    error_log("SCHEDULEV2: Setting judge for case: id=" . $caseData['id'] . ", judge=$username");
+                    error_log("SCHEDULEV2: Setting judge for case: id=" . $caseData['id'] . ", judge=$username, file=$caseFile");
                     
                     // Speichern der Aktualisierungen
                     if (updateRecord('indictments.json', $indictmentId, $indictment) && 
-                        updateRecord('cases.json', $caseData['id'], $caseData)) {
+                        updateRecord($caseFile, $caseData['id'], $caseData)) {
                         $message = 'Gerichtstermin wurde erfolgreich geplant für ' . date('d.m.Y H:i', strtotime($fullTrialDateTime)) . ' Uhr.';
                         
                         // Weiterleitung zur Detailansicht nach erfolgreicher Terminierung
@@ -210,7 +214,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$indictment) {
                 $error = 'Klageschrift nicht gefunden.';
             } else {
-                $caseData = findById('cases.json', $indictment['case_id']);
+                // Bestimme den Falltyp und die richtige Datei
+                $caseType = $indictment['case_type'] ?? 'criminal';
+                $caseFile = ($caseType === 'civil') ? 'civil_cases.json' : 'cases.json';
+                
+                $caseData = findById($caseFile, $indictment['case_id']);
                 if (!$caseData) {
                     $error = 'Zugehöriger Fall nicht gefunden.';
                 } else {
@@ -232,11 +240,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $caseData['judge'] = $username;  // Legacy-Unterstützung
                     
                     // Debug-Ausgabe
-                    error_log("VERDICT: Setting judge for case: id=" . $caseData['id'] . ", judge=$username");
+                    error_log("VERDICT: Setting judge for case: id=" . $caseData['id'] . ", judge=$username, file=$caseFile");
                     
                     // Speichern der Aktualisierungen
                     if (updateRecord('indictments.json', $indictmentId, $indictment) && 
-                        updateRecord('cases.json', $caseData['id'], $caseData)) {
+                        updateRecord($caseFile, $caseData['id'], $caseData)) {
                         $message = 'Urteil wurde erfolgreich eingetragen.';
                         
                         // Weiterleitung zur Detailansicht nach erfolgreicher Urteilseintragung
@@ -263,7 +271,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$indictment) {
                 $error = 'Klageschrift nicht gefunden.';
             } else {
-                $caseData = findById('cases.json', $indictment['case_id']);
+                // Bestimme den Falltyp und die richtige Datei
+                $caseType = $indictment['case_type'] ?? 'criminal';
+                $caseFile = ($caseType === 'civil') ? 'civil_cases.json' : 'cases.json';
+                
+                $caseData = findById($caseFile, $indictment['case_id']);
                 if (!$caseData) {
                     $error = 'Zugehöriger Fall nicht gefunden.';
                 } else {
@@ -288,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Speichere Änderungen
                     if (updateRecord('indictments.json', $indictmentId, $indictment) &&
-                        updateRecord('cases.json', $caseData['id'], $caseData)) {
+                        updateRecord($caseFile, $caseData['id'], $caseData)) {
                         $message = 'Klageschrift und Urteil wurden erfolgreich aktualisiert.';
                     } else {
                         $error = 'Fehler beim Aktualisieren der Klageschrift und des Urteils.';
