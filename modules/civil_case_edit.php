@@ -75,11 +75,7 @@ function ce_appendDefendantHistory($defendantId, $entry) {
     updateRecord('parties.json', $defendantId, $plaintiff);
 }
 
-// Verwende die checkUserHasRoleType Funktion für konsistente Rollenüberprüfung
-$userRole = $_SESSION['role'];
-$isProsecutor = checkUserHasRoleType($userRole, 'prosecutor');
-$isLeadership = checkUserHasRoleType($userRole, 'leadership');
-$isJudge = checkUserHasRoleType($userRole, 'judge');
+// Berechtigungen werden über currentUserCan() geprüft
 
 // Id des zu bearbeitenden Falls aus der URL erhalten
 $caseId = isset($_GET['id']) ? $_GET['id'] : null;
@@ -103,17 +99,8 @@ if (!$caseData) {
 
 // Verarbeite GET parameter 'action' für direkte Aktionen
 if ($action === 'close_case') {
-    // Verwende die zentrale Rollenprüfung (checkUserHasRoleType)
-    $userRole = $_SESSION['role'];
-    $isProsecutor = checkUserHasRoleType($userRole, 'prosecutor');
-    $isLeadership = checkUserHasRoleType($userRole, 'leadership');
-    
-    // Debug-Info
-    error_log("Zugriffsprüfung für Fall schließen - Rolle: " . $_SESSION['role'] . 
-              ", isProsecutor: " . ($isProsecutor ? "true" : "false") . 
-              ", isLeadership: " . ($isLeadership ? "true" : "false"));
-    
-    if ($isLeadership || $isJudge) {
+    // Prüfe Berechtigung über Permission-System
+    if (currentUserCan('civil_cases', 'edit')) {
         // Zeige ein Formular an, um den Fall zu schließen
         $showCloseForm = true;
     } else {
@@ -813,27 +800,22 @@ include '../includes/header.php';
                     </li>
                 <?php endif; ?>
                 <?php 
-                // Richter und Führungskräfte dürfen Fälle schließen
-                $userRole = $_SESSION['role'];
-                $isLeadership = checkUserHasRoleType($userRole, 'leadership');
-                
+                // Berechtigung über Permission-System prüfen
                 if ($caseData['status'] !== 'completed' && $caseData['status'] !== 'dismissed' && 
-                    ($role === 'Administrator' || $role === 'Richter' || $isLeadership || $isJudge)): 
+                    currentUserCan('civil_cases', 'edit')): 
                 ?>
                     <li class="nav-item">
                         <a class="nav-link" id="close-tab" data-toggle="tab" href="#close" role="tab" aria-controls="close" aria-selected="false">Fall schließen</a>
                     </li>
                 <?php endif; ?>
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'rejected' || $caseData['status'] === 'abgeschlossen') && (currentUserCan('civil_cases', 'edit') || $isProsecutor || $isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'rejected' || $caseData['status'] === 'abgeschlossen') && currentUserCan('civil_cases', 'edit')): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="revision-tab" data-toggle="tab" href="#revision" role="tab" aria-controls="revision" aria-selected="false">Revision beantragen</a>
                     </li>
                 <?php endif; ?>
                 <?php
-                // Prüfe auf Richterrolle
-                $isJudge = (strtolower($userRole) == 'judge' || strtolower($userRole) == 'richter');
-                
-                if (strpos($caseData['status'], 'revision') !== false && ($isJudge || $isLeadership)): ?>
+                // Berechtigung über Permission-System prüfen
+                if (strpos($caseData['status'], 'revision') !== false && currentUserCan('civil_cases', 'edit')): ?>
                     <li class="nav-item">
                         <a class="nav-link" id="revision_verdict-tab" data-toggle="tab" href="#revision_verdict" role="tab" aria-controls="revision_verdict" aria-selected="false">Revisionsurteil</a>
                     </li>
@@ -1171,7 +1153,7 @@ include '../includes/header.php';
                 <?php endif; ?>
                 
                 <!-- Tab: Revision beantragen -->
-                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'rejected' || $caseData['status'] === 'abgeschlossen') && (currentUserCan('civil_cases', 'edit') || $isProsecutor || $isLeadership || $isJudge)): ?>
+                <?php if (($caseData['status'] === 'completed' || $caseData['status'] === 'dismissed' || $caseData['status'] === 'rejected' || $caseData['status'] === 'abgeschlossen') && currentUserCan('civil_cases', 'edit')): ?>
                     <div class="tab-pane fade" id="revision" role="tabpanel" aria-labelledby="revision-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">
@@ -1190,8 +1172,8 @@ include '../includes/header.php';
                     </div>
                 <?php endif; ?>
                 
-                <!-- Tab: Revisionsurteil eintragen (nur für Richter und Administrator) -->
-                <?php if (strpos($caseData['status'], 'revision') !== false && ($isJudge || $isLeadership)): ?>
+                <!-- Tab: Revisionsurteil eintragen -->
+                <?php if (strpos($caseData['status'], 'revision') !== false && currentUserCan('civil_cases', 'edit')): ?>
                     <div class="tab-pane fade" id="revision_verdict" role="tabpanel" aria-labelledby="revision_verdict-tab">
                         <div class="card border-top-0 rounded-top-0">
                             <div class="card-body">

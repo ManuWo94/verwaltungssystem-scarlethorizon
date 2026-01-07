@@ -67,15 +67,11 @@ function formatDateTime($dateString) {
 }
 */
 
-// Holen Sie Richter und Staatsanwälte für die Anzeige
+// Holen Sie Richter für die Anzeige (Benutzer mit edit-Rechten auf civil_cases)
 $judges = array_filter($users, function($user) {
-    if ($user['role'] === 'Judge') {
-        return true;
-    }
-    if (isset($user['roles']) && is_array($user['roles'])) {
-        return in_array('Judge', $user['roles']) || in_array('Richter', $user['roles']) || in_array('Judge (Richter)', $user['roles']);
-    }
-    return false;
+    // Prüfe ob Benutzer Judge-ähnliche Rolle hat (für Anzeige)
+    $role = strtolower($user['role'] ?? '');
+    return (strpos($role, 'judge') !== false || strpos($role, 'richter') !== false);
 });
 
 include '../includes/header.php';
@@ -96,13 +92,8 @@ include '../includes/header.php';
                         <span data-feather="edit"></span> Fall bearbeiten
                     </a>
 
-                    <!-- Aktionen für Staatsanwälte und Führungskräfte -->
+                    <!-- Aktionen basierend auf Berechtigungen -->
                     <?php
-                    // Verwende die checkUserHasRoleType Funktion für konsistente Rollenüberprüfung
-                    $userRole = $_SESSION['role'];
-                    $isLeadership = checkUserHasRoleType($userRole, 'leadership');
-                    $isJudge = checkUserHasRoleType($userRole, 'judge');
-                    
                     // Wenn Benutzer Edit-Rechte hat - Klageschrift einreichen
                     if (currentUserCan('civil_cases', 'edit')):
                     ?>
@@ -112,22 +103,15 @@ include '../includes/header.php';
                     <?php endif; ?>
 
                     <!-- Revision beantragen Button -->
-                    <?php 
-                    // Debug: Warum wird der Revisions-Button nicht angezeigt?
-                    error_log("Revisions-Button Check - isLeadership: " . ($isLeadership ? 'true' : 'false') . 
-                              ", isJudge: " . ($isJudge ? 'true' : 'false') . 
-                              ", Status: " . ($case['status'] ?? 'nicht gesetzt') . 
-                              ", case_id: " . $case_id);
-                    
-                    if (($isLeadership || $isJudge) && (isset($case['status']) && ($case['status'] === 'completed' || $case['status'] === 'dismissed' || $case['status'] === 'rejected'))): 
-                    ?>
+                    <?php if (currentUserCan('civil_cases', 'edit') && isset($case['status']) && 
+                            ($case['status'] === 'completed' || $case['status'] === 'dismissed' || $case['status'] === 'rejected')): ?>
                     <a href="civil_case_edit.php?id=<?php echo $case_id; ?>#revision" class="btn btn-warning">
                         <span data-feather="refresh-cw"></span> Revision beantragen
                     </a>
                     <?php endif; ?>
 
                     <!-- Vergleich Button -->
-                    <?php if (($isLeadership || $isJudge) && isset($case['status']) && 
+                    <?php if (currentUserCan('civil_cases', 'edit') && isset($case['status']) && 
                             ($case['status'] === 'open' || $case['status'] === 'in_progress' || $case['status'] === 'pending')): ?>
                     <a href="civil_case_edit.php?id=<?php echo $case_id; ?>#settlement" class="btn btn-info">
                         <span data-feather="users"></span> Vergleich
@@ -137,7 +121,7 @@ include '../includes/header.php';
                     <!-- Fall schließen Button, abhängig vom Status anzeigen -->
                     <?php 
                     $caseStatus = $case['status'] ?? '';
-                    if (($isLeadership || $isJudge) && 
+                    if (currentUserCan('civil_cases', 'edit') && 
                             ($caseStatus !== 'closed' && $caseStatus !== 'abgeschlossen' && $caseStatus !== 'completed')): ?>
                     <a href="civil_case_edit.php?id=<?php echo $case_id; ?>#close" class="btn btn-danger">
                         <span data-feather="archive"></span> Fall schließen
