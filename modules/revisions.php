@@ -335,6 +335,9 @@ usort($revisionCases, function($a, $b) {
                         $subject = $caseType === 'civil' ? ($case['dispute_subject'] ?? 'Unbekannt') : ($case['charge'] ?? 'Unbekannt');
                         $editLink = $caseType === 'civil' ? 'civil_case_edit.php' : 'case_edit.php';
                         
+                        // Debug-Logging für jeden Fall
+                        error_log("Revisions-Fall {$case['id']}: Typ={$caseType}, EditLink={$editLink}");
+                        
                         // Übersetze Status ins Deutsche
                         $statusGerman = mapStatusToGerman($case['status']);
                         
@@ -375,12 +378,8 @@ usort($revisionCases, function($a, $b) {
                                     </form>
                                 </div>';
                         } elseif ($statusType === 'progress') {
-                            // Debug-Ausgabe
-                            error_log("Rendering complete button for in-progress revision: " . $case['id']);
-                            
-                            // Bestimme den richtigen Link basierend auf Aktentyp
-                            $caseType = $case['case_type'] ?? 'criminal';
-                            $editLink = $caseType === 'civil' ? 'civil_case_edit.php' : 'case_edit.php';
+                            // Verwende die bereits oben definierte $editLink Variable
+                            error_log("Revisionsurteil-Button für Fall {$case['id']}: Typ={$caseType}, Link={$editLink}");
                             
                             $html .= '
                                 <a href="' . $editLink . '?id=' . $case['id'] . '#revision_verdict" class="btn btn-sm btn-primary">
