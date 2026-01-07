@@ -267,47 +267,55 @@ require_once __DIR__ . '/../includes/header.php';
                                 
                                 <!-- PREFIX Eingabe -->
                                 <div class="form-group mb-2">
-                                    <label for="schemaPrefix" class="small text-muted">Präfix (z.B. "LIC", "WL", "BL")</label>
-                                    <input type="text" class="form-control form-control-sm" id="schemaPrefix" placeholder="z.B. LIC" maxlength="10">
-                                    <small class="text-muted">Wird als PREFIX-Baustein im Schema verwendet</small>
+                                    <label for="schemaPrefix" class="small font-weight-bold text-primary">1️⃣ Präfix festlegen</label>
+                                    <input type="text" class="form-control form-control-sm" id="schemaPrefix" placeholder="z.B. WL, BL, GL" maxlength="10">
+                                    <small class="text-muted">z.B. "WL" für Waffenlizenz, "BL" für Businesslizenz. Klicken Sie dann auf den PREFIX-Button unten.</small>
                                 </div>
                                 
                                 <!-- Drag & Drop Builder -->
                                 <div class="card">
                                     <div class="card-header bg-light py-2">
-                                        <small class="text-muted font-weight-bold">Bausteine (ziehen Sie die Elemente in die Drop-Zone)</small>
+                                        <small class="text-muted font-weight-bold">2️⃣ Bausteine zusammenstellen</small>
+                                        <p class="mb-0 mt-1" style="font-size: 11px;">Ziehen Sie die Elemente in die Drop-Zone unten oder klicken Sie darauf:</p>
                                     </div>
                                     <div class="card-body p-2">
                                         <div class="d-flex flex-wrap gap-2" id="schemaBlocks" style="gap: 8px;">
-                                            <button type="button" class="btn btn-sm btn-primary schema-block-btn" data-value="PREFIX" style="cursor: move; font-size: 13px;">
+                                            <button type="button" class="btn btn-sm btn-primary schema-block-btn" data-value="PREFIX" style="cursor: pointer; font-size: 13px;" title="Fügt Ihr oben eingegebenes Präfix hinzu">
                                                 📝 PREFIX
                                             </button>
-                                            <span class="badge badge-info schema-block" draggable="true" data-value="{YEAR}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-info schema-block" draggable="true" data-value="{YEAR}" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Aktuelles Jahr (z.B. 2026)">
                                                 📅 JAHR
                                             </span>
-                                            <span class="badge badge-warning schema-block" draggable="true" data-value="{MONTH}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-warning schema-block" draggable="true" data-value="{MONTH}" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Aktueller Monat (01-12)">
                                                 📆 MONAT
                                             </span>
-                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:3}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:3}" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Laufnummer mit 3 Stellen (001, 002, 003...)">
                                                 🔢 NR (3)
                                             </span>
-                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:4}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-success schema-block" draggable="true" data-value="{NUM:4}" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Laufnummer mit 4 Stellen (0001, 0002, 0003...)">
                                                 🔢 NR (4)
                                             </span>
-                                            <span class="badge badge-danger schema-block" draggable="true" data-value="{INITIALS}" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-danger schema-block" draggable="true" data-value="{INITIALS}" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Initialen aus Inhabername (z.B. John Doe → JD)">
                                                 👤 INITIALEN
                                             </span>
-                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="-" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="-" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Trennzeichen">
                                                 -
                                             </span>
-                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="/" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="/" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Trennzeichen">
                                                 /
                                             </span>
-                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="_" style="cursor: move; padding: 8px 12px; font-size: 13px;">
+                                            <span class="badge badge-secondary schema-block" draggable="true" data-value="_" style="cursor: move; padding: 8px 12px; font-size: 13px;" title="Trennzeichen">
                                                 _
                                             </span>
                                         </div>
-                                        <small class="text-muted d-block mt-2">💡 Tipp: INITIALEN nimmt Anfangsbuchstaben aus dem Feld "Inhabername"</small>
+                                        <div class="alert alert-info mt-2 mb-0" style="font-size: 11px;">
+                                            <strong>📖 Erklärung:</strong><br>
+                                            <strong>PREFIX:</strong> Tragen Sie oben ein Präfix ein (z.B. "WL"), dann klicken Sie auf diesen Button<br>
+                                            <strong>JAHR/MONAT:</strong> Wird automatisch mit dem aktuellen Jahr/Monat ersetzt<br>
+                                            <strong>NR (3/4):</strong> Fortlaufende Nummer für diese Kategorie (startet bei 001)<br>
+                                            <strong>INITIALEN:</strong> Wird aus dem "Inhabername"-Feld generiert (John Doe → JD)<br>
+                                            <strong>Beispiel:</strong> PREFIX + - + JAHR + - + NR(3) = "WL-2026-001"
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -315,7 +323,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <div class="mt-2 p-3 border rounded" id="schemaDropZone" 
                                      style="min-height: 60px; background: #f8f9fa; border: 2px dashed #dee2e6 !important;">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <small class="text-muted">Ziehen Sie Bausteine hierher...</small>
+                                        <small class="text-muted"><strong>3️⃣ Schema-Vorschau:</strong> Ziehen Sie Bausteine hierher...</small>
                                         <button type="button" class="btn btn-sm btn-outline-danger" id="resetSchema" title="Schema zurücksetzen">
                                             <i data-feather="x"></i>
                                         </button>
@@ -397,9 +405,6 @@ require_once __DIR__ . '/../includes/header.php';
                                 <div class="d-flex flex-wrap" style="gap: 4px;">
                                     <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"HOLDER_NAME","label":"Inhabername","type":"text","required":true}'>
                                         + Inhabername
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"TG_NUMBER","label":"TG-Nummer","type":"text","required":true}'>
-                                        + TG-Nummer
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-primary quick-field-btn" data-field='{"name":"BUSINESS_TYPE","label":"Geschäftstyp","type":"select","required":true,"options":["Bar","Restaurant","Club","Geschäft","Sonstiges"]}'>
                                         + Geschäftstyp
@@ -781,6 +786,9 @@ $(document).ready(function() {
         const index = $(this).data('index');
         const prop = $(this).data('prop');
         
+        if (typeof index === 'undefined' || !prop) return;
+        if (!fields[index]) return;
+        
         if (prop === 'required') {
             fields[index][prop] = $(this).is(':checked');
         } else if (prop === 'options') {
@@ -791,8 +799,12 @@ $(document).ready(function() {
         
         // Platzhalter aktualisieren wenn Name sich ändert
         if (prop === 'name' || prop === 'label') {
+            renderFields(); // Re-render um Platzhalter-Vorschau zu aktualisieren
             updateCustomFieldPlaceholders();
         }
+        
+        // Debug: Zeige aktuelle Felder im Console
+        console.log('Fields updated:', fields);
     });
     
     // Modal zurücksetzen beim Öffnen

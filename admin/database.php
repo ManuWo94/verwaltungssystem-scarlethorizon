@@ -18,6 +18,27 @@ $message = null;
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Update text output year
+    if (isset($_POST['update_text_year'])) {
+        $textYear = intval($_POST['text_year'] ?? date('Y'));
+        
+        // Lade/erstelle system_settings.json
+        $settings = loadJsonData('system_settings.json');
+        if (!is_array($settings)) {
+            $settings = [];
+        }
+        
+        $settings['text_output_year'] = $textYear;
+        $settings['updated_at'] = date('Y-m-d H:i:s');
+        $settings['updated_by'] = $_SESSION['username'];
+        
+        if (saveJsonData('system_settings.json', $settings)) {
+            $message = 'Jahreszahl für Textausgaben wurde auf ' . $textYear . ' gesetzt.';
+        } else {
+            $error = 'Fehler beim Speichern der Einstellung.';
+        }
+    }
+    
     // Download backup
     if (isset($_POST['download_backup'])) {
         $dataDir = __DIR__ . '/../data/';
@@ -194,6 +215,35 @@ include '../includes/header.php';
 
             <!-- Backup & Restore -->
             <div class="row mb-4">
+                <!-- Text Output Year Setting -->
+                <div class="col-lg-12">
+                    <div class="card mb-4">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0"><span data-feather="calendar"></span> Jahreszahl für Textausgaben</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php 
+                            $settings = loadJsonData('system_settings.json');
+                            $currentTextYear = $settings['text_output_year'] ?? date('Y');
+                            ?>
+                            <p class="card-text">Legen Sie fest, welches Jahr in Textausgaben (z.B. Klageschriften, Lizenzen) verwendet werden soll.</p>
+                            <p class="text-muted small">Dies betrifft nur die Textausgaben zum Kopieren, nicht die Datumswerte in der Webanwendung.</p>
+                            <form method="post" class="form-inline">
+                                <div class="form-group mr-3">
+                                    <label for="text_year" class="mr-2">Jahr:</label>
+                                    <input type="number" name="text_year" id="text_year" class="form-control" 
+                                           value="<?php echo $currentTextYear; ?>" 
+                                           min="1800" max="2100" required style="width: 120px;">
+                                </div>
+                                <button type="submit" name="update_text_year" class="btn btn-info">
+                                    <span data-feather="save"></span> Jahreszahl speichern
+                                </button>
+                            </form>
+                            <p class="text-muted small mt-2">Aktuell: <strong><?php echo $currentTextYear; ?></strong></p>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="col-lg-6">
                     <div class="card mb-4">
                         <div class="card-header bg-success text-white">

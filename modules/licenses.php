@@ -154,6 +154,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
+    // Lizenz archivieren
+    if ($action === 'archive') {
+        checkModulePermission('licenses', 'edit');
+        
+        $licenseId = $_POST['license_id'] ?? '';
+        $found = false;
+        
+        foreach ($licenses as &$lic) {
+            if ($lic['id'] === $licenseId) {
+                $lic['status'] = 'archived';
+                $lic['archived_at'] = date('Y-m-d H:i:s');
+                $lic['archived_by'] = $_SESSION['username'];
+                $found = true;
+                break;
+            }
+        }
+        
+        if ($found && saveJsonData('licenses.json', $licenses)) {
+            echo json_encode(['success' => true, 'message' => 'Lizenz archiviert']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Fehler beim Archivieren']);
+        }
+        exit;
+    }
+    
     // Wenn keine Action erkannt wurde
     echo json_encode(['success' => false, 'message' => 'Unbekannte Aktion: ' . $action]);
     exit;
@@ -224,14 +249,18 @@ function extractInitials($name) {
 function generateLicenseText($category, $licenseNumber, $fields, $startDate, $endDate) {
     global $allUsers;
     
+    // Lade System-Einstellungen
+    $settings = loadJsonData('system_settings.json');
+    $textYear = $settings['text_output_year'] ?? date('Y');
+    
     $template = $category['template'];
     
     // Systemfelder
     $replacements = [
         '{LICENSE_NUMBER}' => $licenseNumber,
-        '{START_DATE}' => date('d.m.Y', strtotime($startDate)),
-        '{END_DATE}' => date('d.m.Y', strtotime($endDate)),
-        '{ISSUE_DATE}' => date('d.m.Y'),
+        '{START_DATE}' => date('d.m.', strtotime($startDate)) . $textYear,
+        '{END_DATE}' => date('d.m.', strtotime($endDate)) . $textYear,
+        '{ISSUE_DATE}' => date('d.m.') . $textYear,
         '{ISSUER_NAME}' => $_SESSION['username'],
         '{ISSUER_ROLE}' => getCleanRoleName($_SESSION['role'] ?? 'User')
     ];
@@ -429,6 +458,13 @@ usort($activeLicenses, function($a, $b) {
                                         <button class="btn btn-sm btn-success renew-license" 
                                                 data-license='<?php echo json_encode($license, JSON_HEX_APOS | JSON_HEX_QUOT); ?>'>
                                             <i data-feather="refresh-cw"></i>
+                                        </button>
+                                        <?php endif; ?>
+                                        <?php if (currentUserCan('licenses', 'edit') && $license['status'] !== 'archived'): ?>
+                                        <button class="btn btn-sm btn-warning archive-license" 
+                                                data-license-id="<?php echo htmlspecialchars($license['id']); ?>"
+                                                data-license-number="<?php echo htmlspecialchars($license['license_number']); ?>">
+                                            <i data-feather="archive"></i>
                                         </button>
                                         <?php endif; ?>
                                         <?php if (currentUserCan('licenses', 'delete')): ?>
@@ -748,6 +784,26 @@ $(document).ready(function() {
         }, function(response) {
             if (response.success) {
                 alert('Lizenz gelöscht');
+                location.reload();
+            } else {
+                alert('Fehler: ' + response.message);
+            }
+        }, 'json');
+    });
+    
+    // Lizenz archivieren
+    $(document).on('click', '.archive-license', function() {
+        const licenseId = $(this).data('license-id');
+        const licenseNumber = $(this).data('license-number');
+        
+        if (!confirm('Lizenz ' + licenseNumber + ' ins Archiv verschieben?')) return;
+        
+        $.post('', {
+            action: 'archive',
+            license_id: licenseId
+        }, function(response) {
+            if (response.success) {
+                alert('Lizenz archiviert');
                 location.reload();
             } else {
                 alert('Fehler: ' + response.message);
