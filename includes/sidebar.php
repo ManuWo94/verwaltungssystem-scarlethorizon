@@ -128,12 +128,14 @@ $openHilfe = in_array($currentPage, $hilfePages);
                             <?php endif; ?>
                         </a>
                     </li>
+                    <?php if (currentUserCan('civil_cases', 'view')): ?>
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/civil_cases.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/civil_cases.php">
                             <span data-feather="briefcase"></span>
                             Zivilakten
                         </a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/defendants.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/defendants.php">
                             <span data-feather="users"></span>
@@ -146,12 +148,14 @@ $openHilfe = in_array($currentPage, $hilfePages);
                             Klageschriften
                         </a>
                     </li>
+                    <?php if (currentUserCan('revisions', 'view')): ?>
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/revisions.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/revisions.php">
                             <span data-feather="refresh-cw"></span>
                             Revisionen
                         </a>
                     </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link <?php echo getCurrentPage() == 'modules/files.php' ? 'active' : ''; ?>" href="<?php echo getBasePath(); ?>modules/files.php">
                             <span data-feather="archive"></span>
@@ -364,7 +368,6 @@ $openHilfe = in_array($currentPage, $hilfePages);
 // Preserve sidebar scroll position across page loads; also save before navigation clicks
 document.addEventListener('DOMContentLoaded', function() {
     var storageKey = 'sidebarScrollTop';
-    var collapseStateKey = 'sidebarCollapseStates';
 
     // Determine the actual scrollable sidebar element
     var sidebarNav = document.getElementById('sidebarMenu');
@@ -381,29 +384,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sicher auf sessionStorage zugreifen (Tracking Prevention-kompatibel)
     // SCROLL-WIEDERHERSTELLUNG DEAKTIVIERT - Accordion macht Scrollen unnötig
     
-    // Collapse-Status speichern und wiederherstellen
+    // Stelle sicher, dass das korrekte Accordion-Panel offen bleibt
+    // Die PHP-Seite setzt bereits die 'show'-Klasse basierend auf der aktuellen Seite
+    // Wir müssen nur sicherstellen, dass Bootstrap dies respektiert
     try {
         var collapseElements = document.querySelectorAll('.sidebar-section .collapse');
         
-        // WIEDERHERSTELLUNG DEAKTIVIERT - data-parent steuert Accordion
-        // Die Sidebar öffnet basierend auf der aktuellen Seite (PHP-seitig)
-        
-        // Speichere Zustand bei Änderung (optional für zukünftige Features)
+        // Finde das Element, das die 'show'-Klasse hat (von PHP gesetzt)
         collapseElements.forEach(function(el) {
-            $(el).on('shown.bs.collapse hidden.bs.collapse', function() {
-                var states = {};
-                collapseElements.forEach(function(elem) {
-                    states[elem.id] = $(elem).hasClass('show');
-                });
-                try {
-                    sessionStorage.setItem(collapseStateKey, JSON.stringify(states));
-                } catch (e) {
-                    console.warn('Konnte Collapse-Status nicht speichern:', e);
+            if (el.classList.contains('show')) {
+                // Stelle sicher, dass der zugehörige Toggle-Button nicht 'collapsed' ist
+                var toggleBtn = document.querySelector('[href="#' + el.id + '"]');
+                if (toggleBtn) {
+                    toggleBtn.classList.remove('collapsed');
+                    toggleBtn.setAttribute('aria-expanded', 'true');
                 }
-            });
+            }
         });
     } catch (e) {
-        console.warn('Collapse-Status-Speicherung nicht verfügbar:', e);
+        console.warn('Sidebar-Initialisierung fehlgeschlagen:', e);
     }
 });
 </script>
