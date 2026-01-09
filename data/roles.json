@@ -322,61 +322,192 @@
         "id": "senatsrichter",
         "name": "Senatsrichter",
         "description": "Senatsrichter",
-        "permissions": []
+        "permissions": {
+            "cases": ["view", "create", "edit", "delete"],
+            "civil_cases": ["view", "create", "edit", "delete"],
+            "indictments": ["view", "create", "edit", "delete"],
+            "appeals": ["view", "create", "edit", "delete"],
+            "defendants": ["view", "create", "edit"],
+            "hearings": ["view", "create", "edit", "delete"],
+            "templates": ["view", "create", "edit"],
+            "warrants": ["view", "create", "edit", "delete"],
+            "notes": ["view", "create", "edit", "delete"],
+            "calendar": ["view", "create", "edit", "delete"],
+            "files": ["view", "create", "edit"],
+            "address_book": ["view"],
+            "evidence": ["view", "create", "edit", "delete"],
+            "revisions": ["view", "create", "edit"],
+            "justice_references": ["view", "create", "edit"]
+        }
     },
     {
         "id": "amtsrichter",
         "name": "Amtsrichter",
         "description": "Amtsrichter",
-        "permissions": []
+        "permissions": {
+            "cases": ["view", "create", "edit", "delete"],
+            "civil_cases": ["view", "create", "edit", "delete"],
+            "indictments": ["view", "create", "edit", "delete"],
+            "defendants": ["view", "create", "edit"],
+            "hearings": ["view", "create", "edit", "delete"],
+            "templates": ["view", "create", "edit"],
+            "warrants": ["view", "create", "edit"],
+            "notes": ["view", "create", "edit", "delete"],
+            "calendar": ["view", "create", "edit", "delete"],
+            "files": ["view", "create", "edit"],
+            "address_book": ["view"],
+            "evidence": ["view", "create", "edit"],
+            "justice_references": ["view"]
+        }
     },
     {
         "id": "beisitzender_richter",
         "name": "Beisitzender Richter",
         "description": "Beisitzender Richter",
-        "permissions": []
+        "permissions": {
+            "cases": ["view", "edit"],
+            "civil_cases": ["view", "edit"],
+            "indictments": ["view"],
+            "defendants": ["view"],
+            "hearings": ["view", "create", "edit"],
+            "templates": ["view"],
+            "notes": ["view", "create", "edit"],
+            "calendar": ["view", "create", "edit"],
+            "files": ["view"],
+            "address_book": ["view"],
+            "evidence": ["view"],
+            "justice_references": ["view"]
+        }
     },
     {
         "id": "berufungsrichter",
         "name": "Berufungsrichter",
         "description": "Richter im Berufungsgericht",
-        "permissions": []
+        "permissions": {
+            "cases": ["view", "edit"],
+            "civil_cases": ["view", "edit"],
+            "indictments": ["view", "edit"],
+            "appeals": ["view", "create", "edit", "delete"],
+            "defendants": ["view"],
+            "hearings": ["view", "create", "edit", "delete"],
+            "templates": ["view", "create", "edit"],
+            "notes": ["view", "create", "edit", "delete"],
+            "calendar": ["view", "create", "edit", "delete"],
+            "files": ["view", "create", "edit"],
+            "address_book": ["view"],
+            "evidence": ["view", "edit"],
+            "revisions": ["view", "create", "edit", "delete"],
+            "justice_references": ["view", "create", "edit"]
+        }
     },
     {
         "id": "friedensrichter",
         "name": "Friedensrichter",
-        "description": "Richter f\u00fcr Schlichtungsverfahren",
-        "permissions": []
+        "description": "Richter für Schlichtungsverfahren",
+        "permissions": {
+            "civil_cases": ["view", "create", "edit", "delete"],
+            "defendants": ["view"],
+            "hearings": ["view", "create", "edit"],
+            "templates": ["view"],
+            "notes": ["view", "create", "edit"],
+            "calendar": ["view", "create", "edit"],
+            "files": ["view"],
+            "address_book": ["view"]
+        }
     },
     {
         "id": "gerichtsassistent",
         "name": "Gerichtsassistent",
-        "description": "Assistent f\u00fcr richterliche T\u00e4tigkeiten",
-        "permissions": []
+        "description": "Assistent für richterliche Tätigkeiten",
+        "permissions": {
+            "cases": ["view", "create", "edit"],
+            "civil_cases": ["view", "create", "edit"],
+            "indictments": ["view", "create", "edit"],
+            "defendants": ["view", "create", "edit"],
+            "hearings": ["view", "create", "edit"],
+            "templates": ["view", "create", "edit"],
+            "notes": ["view", "create", "edit", "delete"],
+            "calendar": ["view", "create", "edit", "delete"],
+            "files": ["view", "create", "edit"],
+            "address_book": ["view", "create", "edit"],
+            "evidence": ["view", "create", "edit"],
+            "todos": ["view", "create", "edit", "delete"]
+        }
     },
     {
         "id": "gerichtsvolontar",
-        "name": "Gerichtsvolont\u00e4r",
-        "description": "Volont\u00e4r\/Praktikant am Gericht",
-        "permissions": []
+        "name": "Gerichtsvolontär",
+        "description": "Volontär/Praktikant am Gericht",
+        "permissions": {
+            "cases": ["view"],
+            "civil_cases": ["view"],
+            "indictments": ["view"],
+            "defendants": ["view"],
+            "hearings": ["view"],
+            "templates": ["view"],
+            "notes": ["view", "create"],
+            "calendar": ["view"],
+            "files": ["view"],
+            "address_book": ["view"],
+            "evidence": ["view"]
+        }
     },
     {
         "id": "gerichtsreferendar",
         "name": "Gerichtsreferendar",
         "description": "Referendar am Gericht",
-        "permissions": [],
+        "permissions": {
+            "cases": ["view", "create", "edit"],
+            "civil_cases": ["view", "create", "edit"],
+            "indictments": ["view", "create", "edit"],
+            "defendants": ["view", "create", "edit"],
+            "hearings": ["view", "create", "edit"],
+            "templates": ["view", "create", "edit"],
+            "notes": ["view", "create", "edit", "delete"],
+            "calendar": ["view", "create", "edit"],
+            "files": ["view", "create", "edit"],
+            "address_book": ["view", "create", "edit"],
+            "evidence": ["view", "create", "edit"],
+            "justice_references": ["view"]
+        },
         "date_updated": "2026-01-05 01:21:58"
     },
     {
         "id": "us_marshal",
         "name": "U.S. Marshal",
         "description": "US Marshal",
-        "permissions": []
+        "permissions": {
+            "cases": ["view"],
+            "civil_cases": ["view"],
+            "defendants": ["view", "edit"],
+            "hearings": ["view"],
+            "warrants": ["view", "create", "edit", "delete"],
+            "staff": ["view", "create", "edit", "delete"],
+            "equipment": ["view", "create", "edit", "delete"],
+            "notes": ["view", "create", "edit", "delete"],
+            "calendar": ["view", "create", "edit", "delete"],
+            "duty_log": ["view", "create", "edit", "delete"],
+            "address_book": ["view"],
+            "seized_assets": ["view", "create", "edit", "delete"],
+            "evidence": ["view", "create", "edit"],
+            "task_assignments": ["view", "create", "edit"]
+        }
     },
     {
         "id": "marshal_secretary",
         "name": "Marshal Secretary",
         "description": "Sekretariat des Marshal",
-        "permissions": []
+        "permissions": {
+            "cases": ["view"],
+            "defendants": ["view"],
+            "hearings": ["view"],
+            "staff": ["view"],
+            "equipment": ["view", "create", "edit"],
+            "notes": ["view", "create", "edit"],
+            "calendar": ["view", "create", "edit", "delete"],
+            "duty_log": ["view", "create", "edit"],
+            "address_book": ["view", "create", "edit"],
+            "task_assignments": ["view"]
+        }
     }
 ]

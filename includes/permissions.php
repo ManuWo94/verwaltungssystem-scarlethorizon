@@ -86,7 +86,7 @@ function simplifyPermissionActions($actions) {
     }
 
     $normalized = array_values(array_unique($normalized));
-    return array_values(array_intersect($availableActions, $normalized));
+    return array_values(array_intersect(array_keys($availableActions), $normalized));
 }
 
 /**
